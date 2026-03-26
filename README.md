@@ -198,7 +198,7 @@ cd apps/vibe-app && npm ci && npm run build
   - 执行内容：Rust 格式检查、workspace 编译、workspace 测试、前端构建、`relay_polling` 烟测
 - `Release`
   - 触发时机：推送 `v*` tag
-  - 执行内容：完整验证、`overlay` 烟测、跨平台 CLI 二进制打包、跨平台 Tauri 桌面包构建、GitHub Release 资产上传
+  - 执行内容：完整验证、best-effort `overlay` 烟测、跨平台 CLI 二进制打包、跨平台 Tauri 桌面包构建、GitHub Release 资产上传
 
 发布方式示例：
 

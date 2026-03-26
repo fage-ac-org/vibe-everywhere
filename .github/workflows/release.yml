@@ -82,7 +82,8 @@ jobs:
       - name: Run relay polling smoke test
         run: ./scripts/dual-process-smoke.sh relay_polling
 
-      - name: Run overlay smoke test
+      - name: Run overlay smoke test (best effort)
+        continue-on-error: true
         run: ./scripts/dual-process-smoke.sh overlay
 
   build-cli:

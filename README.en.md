@@ -198,7 +198,7 @@ The repository includes two workflows:
   - Runs formatting checks, workspace builds, workspace tests, frontend build, and `relay_polling` smoke tests
 - `Release`
   - Triggers on `v*` tags
-  - Runs full verification, `overlay` smoke tests, cross-platform CLI packaging, cross-platform Tauri desktop builds, and GitHub Release asset publishing
+  - Runs full verification, best-effort `overlay` smoke tests, cross-platform CLI packaging, cross-platform Tauri desktop builds, and GitHub Release asset publishing
 
 Release example:
 
