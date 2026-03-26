@@ -1,0 +1,770 @@
+use anyhow::Result;
+use serde_json::Value;
+use std::path::Path;
+use tokio::process::Command;
+use vibe_core::{
+    ExecutionProtocol, ProviderKind, ProviderStatus, TaskEventInput, TaskEventKind, TaskRecord,
+};
+
+pub(crate) fn build_provider_command(
+    provider: &ProviderStatus,
+    task: &TaskRecord,
+    cwd: &Path,
+) -> Result<Command> {
+    let mut command = Command::new(&provider.command);
+
+    match task.provider {
+        ProviderKind::Codex => {
+            command
+                .arg("exec")
+                .arg("--json")
+                .arg("--skip-git-repo-check")
+                .arg("--full-auto")
+                .arg("-C")
+                .arg(cwd);
+            if let Some(model) = &task.model {
+                command.arg("-m").arg(model);
+            }
+            command.arg(&task.prompt);
+        }
+        ProviderKind::ClaudeCode => {
+            command
+                .arg("-p")
+                .arg(&task.prompt)
+                .arg("--output-format")
+                .arg("stream-json")
+                .arg("--verbose")
+                .arg("--include-partial-messages")
+                .arg("--permission-mode")
+                .arg(
+                    std::env::var("VIBE_CLAUDE_PERMISSION_MODE")
+                        .ok()
+                        .filter(|value| !value.trim().is_empty())
+                        .unwrap_or_else(|| "acceptEdits".to_string()),
+                )
+                .arg("--add-dir")
+                .arg(cwd);
+            if let Some(allowed_tools) = std::env::var("VIBE_CLAUDE_ALLOWED_TOOLS")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+            {
+                command.arg("--allowedTools").arg(allowed_tools);
+            }
+            if let Some(model) = &task.model {
+                command.arg("--model").arg(model);
+            }
+        }
+        ProviderKind::OpenCode => {
+            command.arg("run");
+            if let Some(model) = &task.model {
+                command.arg("--model").arg(model);
+            }
+            command.arg(&task.prompt);
+        }
+    }
+
+    Ok(command)
+}
+
+pub(crate) fn detect_providers() -> Vec<ProviderStatus> {
+    provider_definitions()
+        .into_iter()
+        .map(|definition| {
+            detect_provider(
+                definition.kind,
+                definition.command_env,
+                definition.default_command,
+                definition.supports_acp,
+            )
+        })
+        .collect()
+}
+
+pub(crate) fn acp_update_to_events(params: &Value) -> Vec<TaskEventInput> {
+    let Some(update) = params.get("update") else {
+        return vec![];
+    };
+    let Some(kind) = update.get("sessionUpdate").and_then(Value::as_str) else {
+        return vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: compact_json(update),
+        }];
+    };
+
+    match kind {
+        "agent_message_chunk" => {
+            text_events_from_content(update.get("content"), TaskEventKind::AssistantDelta)
+        }
+        "user_message_chunk" => {
+            text_events_from_content(update.get("content"), TaskEventKind::System)
+        }
+        "thought_message_chunk" => {
+            text_events_from_content(update.get("content"), TaskEventKind::Status)
+        }
+        "tool_call" => vec![TaskEventInput {
+            kind: TaskEventKind::ToolCall,
+            message: format_tool_call_message(update),
+        }],
+        "tool_call_update" => {
+            let mut message = format_tool_call_message(update);
+            let content = flatten_content_text(update.get("content"));
+            if !content.is_empty() {
+                message.push('\n');
+                message.push_str(&content);
+            }
+            vec![TaskEventInput {
+                kind: TaskEventKind::ToolOutput,
+                message,
+            }]
+        }
+        "plan" => vec![TaskEventInput {
+            kind: TaskEventKind::Status,
+            message: format_plan_update(update),
+        }],
+        "config_option_update" => vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format_config_update(update),
+        }],
+        "current_mode_update" => vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!(
+                "ACP mode changed to {}",
+                update
+                    .get("currentModeId")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown")
+            ),
+        }],
+        _ => vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: compact_json(update),
+        }],
+    }
+}
+
+pub(crate) fn provider_stdout_to_task_events(
+    provider_kind: &ProviderKind,
+    line: &str,
+) -> Vec<TaskEventInput> {
+    match provider_kind {
+        ProviderKind::Codex => codex_jsonl_to_task_events(line),
+        ProviderKind::ClaudeCode => claude_jsonl_to_task_events(line),
+        ProviderKind::OpenCode => vec![TaskEventInput {
+            kind: TaskEventKind::ProviderStdout,
+            message: line.to_string(),
+        }],
+    }
+}
+
+pub(crate) fn claude_jsonl_to_task_events(line: &str) -> Vec<TaskEventInput> {
+    let message = match serde_json::from_str::<Value>(line) {
+        Ok(value) => value,
+        Err(_) => {
+            return vec![TaskEventInput {
+                kind: TaskEventKind::ProviderStdout,
+                message: line.to_string(),
+            }];
+        }
+    };
+
+    let Some(event_type) = message.get("type").and_then(Value::as_str) else {
+        return vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: compact_json(&message),
+        }];
+    };
+
+    match event_type {
+        "system" => claude_system_to_task_events(&message),
+        "assistant" => claude_assistant_to_task_events(&message),
+        "result" => claude_result_to_task_events(&message),
+        "user" => claude_user_to_task_events(&message),
+        _ => vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!("Claude event {event_type}: {}", compact_json(&message)),
+        }],
+    }
+}
+
+pub(crate) fn codex_jsonl_to_task_events(line: &str) -> Vec<TaskEventInput> {
+    let message = match serde_json::from_str::<Value>(line) {
+        Ok(value) => value,
+        Err(_) => {
+            return vec![TaskEventInput {
+                kind: TaskEventKind::ProviderStdout,
+                message: line.to_string(),
+            }];
+        }
+    };
+
+    let Some(event_type) = message.get("type").and_then(Value::as_str) else {
+        return vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: compact_json(&message),
+        }];
+    };
+
+    match event_type {
+        "thread.started" => message
+            .get("thread_id")
+            .and_then(Value::as_str)
+            .map(|thread_id| TaskEventInput {
+                kind: TaskEventKind::System,
+                message: format!("Codex session started: {thread_id}"),
+            })
+            .into_iter()
+            .collect(),
+        "turn.started" => Vec::new(),
+        "turn.completed" => {
+            let usage = message
+                .get("usage")
+                .map(compact_json)
+                .unwrap_or_else(|| "{}".to_string());
+            vec![TaskEventInput {
+                kind: TaskEventKind::Status,
+                message: format!("Codex turn completed with usage {usage}"),
+            }]
+        }
+        "item.started" => message
+            .get("item")
+            .map(|item| codex_item_to_task_events(item, true))
+            .unwrap_or_default(),
+        "item.completed" => message
+            .get("item")
+            .map(|item| codex_item_to_task_events(item, false))
+            .unwrap_or_default(),
+        _ => vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!("Codex event {event_type}: {}", compact_json(&message)),
+        }],
+    }
+}
+
+struct ProviderDefinition {
+    kind: ProviderKind,
+    command_env: &'static str,
+    default_command: &'static str,
+    supports_acp: bool,
+}
+
+fn detect_provider(
+    kind: ProviderKind,
+    command_env: &str,
+    default_command: &str,
+    supports_acp: bool,
+) -> ProviderStatus {
+    let command = std::env::var(command_env).unwrap_or_else(|_| default_command.to_string());
+    let execution_protocol = advertised_execution_protocol(kind.clone(), supports_acp);
+
+    match which::which(&command) {
+        Ok(path) => {
+            let version = std::process::Command::new(&path)
+                .arg("--version")
+                .output()
+                .ok()
+                .map(|output| {
+                    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+                    if !stdout.is_empty() { stdout } else { stderr }
+                })
+                .filter(|value| !value.is_empty());
+
+            ProviderStatus {
+                kind,
+                command: path.to_string_lossy().to_string(),
+                available: true,
+                version,
+                execution_protocol,
+                supports_acp,
+                error: None,
+            }
+        }
+        Err(error) => ProviderStatus {
+            kind,
+            command,
+            available: false,
+            version: None,
+            execution_protocol,
+            supports_acp,
+            error: Some(error.to_string()),
+        },
+    }
+}
+
+fn advertised_execution_protocol(kind: ProviderKind, supports_acp: bool) -> ExecutionProtocol {
+    if supports_acp && matches!(kind, ProviderKind::OpenCode | ProviderKind::Codex) {
+        ExecutionProtocol::Acp
+    } else {
+        ExecutionProtocol::Cli
+    }
+}
+
+fn provider_definitions() -> Vec<ProviderDefinition> {
+    vec![
+        ProviderDefinition {
+            kind: ProviderKind::Codex,
+            command_env: "VIBE_CODEX_COMMAND",
+            default_command: "codex",
+            supports_acp: true,
+        },
+        ProviderDefinition {
+            kind: ProviderKind::ClaudeCode,
+            command_env: "VIBE_CLAUDE_COMMAND",
+            default_command: "claude",
+            supports_acp: false,
+        },
+        ProviderDefinition {
+            kind: ProviderKind::OpenCode,
+            command_env: "VIBE_OPENCODE_COMMAND",
+            default_command: "opencode",
+            supports_acp: true,
+        },
+    ]
+}
+
+fn text_events_from_content(content: Option<&Value>, kind: TaskEventKind) -> Vec<TaskEventInput> {
+    let text = flatten_content_text(content);
+    if text.is_empty() {
+        return vec![];
+    }
+    vec![TaskEventInput {
+        kind,
+        message: text,
+    }]
+}
+
+fn flatten_content_text(content: Option<&Value>) -> String {
+    let Some(content) = content else {
+        return String::new();
+    };
+
+    match content {
+        Value::String(text) => text.to_string(),
+        Value::Array(items) => items
+            .iter()
+            .map(flatten_content_block)
+            .filter(|value| !value.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        Value::Object(_) => flatten_content_block(content),
+        _ => String::new(),
+    }
+}
+
+fn flatten_content_block(block: &Value) -> String {
+    if let Value::String(text) = block {
+        return text.to_string();
+    }
+
+    let block_type = block
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    match block_type {
+        "text" => block
+            .get("text")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        "resource" => block
+            .get("resource")
+            .and_then(|resource| resource.get("text"))
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        "resource_link" => block
+            .get("uri")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        "diff" => {
+            let path = block
+                .get("path")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            format!("diff {path}")
+        }
+        "terminal" => {
+            let terminal_id = block
+                .get("terminalId")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            format!("terminal {terminal_id}")
+        }
+        _ => compact_json(block),
+    }
+}
+
+fn format_tool_call_message(update: &Value) -> String {
+    let title = update
+        .get("title")
+        .and_then(Value::as_str)
+        .unwrap_or("tool call");
+    let status = update
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let kind = update.get("kind").and_then(Value::as_str).unwrap_or("tool");
+    let tool_call_id = update
+        .get("toolCallId")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    format!("{title} [{kind}] status={status} id={tool_call_id}")
+}
+
+fn format_plan_update(update: &Value) -> String {
+    if let Some(steps) = update.get("steps").and_then(Value::as_array) {
+        let rendered = steps
+            .iter()
+            .filter_map(|step| {
+                let title = step.get("title").and_then(Value::as_str)?;
+                let status = step
+                    .get("status")
+                    .and_then(Value::as_str)
+                    .unwrap_or("pending");
+                Some(format!("[{status}] {title}"))
+            })
+            .collect::<Vec<_>>();
+        if !rendered.is_empty() {
+            return format!("ACP plan\n{}", rendered.join("\n"));
+        }
+    }
+    compact_json(update)
+}
+
+fn format_config_update(update: &Value) -> String {
+    if let Some(config_options) = update.get("configOptions").and_then(Value::as_array) {
+        let rendered = config_options
+            .iter()
+            .filter_map(|config| {
+                let config_id = config.get("id").and_then(Value::as_str)?;
+                let current = config
+                    .get("currentValue")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown");
+                Some(format!("{config_id}={current}"))
+            })
+            .collect::<Vec<_>>();
+        if !rendered.is_empty() {
+            return format!("ACP config updated: {}", rendered.join(", "));
+        }
+    }
+    compact_json(update)
+}
+
+fn claude_system_to_task_events(message: &Value) -> Vec<TaskEventInput> {
+    let subtype = message
+        .get("subtype")
+        .and_then(Value::as_str)
+        .unwrap_or("event");
+
+    if subtype == "init" {
+        let session_id = message
+            .get("session_id")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
+        let model = message
+            .get("model")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
+        let permission_mode = message
+            .get("permissionMode")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
+        return vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!(
+                "Claude session started: {session_id} model={model} permission_mode={permission_mode}"
+            ),
+        }];
+    }
+
+    vec![TaskEventInput {
+        kind: TaskEventKind::System,
+        message: format!("Claude {subtype}: {}", compact_json(message)),
+    }]
+}
+
+fn claude_assistant_to_task_events(message: &Value) -> Vec<TaskEventInput> {
+    let mut events = Vec::new();
+
+    if let Some(content) = message
+        .get("message")
+        .and_then(|value| value.get("content"))
+        .and_then(Value::as_array)
+    {
+        for block in content {
+            events.extend(claude_content_block_to_events(block));
+        }
+    }
+
+    if let Some(error) = message.get("error").and_then(Value::as_str) {
+        events.push(TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!("Claude error: {error}"),
+        });
+    }
+
+    if events.is_empty() {
+        events.push(TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!("Claude assistant event: {}", compact_json(message)),
+        });
+    }
+
+    events
+}
+
+fn claude_content_block_to_events(block: &Value) -> Vec<TaskEventInput> {
+    let block_type = block
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+
+    match block_type {
+        "text" => block
+            .get("text")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|message| {
+                vec![TaskEventInput {
+                    kind: TaskEventKind::AssistantDelta,
+                    message: message.to_string(),
+                }]
+            })
+            .unwrap_or_default(),
+        "thinking" | "redacted_thinking" => {
+            let content = block
+                .get("thinking")
+                .and_then(Value::as_str)
+                .or_else(|| block.get("text").and_then(Value::as_str))
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("Claude {block_type}"));
+            vec![TaskEventInput {
+                kind: TaskEventKind::Status,
+                message: content,
+            }]
+        }
+        "tool_use" => {
+            let name = block.get("name").and_then(Value::as_str).unwrap_or("tool");
+            let tool_use_id = block.get("id").and_then(Value::as_str).unwrap_or("unknown");
+            let mut message = format!("Claude tool use {name} id={tool_use_id}");
+            if let Some(input) = block.get("input") {
+                message.push_str(" input=");
+                message.push_str(&compact_json(input));
+            }
+            vec![TaskEventInput {
+                kind: TaskEventKind::ToolCall,
+                message,
+            }]
+        }
+        "tool_result" => {
+            let tool_use_id = block
+                .get("tool_use_id")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            let mut message = format!("Claude tool result id={tool_use_id}");
+            if block.get("is_error").and_then(Value::as_bool) == Some(true) {
+                message.push_str(" error=true");
+            }
+            let content = flatten_content_text(block.get("content"));
+            if !content.is_empty() {
+                message.push('\n');
+                message.push_str(&content);
+            }
+            vec![TaskEventInput {
+                kind: TaskEventKind::ToolOutput,
+                message,
+            }]
+        }
+        _ if block_type.contains("tool") => vec![TaskEventInput {
+            kind: TaskEventKind::ToolOutput,
+            message: format!("Claude {block_type}: {}", compact_json(block)),
+        }],
+        _ => vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!("Claude content {block_type}: {}", compact_json(block)),
+        }],
+    }
+}
+
+fn claude_result_to_task_events(message: &Value) -> Vec<TaskEventInput> {
+    let subtype = message
+        .get("subtype")
+        .and_then(Value::as_str)
+        .unwrap_or("result");
+    let is_error = message
+        .get("is_error")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let stop_reason = message
+        .get("stop_reason")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let num_turns = message
+        .get("num_turns")
+        .and_then(Value::as_u64)
+        .unwrap_or_default();
+    let duration_ms = message
+        .get("duration_ms")
+        .and_then(Value::as_u64)
+        .unwrap_or_default();
+    let total_cost_usd = message
+        .get("total_cost_usd")
+        .map(compact_json)
+        .unwrap_or_else(|| "null".to_string());
+
+    let mut summary = format!(
+        "Claude {subtype} stop_reason={stop_reason} turns={num_turns} duration_ms={duration_ms} cost_usd={total_cost_usd}"
+    );
+    if is_error {
+        if let Some(result) = message
+            .get("result")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            summary.push_str(" message=");
+            summary.push_str(result);
+        }
+    }
+
+    let mut events = vec![TaskEventInput {
+        kind: if is_error {
+            TaskEventKind::System
+        } else {
+            TaskEventKind::Status
+        },
+        message: summary,
+    }];
+
+    if let Some(permission_denials) = message
+        .get("permission_denials")
+        .and_then(Value::as_array)
+        .filter(|items| !items.is_empty())
+    {
+        events.push(TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!(
+                "Claude permission denials: {}",
+                compact_json(&Value::Array(permission_denials.clone()))
+            ),
+        });
+    }
+
+    events
+}
+
+fn claude_user_to_task_events(message: &Value) -> Vec<TaskEventInput> {
+    let Some(content) = message
+        .get("message")
+        .and_then(|value| value.get("content"))
+        .and_then(Value::as_array)
+    else {
+        return Vec::new();
+    };
+
+    let text = content
+        .iter()
+        .map(flatten_content_block)
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if text.is_empty() {
+        Vec::new()
+    } else {
+        vec![TaskEventInput {
+            kind: TaskEventKind::System,
+            message: format!("Claude user message: {text}"),
+        }]
+    }
+}
+
+fn codex_item_to_task_events(item: &Value, started: bool) -> Vec<TaskEventInput> {
+    let item_type = item
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown_item");
+
+    if item_type == "agent_message" {
+        let text = item
+            .get("text")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+        return text
+            .map(|message| {
+                vec![TaskEventInput {
+                    kind: TaskEventKind::AssistantDelta,
+                    message,
+                }]
+            })
+            .unwrap_or_default();
+    }
+
+    if item_type.contains("reason") || item_type.contains("thought") {
+        let message = codex_item_summary(item_type, item, started);
+        return vec![TaskEventInput {
+            kind: TaskEventKind::Status,
+            message,
+        }];
+    }
+
+    if item_type.contains("tool")
+        || item_type.contains("command")
+        || item_type.contains("patch")
+        || item_type.contains("shell")
+    {
+        let kind = if started {
+            TaskEventKind::ToolCall
+        } else {
+            TaskEventKind::ToolOutput
+        };
+        let message = codex_item_summary(item_type, item, started);
+        return vec![TaskEventInput { kind, message }];
+    }
+
+    let message = codex_item_summary(item_type, item, started);
+    vec![TaskEventInput {
+        kind: TaskEventKind::System,
+        message,
+    }]
+}
+
+fn codex_item_summary(item_type: &str, item: &Value, started: bool) -> String {
+    let phase = if started { "started" } else { "completed" };
+    let mut details = Vec::new();
+
+    for key in ["title", "name", "command", "text", "call_id", "status"] {
+        if let Some(value) = item.get(key).and_then(Value::as_str) {
+            let value = value.trim();
+            if !value.is_empty() {
+                details.push(format!("{key}={value}"));
+            }
+        }
+    }
+
+    if details.is_empty() {
+        for key in ["arguments", "output", "metadata"] {
+            if let Some(value) = item.get(key) {
+                details.push(format!("{key}={}", compact_json(value)));
+            }
+        }
+    }
+
+    if details.is_empty() {
+        format!("Codex {item_type} {phase}")
+    } else {
+        format!("Codex {item_type} {phase}: {}", details.join(" "))
+    }
+}
+
+fn compact_json(value: &Value) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "{}".to_string())
+}

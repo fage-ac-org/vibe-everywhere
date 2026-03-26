@@ -1,0 +1,55 @@
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, path::Path as FsPath};
+use vibe_core::{
+    DeviceRecord, PortForwardRecord, ShellInputRecord, ShellOutputChunk, ShellSessionRecord,
+    TaskEvent, TaskRecord,
+};
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub(crate) struct RelayStore {
+    pub(crate) devices: HashMap<String, DeviceRecord>,
+    pub(crate) tasks: HashMap<String, TaskEntry>,
+    pub(crate) shell_sessions: HashMap<String, ShellSessionEntry>,
+    pub(crate) port_forwards: HashMap<String, PortForwardEntry>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct TaskEntry {
+    pub(crate) record: TaskRecord,
+    pub(crate) events: Vec<TaskEvent>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct ShellSessionEntry {
+    pub(crate) record: ShellSessionRecord,
+    pub(crate) inputs: Vec<ShellInputRecord>,
+    pub(crate) outputs: Vec<ShellOutputChunk>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct PortForwardEntry {
+    pub(crate) record: PortForwardRecord,
+}
+
+pub(crate) fn load_relay_store(path: &FsPath) -> Result<RelayStore, Box<dyn std::error::Error>> {
+    if !path.exists() {
+        return Ok(RelayStore::default());
+    }
+
+    let bytes = std::fs::read(path)?;
+    let store = serde_json::from_slice::<RelayStore>(&bytes)?;
+    Ok(store)
+}
+
+pub(crate) fn persist_relay_store(
+    path: &FsPath,
+    store: &RelayStore,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let encoded = serde_json::to_vec_pretty(store)?;
+    std::fs::write(path, encoded)?;
+    Ok(())
+}

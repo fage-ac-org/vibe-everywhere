@@ -1,0 +1,25 @@
+{
+  "name": "vibe-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 1420",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 1420",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.3.0",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.26",
+    "vue-router": "^4.6.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.3.1",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "typescript": "^5.8.2",
+    "vite": "^7.0.0",
+    "vue-tsc": "^3.1.0"
+  }
+}
