@@ -6,29 +6,29 @@
 
 [中文](./README.md) | [English](./README.en.md)
 
-Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Tauri 2 app`。
+Rust-first remote AI control plane: `Rust relay + Rust agent + Vue 3.5 + Tauri 2 app`.
 
-它不是传统远程桌面，而是一个面向多设备 AI 协作、任务执行、Shell 会话和 TCP 端口转发的控制系统。服务端负责设备注册、状态维护和控制面 API，Agent 运行在被控设备上执行任务，控制端可以使用 Web 或 Tauri 桌面壳连接整个系统。
+This is not a traditional remote desktop product. It is a control system for multi-device AI workflows, task execution, shell sessions, and TCP port forwarding. The relay provides the control-plane API and state management, the agent runs on the target machine, and the control UI connects through Web or a Tauri desktop shell.
 
-## 项目状态
+## Status
 
-- 当前定位：个人版 MVP / 开源实验项目
-- 当前已打通：设备注册、任务执行、事件流、Shell Session、Relay-first 端口转发、Overlay 辅助转发
-- 当前技术方向：以 Rust 为核心，控制端统一走 Vue + Tauri，服务端和 Agent 统一协议
-- 当前适用场景：个人远程 AI 工作台、自托管多设备控制面、跨平台实验性远程协作
+- Positioning: personal-edition MVP / open source experimental project
+- Working flows: device registration, task execution, event streaming, shell sessions, relay-first port forwarding, overlay-assisted transport
+- Technical direction: Rust for protocol, backend, and agent; Vue + Tauri for the control client
+- Best-fit use cases: self-hosted personal AI operations console, multi-device control plane, cross-platform experimentation
 
-## 核心能力
+## Features
 
-- Rust workspace 架构，协议、服务端、Agent、桌面端共享同一仓库
-- `vibe-relay` 提供 Axum API、设备状态管理、任务与会话调度
-- `vibe-agent` 提供设备注册、轮询执行、Provider 适配、Shell 与端口转发运行时
-- `vibe-app` 提供 Vue 3.5 控制台，`src-tauri` 提供桌面壳
-- 支持 `Codex`、`Claude Code`、`OpenCode` Provider 接入
-- 支持 Relay-first 任务、Shell、TCP 端口转发
-- 支持基于 EasyTier 的 Overlay 辅助传输
-- 支持 SSE / WebSocket / Tunnel 等多种实时通道
+- Rust workspace with shared protocol, backend, agent, and desktop app
+- `vibe-relay` for Axum APIs, device state, task scheduling, shell sessions, and port forwarding
+- `vibe-agent` for registration, polling, provider adapters, shell runtime, and forwarding runtime
+- `vibe-app` for the Vue 3.5 control UI, with `src-tauri` as the desktop shell
+- Provider integration for `Codex`, `Claude Code`, and `OpenCode`
+- Relay-first task, shell, and TCP forwarding paths
+- EasyTier-based overlay-assisted transport
+- SSE / WebSocket / tunnel based real-time updates
 
-## 架构概览
+## Architecture
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
@@ -53,7 +53,7 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
                     └────────────────┘
 ```
 
-## 仓库结构
+## Repository Layout
 
 ```text
 .
@@ -68,49 +68,49 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 └── TESTING.md            # Testing strategy and validation matrix
 ```
 
-## 快速开始
+## Quick Start
 
-### 依赖要求
+### Prerequisites
 
 - Rust stable toolchain
 - Node.js 20+
-- `protobuf-compiler` 或可用的 `protoc`
-- Linux 下构建 Tauri 时需要 WebKitGTK / GTK 相关开发包
-- 如果要实际执行 AI 任务，需要本机至少安装一个 Provider CLI
+- `protobuf-compiler` or another working `protoc`
+- WebKitGTK / GTK development packages when building Tauri on Linux
+- At least one provider CLI installed locally if you want to execute AI tasks
   - `codex`
   - `claude`
   - `opencode`
 
-### 1. 克隆仓库
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/fage-ac-org/vibe-everywhere.git
 cd vibe-everywhere
 ```
 
-### 2. 启动 relay
+### 2. Start the relay
 
 ```bash
 cargo run -p vibe-relay
 ```
 
-默认监听 `http://127.0.0.1:8787`。
+The default address is `http://127.0.0.1:8787`.
 
-如果你希望开启单用户访问控制，可以在启动前设置：
+To enable single-user access control:
 
 ```bash
 export VIBE_RELAY_ACCESS_TOKEN=change-me
 ```
 
-### 3. 启动 agent
+### 3. Start the agent
 
 ```bash
 cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787
 ```
 
-如果没有安装任何 Provider CLI，设备仍然可以注册上线，但 AI 任务能力会显示不可用。
+If no provider CLI is installed, the device will still register successfully, but AI task execution will be unavailable.
 
-### 4. 启动 Web 控制台
+### 4. Start the Web control UI
 
 ```bash
 cd apps/vibe-app
@@ -118,18 +118,18 @@ npm ci
 npm run dev
 ```
 
-默认访问地址：
+Default UI address:
 
 - `http://127.0.0.1:1420`
 
-如果 relay 开启了访问令牌，可在页面右上区域填入 token，或者在前端环境变量中设置：
+If the relay requires an access token, you can enter it in the UI or set:
 
 ```bash
 export VITE_RELAY_BASE_URL=http://127.0.0.1:8787
 export VITE_RELAY_ACCESS_TOKEN=change-me
 ```
 
-### 5. 启动桌面壳
+### 5. Start the desktop shell
 
 ```bash
 cd apps/vibe-app
@@ -137,22 +137,22 @@ npm ci
 npm run tauri dev
 ```
 
-Tauri 桌面壳会读取：
+The Tauri shell reads:
 
 - `VIBE_PUBLIC_RELAY_BASE_URL`
 - `VIBE_RELAY_ACCESS_TOKEN`
 
-### 6. 验证链路
+### 6. Verify the stack
 
-完成以上步骤后，你应该可以看到：
+After the steps above, you should be able to:
 
-- 控制台能连上 relay
-- Agent 设备出现在设备列表里
-- 如果安装了可用 Provider，可以创建并执行任务
-- 可以创建 Shell Session
-- 可以创建 TCP 端口转发
+- connect the UI to the relay
+- see the agent in the device list
+- create and execute tasks if a provider CLI is available
+- open shell sessions
+- create TCP port forwards
 
-## 开发命令
+## Development
 
 ```bash
 cargo check -p vibe-relay -p vibe-agent -p vibe-app
@@ -160,7 +160,7 @@ cargo test --workspace --all-targets -- --nocapture
 cd apps/vibe-app && npm ci && npm run build
 ```
 
-常用启动方式：
+Common local entrypoints:
 
 ```bash
 cargo run -p vibe-relay
@@ -169,11 +169,11 @@ cd apps/vibe-app && npm run dev
 cd apps/vibe-app && npm run tauri dev
 ```
 
-## 测试
+## Testing
 
-完整测试方案见 [TESTING.md](./TESTING.md)。
+See [TESTING.md](./TESTING.md) for the full test strategy.
 
-当前推荐的本地最小验证集：
+Recommended local baseline:
 
 ```bash
 cargo fmt --all --check
@@ -183,7 +183,7 @@ cd apps/vibe-app && npm ci && npm run build
 ./scripts/dual-process-smoke.sh relay_polling
 ```
 
-涉及 Overlay / EasyTier / Shell / 端口转发传输路径时，建议额外执行：
+For overlay, EasyTier, shell, and forwarding transport changes, also run:
 
 ```bash
 ./scripts/dual-process-smoke.sh overlay
@@ -191,23 +191,23 @@ cd apps/vibe-app && npm ci && npm run build
 
 ## GitHub Actions
 
-仓库内置两套工作流：
+The repository includes two workflows:
 
 - `CI`
-  - 触发时机：`push` 到 `main`、`pull_request`、手动触发
-  - 执行内容：Rust 格式检查、workspace 编译、workspace 测试、前端构建、`relay_polling` 烟测
+  - Triggers on `push` to `main`, `pull_request`, and manual dispatch
+  - Runs formatting checks, workspace builds, workspace tests, frontend build, and `relay_polling` smoke tests
 - `Release`
-  - 触发时机：推送 `v*` tag
-  - 执行内容：完整验证、`overlay` 烟测、跨平台 CLI 二进制打包、跨平台 Tauri 桌面包构建、GitHub Release 资产上传
+  - Triggers on `v*` tags
+  - Runs full verification, `overlay` smoke tests, cross-platform CLI packaging, cross-platform Tauri desktop builds, and GitHub Release asset publishing
 
-发布方式示例：
+Release example:
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Release 工作流会上传类似以下资产：
+Expected release assets include:
 
 - `vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz`
 - `vibe-remote-cli-x86_64-apple-darwin.tar.gz`
@@ -215,7 +215,7 @@ Release 工作流会上传类似以下资产：
 - `vibe-remote-desktop-*.tar.gz` / `zip`
 - `SHA256SUMS.txt`
 
-## 常用环境变量
+## Common Environment Variables
 
 ### relay
 
@@ -253,27 +253,27 @@ Release 工作流会上传类似以下资产：
 - `VIBE_PUBLIC_RELAY_BASE_URL`
 - `VIBE_RELAY_ACCESS_TOKEN`
 
-## 路线图
+## Roadmap
 
-- 增强认证、审计和生产化部署能力
-- 补充前端自动化测试和协议 round-trip 测试
-- 继续压缩 `main.rs` 中的聚合逻辑，稳定模块边界
-- 扩展更完整的文件同步、工作区浏览和通知能力
-- 完善桌面端和移动端体验
+- stronger authentication, auditing, and production deployment support
+- frontend automated tests and protocol round-trip tests
+- continued extraction of large `main.rs` responsibilities into stable modules
+- richer file sync, workspace browsing, and notification capabilities
+- better desktop and mobile UX
 
-## 贡献
+## Contributing
 
-欢迎提交 Issue 和 Pull Request。
+Issues and pull requests are welcome.
 
-建议在 PR 中包含：
+Please include:
 
-- 变更背景和目标
-- 受影响的 crate / app
-- 已执行的验证命令
-- 如果涉及 UI，附带截图
-- 如果涉及环境变量或系统依赖，明确说明
+- the problem statement and change goal
+- the affected crate / app
+- the validation commands you ran
+- screenshots for UI changes
+- any new environment variables or system dependencies
 
-提交信息建议使用 Conventional Commits，例如：
+Conventional Commits are recommended, for example:
 
 ```text
 feat(agent): add claude stream-json mapping
@@ -281,6 +281,6 @@ fix(relay): keep overlay transport fallback stable
 docs(readme): rewrite project overview and quick start
 ```
 
-## 许可证
+## License
 
-本项目使用 [MIT License](./LICENSE)。
+This project is licensed under the [MIT License](./LICENSE).
