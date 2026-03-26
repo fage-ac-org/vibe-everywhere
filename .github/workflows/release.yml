@@ -87,39 +87,16 @@ jobs:
         run: ./scripts/dual-process-smoke.sh overlay
 
   build-cli:
-    name: Build CLI (${{ matrix.target }})
+    name: Build CLI (Linux)
     needs: verify
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-gnu
-            archive_basename: vibe-remote-cli-x86_64-unknown-linux-gnu
-            archive_name: vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz
-            archive_format: gztar
-            bin_ext: ""
-          - os: macos-13
-            target: x86_64-apple-darwin
-            archive_basename: vibe-remote-cli-x86_64-apple-darwin
-            archive_name: vibe-remote-cli-x86_64-apple-darwin.tar.gz
-            archive_format: gztar
-            bin_ext: ""
-          - os: windows-2022
-            target: x86_64-pc-windows-msvc
-            archive_basename: vibe-remote-cli-x86_64-pc-windows-msvc
-            archive_name: vibe-remote-cli-x86_64-pc-windows-msvc.zip
-            archive_format: zip
-            bin_ext: ".exe"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Linux system dependencies
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libdbus-1-dev
@@ -139,10 +116,10 @@ jobs:
       - name: Package CLI archive
         shell: bash
         env:
-          ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
-          ARCHIVE_NAME: ${{ matrix.archive_name }}
-          ARCHIVE_FORMAT: ${{ matrix.archive_format }}
-          BIN_EXT: ${{ matrix.bin_ext }}
+          ARCHIVE_BASENAME: vibe-remote-cli-x86_64-unknown-linux-gnu
+          ARCHIVE_NAME: vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz
+          ARCHIVE_FORMAT: gztar
+          BIN_EXT: ""
         run: |
           set -euo pipefail
           staging_dir="$RUNNER_TEMP/$ARCHIVE_BASENAME"
@@ -170,42 +147,22 @@ jobs:
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.archive_basename }}
-          path: ${{ github.workspace }}/${{ matrix.archive_name }}
+          name: vibe-remote-cli-x86_64-unknown-linux-gnu
+          path: ${{ github.workspace }}/vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz
           if-no-files-found: error
           retention-days: 14
 
   build-desktop:
-    name: Build Desktop (${{ matrix.target }})
+    name: Build Desktop (Linux)
     needs: verify
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-gnu
-            archive_basename: vibe-remote-desktop-x86_64-unknown-linux-gnu
-            archive_name: vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz
-            archive_format: gztar
-          - os: macos-13
-            target: x86_64-apple-darwin
-            archive_basename: vibe-remote-desktop-x86_64-apple-darwin
-            archive_name: vibe-remote-desktop-x86_64-apple-darwin.tar.gz
-            archive_format: gztar
-          - os: windows-2022
-            target: x86_64-pc-windows-msvc
-            archive_basename: vibe-remote-desktop-x86_64-pc-windows-msvc
-            archive_name: vibe-remote-desktop-x86_64-pc-windows-msvc.zip
-            archive_format: zip
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Linux system dependencies
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -247,9 +204,9 @@ jobs:
       - name: Package desktop archive
         shell: bash
         env:
-          ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
-          ARCHIVE_NAME: ${{ matrix.archive_name }}
-          ARCHIVE_FORMAT: ${{ matrix.archive_format }}
+          ARCHIVE_BASENAME: vibe-remote-desktop-x86_64-unknown-linux-gnu
+          ARCHIVE_NAME: vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz
+          ARCHIVE_FORMAT: gztar
         run: |
           set -euo pipefail
           bundle_dir="$(find "$GITHUB_WORKSPACE" -type d -path '*/target/release/bundle' | head -n 1)"
@@ -281,8 +238,8 @@ jobs:
       - name: Upload desktop artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.archive_basename }}
-          path: ${{ github.workspace }}/${{ matrix.archive_name }}
+          name: vibe-remote-desktop-x86_64-unknown-linux-gnu
+          path: ${{ github.workspace }}/vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz
           if-no-files-found: error
           retention-days: 14
 

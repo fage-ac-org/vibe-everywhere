@@ -198,7 +198,7 @@ The repository includes two workflows:
   - Runs formatting checks, workspace builds, workspace tests, frontend build, and `relay_polling` smoke tests
 - `Release`
   - Triggers on `v*` tags
-  - Runs full verification, best-effort `overlay` smoke tests, cross-platform CLI packaging, cross-platform Tauri desktop builds, and GitHub Release asset publishing
+  - Runs full verification, best-effort `overlay` smoke tests, Linux CLI packaging, Linux Tauri desktop packaging, and GitHub Release asset publishing
 
 Release example:
 
@@ -210,9 +210,7 @@ git push origin v0.1.0
 Expected release assets include:
 
 - `vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz`
-- `vibe-remote-cli-x86_64-apple-darwin.tar.gz`
-- `vibe-remote-cli-x86_64-pc-windows-msvc.zip`
-- `vibe-remote-desktop-*.tar.gz` / `zip`
+- `vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz`
 - `SHA256SUMS.txt`
 
 ## Common Environment Variables
