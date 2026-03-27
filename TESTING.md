@@ -99,6 +99,7 @@ Execution commands:
 
 ```bash
 cd apps/vibe-app
+npm run android:doctor
 npm run android:build:debug:apk
 npm run android:build:apk
 npm run android:build:aab
@@ -110,6 +111,7 @@ Environment notes:
 - install Android SDK cmdline-tools and accept licenses
 - install `platform-tools`, `platforms;android-36`, `build-tools;35.0.0`, and `ndk;25.2.9519653`
 - export `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `NDK_HOME`, and `ANDROID_NDK_HOME`
+- run `npm run android:doctor` before packaging so partial SDK or NDK installs fail fast with a clear diagnosis
 - install the Rust target with `rustup target add aarch64-linux-android`
 
 Pass criteria:

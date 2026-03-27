@@ -6,12 +6,20 @@ fn app_config() -> AppConfig {
         .ok()
         .map(|value| value.trim().trim_end_matches('/').to_string())
         .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| "http://127.0.0.1:8787".to_string());
+        .unwrap_or_else(default_relay_base_url);
     let requires_auth = std::env::var("VIBE_RELAY_ACCESS_TOKEN")
         .ok()
         .map(|value| !value.trim().is_empty())
         .unwrap_or(false);
     default_app_config(default_relay_base_url, requires_auth)
+}
+
+fn default_relay_base_url() -> String {
+    if cfg!(target_os = "android") || cfg!(target_os = "ios") {
+        String::new()
+    } else {
+        "http://127.0.0.1:8787".to_string()
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

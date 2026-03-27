@@ -194,6 +194,18 @@ pre {
   color: #ffd7d2;
 }
 
+.relay-tip {
+  margin: 0;
+}
+
+.relay-tip.warning {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 111, 97, 0.14);
+  border: 1px solid rgba(255, 111, 97, 0.24);
+  color: #ffd7d2;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 0.95fr 1.2fr 1.1fr;

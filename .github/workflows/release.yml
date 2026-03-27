@@ -378,10 +378,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          set +o pipefail
+          yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null
+
       - name: Install Android SDK packages
         shell: bash
         run: |
-          yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null
           sdkmanager --sdk_root="$ANDROID_HOME" \
             "platform-tools" \
             "platforms;android-${ANDROID_API_LEVEL}" \
@@ -390,6 +395,10 @@ jobs:
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
           echo "NDK_HOME=$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Validate Android toolchain
+        working-directory: apps/vibe-app
+        run: npm run android:doctor
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable

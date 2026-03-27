@@ -19,6 +19,7 @@ import {
 import {
   buildEventStreamUrl,
   buildWebSocketUrl,
+  loadTauriConfig,
   persistRelayAccessToken,
   persistRelayBaseUrl,
   resolveInitialRelayAccessToken,
@@ -79,6 +80,7 @@ export const useControlStore = defineStore("control", {
     relayInput: "",
     relayAccessToken: "",
     relayAccessTokenInput: "",
+    localAppConfig: null as AppConfig | null,
     appConfig: null as AppConfig | null,
     health: null as ServiceHealth | null,
     devices: [] as DeviceRecord[],
@@ -210,10 +212,16 @@ export const useControlStore = defineStore("control", {
       this.errorMessage = "";
 
       try {
+        this.localAppConfig = await loadTauriConfig();
+        this.appConfig = this.localAppConfig;
         this.relayBaseUrl = await resolveInitialRelayBaseUrl();
         this.relayAccessToken = resolveInitialRelayAccessToken();
         this.relayInput = this.relayBaseUrl;
         this.relayAccessTokenInput = this.relayAccessToken;
+        if (!this.relayBaseUrl) {
+          this.resetRemoteState();
+          return;
+        }
         await this.reloadAll();
         this.connectEvents();
         this.startShellPolling();
@@ -230,6 +238,11 @@ export const useControlStore = defineStore("control", {
       this.relayAccessToken = this.relayAccessTokenInput.trim();
       persistRelayBaseUrl(this.relayBaseUrl);
       persistRelayAccessToken(this.relayAccessToken);
+      if (!this.relayBaseUrl) {
+        this.errorMessage = "";
+        this.resetRemoteState();
+        return;
+      }
       await this.reloadAll();
       this.connectEvents();
       this.startShellPolling();
@@ -237,6 +250,11 @@ export const useControlStore = defineStore("control", {
       this.connectShellSocket();
     },
     async reloadAll() {
+      if (!this.relayBaseUrl) {
+        this.resetRemoteState();
+        return;
+      }
+
       this.errorMessage = "";
       const [appConfig, health] = await Promise.all([
         fetchAppConfig(this.relayBaseUrl),
@@ -454,13 +472,35 @@ export const useControlStore = defineStore("control", {
       this.selectedTaskDetail = detail;
       this.upsertTask(detail.task);
     },
-    connectEvents() {
+    disconnectEvents() {
       if (activeEventSource) {
         activeEventSource.close();
+        activeEventSource = null;
       }
+      this.eventState = "disconnected";
+    },
+    resetRemoteState() {
+      this.disconnectEvents();
+      this.stopShellPolling();
+      this.stopPortForwardPolling();
+      this.disconnectShellSocket();
+      this.appConfig = this.localAppConfig;
+      this.health = null;
+      this.devices = [];
+      this.tasks = [];
+      this.shellSessions = [];
+      this.portForwards = [];
+      this.selectedDeviceId = null;
+      this.selectedTaskId = null;
+      this.selectedShellSessionId = null;
+      this.selectedPortForwardId = null;
+      this.selectedTaskDetail = null;
+      this.selectedShellSessionDetail = null;
+    },
+    connectEvents() {
+      this.disconnectEvents();
 
       if (!this.relayBaseUrl || (this.appConfig?.requiresAuth && !this.relayAccessToken)) {
-        this.eventState = "disconnected";
         return;
       }
 

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
 import { storeToRefs } from "pinia";
+import {
+  getRelayBaseUrlPlaceholder,
+  isLoopbackRelayBaseUrl,
+  isMobileControlClient
+} from "../lib/runtime";
 import { useControlStore } from "../stores/control";
 
 const store = useControlStore();
@@ -121,6 +126,14 @@ const shellTimeline = computed(() => {
     return left.timestampEpochMs - right.timestampEpochMs;
   });
 });
+const relayPlaceholder = getRelayBaseUrlPlaceholder();
+const showMobileRelayHint = computed(() => isMobileControlClient());
+const showLoopbackRelayWarning = computed(
+  () =>
+    showMobileRelayHint.value &&
+    Boolean(relayInput.value.trim()) &&
+    isLoopbackRelayBaseUrl(relayInput.value)
+);
 
 function formatProviderKind(value: string) {
   return value
@@ -194,7 +207,7 @@ onMounted(() => {
         <span class="status-pill">SSE {{ eventState }}</span>
         <p class="status-label">Relay Base URL</p>
         <div class="relay-row">
-          <input v-model="relayInput" class="relay-input" placeholder="http://127.0.0.1:8787" />
+          <input v-model="relayInput" class="relay-input" :placeholder="relayPlaceholder" />
           <button class="primary-button" @click="store.applyRelayBaseUrl">Connect</button>
         </div>
         <div class="relay-row auth-row">
@@ -208,6 +221,17 @@ onMounted(() => {
             {{ appConfig?.requiresAuth ? "auth required" : "auth optional" }}
           </span>
         </div>
+        <p
+          v-if="showMobileRelayHint"
+          class="subtle relay-tip"
+          :class="{ warning: showLoopbackRelayWarning }"
+        >
+          {{
+            showLoopbackRelayWarning
+              ? "移动端不能连接 localhost / 127.0.0.1，请改成 relay 所在机器的局域网 IP 或 HTTPS 公网地址。"
+              : "移动端请填写 relay 所在机器的局域网 IP 或 HTTPS 公网地址。"
+          }}
+        </p>
         <p class="status-footnote">
           在线设备 {{ health?.onlineDeviceCount ?? 0 }} / {{ health?.deviceCount ?? 0 }}，
           任务 {{ health?.taskCount ?? 0 }}，终端会话 {{ shellSessions.length }}，端口转发

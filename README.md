@@ -162,6 +162,7 @@ export ANDROID_NDK_HOME=$NDK_HOME
 
 cd apps/vibe-app
 npm ci
+npm run android:doctor
 npm run android:build:debug:apk
 ```
 
@@ -184,8 +185,10 @@ npm run android:build:aab
 
 注意：
 
+- Android / iOS 控制端默认不会预填 `127.0.0.1:8787`；首次启动请手动填写 relay 所在机器的局域网 IP 或 HTTPS 公网地址，除非你显式设置了 `VIBE_PUBLIC_RELAY_BASE_URL`
 - 手机上的 relay 地址应该配置为 `http://<服务器局域网IP>:8787` 或 HTTPS 公网地址，不要使用 `http://127.0.0.1:8787`
 - 当前 Android 包默认允许 HTTP 明文流量，方便自托管局域网 relay；如果对外发布，仍然建议使用 HTTPS
+- 如果 `tauri android build` 报 NDK `source.properties` 缺失，说明 SDK 里有半安装状态的 NDK；先运行 `npm run android:doctor`，再重装对应 NDK 或显式导出 `NDK_HOME`
 
 ### 7. 验证链路
 

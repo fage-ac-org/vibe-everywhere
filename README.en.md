@@ -162,6 +162,7 @@ export ANDROID_NDK_HOME=$NDK_HOME
 
 cd apps/vibe-app
 npm ci
+npm run android:doctor
 npm run android:build:debug:apk
 ```
 
@@ -184,8 +185,10 @@ Output paths:
 
 Notes:
 
+- Android and iOS control clients no longer prefill `127.0.0.1:8787`; on first launch, enter the relay machine's LAN IP or an HTTPS public URL unless you explicitly set `VIBE_PUBLIC_RELAY_BASE_URL`
 - On the phone, point the relay URL to `http://<server-lan-ip>:8787` or a public HTTPS relay URL, not `http://127.0.0.1:8787`
 - The Android app currently allows cleartext HTTP traffic for self-hosted LAN relays; use HTTPS for public deployments
+- If `tauri android build` fails because `source.properties` is missing from an NDK directory, the SDK contains a partial NDK install. Run `npm run android:doctor`, then reinstall that NDK or explicitly export `NDK_HOME`
 
 ### 7. Verify the stack
 
