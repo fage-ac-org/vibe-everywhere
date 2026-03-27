@@ -134,6 +134,6 @@ jobs:
       - name: Check Windows Rust targets
         run: cargo check --locked -p vibe-relay -p vibe-agent
 
-      - name: Check Tauri shell without bundling
+      - name: Check Windows Tauri MSI bundle
         working-directory: apps/vibe-app
-        run: npm run tauri -- build --debug --no-bundle --ci
+        run: npm run tauri -- build --debug --bundles msi --no-sign --ci

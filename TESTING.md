@@ -67,18 +67,18 @@ Execution in CI:
 ```powershell
 cargo check --locked -p vibe-relay -p vibe-agent
 cd apps/vibe-app
-npm run tauri -- build --debug --no-bundle --ci
+npm run tauri -- build --debug --bundles msi --no-sign --ci
 ```
 
 Environment notes:
 
 - inject the Npcap SDK `Lib/x64` directory into `%LIB%` before building Rust binaries
-- no installer/bundle generation is required for the PR gate; compile-only validation is enough
+- use MSI bundling in CI so Windows-only resource requirements such as `.ico` icons fail before release
 
 Pass criteria:
 
 - `vibe-relay` and `vibe-agent` compile on `x86_64-pc-windows-msvc`
-- Tauri desktop code compiles on Windows without missing icon/resource errors
+- Tauri desktop MSI bundling succeeds on Windows without missing icon/resource errors
 - the frontend build invoked by `tauri build` succeeds
 
 Recommended frequency:
