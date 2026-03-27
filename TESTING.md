@@ -54,6 +54,38 @@ Recommended frequency:
 - every local change before handoff
 - every PR in CI
 
+### Layer 0.5: Windows Compatibility Gate
+
+Purpose:
+
+- catch Windows-only linker/resource regressions before release
+- verify `pnet` can resolve `Packet.lib` under the MSVC toolchain
+- verify the Tauri shell still compiles when Windows-specific assets such as `icon.ico` are required
+
+Execution in CI:
+
+```powershell
+cargo check --locked -p vibe-relay -p vibe-agent
+cd apps/vibe-app
+npm run tauri -- build --debug --no-bundle --ci
+```
+
+Environment notes:
+
+- inject the Npcap SDK `Lib/x64` directory into `%LIB%` before building Rust binaries
+- no installer/bundle generation is required for the PR gate; compile-only validation is enough
+
+Pass criteria:
+
+- `vibe-relay` and `vibe-agent` compile on `x86_64-pc-windows-msvc`
+- Tauri desktop code compiles on Windows without missing icon/resource errors
+- the frontend build invoked by `tauri build` succeeds
+
+Recommended frequency:
+
+- every PR in CI
+- before cutting any release tag intended to ship Windows assets
+
 ### Layer 1: Rust Unit and Contract Tests
 
 Purpose:
@@ -237,6 +269,7 @@ Run the networking or transport change gate, then complete:
 - frontend manual regression checklist
 - Tauri shell manual validation
 - environment-variable sanity checks for tokenized relay access
+- GitHub Actions release packaging for Linux and Windows
 
 ## Current Coverage Gaps
 
@@ -256,8 +289,9 @@ These areas should be added next if the goal is a more complete automated test s
    - introduce `vitest` and cover `src/lib/api.ts`, `src/lib/runtime.ts`, and `src/stores/control.ts`
    - mock `fetch`, `EventSource`, and `WebSocket` to test reconnect and filter behavior
 6. cross-platform runtime validation
-   - Linux is the current practical baseline
-   - Windows and macOS shell behavior still need dedicated smoke coverage
+   - Linux remains the most complete smoke-test baseline
+   - Windows now has dedicated compile/package validation in CI and Release, but still lacks runtime smoke coverage
+   - macOS shell behavior and packaging still need dedicated validation
 
 ## Execution Record Template
 

@@ -76,6 +76,7 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 - Node.js 20+
 - `protobuf-compiler` 或可用的 `protoc`
 - Linux 下构建 Tauri 时需要 WebKitGTK / GTK 相关开发包
+- Windows 下如果要启用 EasyTier / Overlay 相关能力，建议安装 Npcap，并启用 WinPcap API-compatible Mode
 - 如果要实际执行 AI 任务，需要本机至少安装一个 Provider CLI
   - `codex`
   - `claude`
@@ -195,10 +196,10 @@ cd apps/vibe-app && npm ci && npm run build
 
 - `CI`
   - 触发时机：`push` 到 `main`、`pull_request`、手动触发
-  - 执行内容：Rust 格式检查、workspace 编译、workspace 测试、前端构建、`relay_polling` 烟测
+  - 执行内容：Rust 格式检查、workspace 编译、workspace 测试、前端构建、`relay_polling` 烟测、Windows Rust 编译与 Tauri `--no-bundle` 兼容性校验
 - `Release`
   - 触发时机：推送 `v*` tag
-  - 执行内容：完整验证、best-effort `overlay` 烟测、Linux CLI / Linux Tauri 桌面包构建、GitHub Release 资产上传
+  - 执行内容：完整验证、best-effort `overlay` 烟测、Linux / Windows CLI 与 Tauri 桌面包构建、GitHub Release 资产上传
 
 发布方式示例：
 
@@ -211,6 +212,8 @@ Release 工作流会上传类似以下资产：
 
 - `vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz`
 - `vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz`
+- `vibe-remote-cli-x86_64-pc-windows-msvc.zip`
+- `vibe-remote-desktop-x86_64-pc-windows-msvc.zip`
 - `SHA256SUMS.txt`
 
 ## 常用环境变量

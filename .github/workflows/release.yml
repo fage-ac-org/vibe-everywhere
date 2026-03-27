@@ -15,6 +15,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   NODE_VERSION: "20"
+  NPCAP_SDK_VERSION: "1.16"
 
 jobs:
   verify:
@@ -87,19 +88,53 @@ jobs:
         run: ./scripts/dual-process-smoke.sh overlay
 
   build-cli:
-    name: Build CLI (Linux)
+    name: Build CLI (${{ matrix.label }})
     needs: verify
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Linux
+            os: ubuntu-24.04
+            artifact_name: vibe-remote-cli-x86_64-unknown-linux-gnu
+            archive_basename: vibe-remote-cli-x86_64-unknown-linux-gnu
+            archive_name: vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz
+            bin_ext: ""
+          - label: Windows
+            os: windows-2022
+            artifact_name: vibe-remote-cli-x86_64-pc-windows-msvc
+            archive_basename: vibe-remote-cli-x86_64-pc-windows-msvc
+            archive_name: vibe-remote-cli-x86_64-pc-windows-msvc.zip
+            bin_ext: ".exe"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libdbus-1-dev
+
+      - name: Setup Npcap SDK import libraries
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $sdkZip = Join-Path $env:RUNNER_TEMP "npcap-sdk.zip"
+          $sdkDir = Join-Path $env:RUNNER_TEMP "npcap-sdk"
+          curl.exe -fsSL --retry 5 --retry-all-errors "https://npcap.com/dist/npcap-sdk-$env:NPCAP_SDK_VERSION.zip" -o $sdkZip
+          Expand-Archive -Path $sdkZip -DestinationPath $sdkDir -Force
+          $packetLib = Get-ChildItem -Path $sdkDir -Recurse -Filter Packet.lib |
+            Where-Object { $_.FullName -match '[\\/]+Lib[\\/]+x64[\\/]+Packet\.lib$' } |
+            Select-Object -First 1
+          if (-not $packetLib) {
+            throw "Npcap Packet.lib not found under $sdkDir"
+          }
+          $libDir = $packetLib.Directory.FullName
+          "LIB=$libDir;$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -113,13 +148,14 @@ jobs:
       - name: Build release binaries
         run: cargo build --locked --release -p vibe-relay -p vibe-agent
 
-      - name: Package CLI archive
+      - name: Package Linux CLI archive
+        if: runner.os == 'Linux'
         shell: bash
         env:
-          ARCHIVE_BASENAME: vibe-remote-cli-x86_64-unknown-linux-gnu
-          ARCHIVE_NAME: vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz
+          ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
+          ARCHIVE_NAME: ${{ matrix.archive_name }}
           ARCHIVE_FORMAT: gztar
-          BIN_EXT: ""
+          BIN_EXT: ${{ matrix.bin_ext }}
         run: |
           set -euo pipefail
           staging_dir="$RUNNER_TEMP/$ARCHIVE_BASENAME"
@@ -131,7 +167,7 @@ jobs:
 
           export STAGING_DIR="$staging_dir"
           export ARCHIVE_BASE_PATH="$GITHUB_WORKSPACE/$ARCHIVE_BASENAME"
-          python - <<'PY'
+          python3 - <<'PY'
           import os
           import shutil
 
@@ -144,25 +180,68 @@ jobs:
 
           test -f "$GITHUB_WORKSPACE/$ARCHIVE_NAME"
 
+      - name: Package Windows CLI archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
+          ARCHIVE_NAME: ${{ matrix.archive_name }}
+          BIN_EXT: ${{ matrix.bin_ext }}
+        run: |
+          $stagingDir = Join-Path $env:RUNNER_TEMP $env:ARCHIVE_BASENAME
+          New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
+
+          Copy-Item "target/release/vibe-relay$env:BIN_EXT" $stagingDir
+          Copy-Item "target/release/vibe-agent$env:BIN_EXT" $stagingDir
+          Copy-Item README.md, README.en.md, LICENSE -Destination $stagingDir
+
+          $archivePath = Join-Path $env:GITHUB_WORKSPACE $env:ARCHIVE_NAME
+          if (Test-Path $archivePath) {
+            Remove-Item $archivePath -Force
+          }
+
+          Push-Location $stagingDir
+          Compress-Archive -Path * -DestinationPath $archivePath
+          Pop-Location
+
+          if (-not (Test-Path $archivePath)) {
+            throw "Failed to create $archivePath"
+          }
+
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vibe-remote-cli-x86_64-unknown-linux-gnu
-          path: ${{ github.workspace }}/vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz
+          name: ${{ matrix.artifact_name }}
+          path: ${{ github.workspace }}/${{ matrix.archive_name }}
           if-no-files-found: error
           retention-days: 14
 
   build-desktop:
-    name: Build Desktop (Linux)
+    name: Build Desktop (${{ matrix.label }})
     needs: verify
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Linux
+            os: ubuntu-24.04
+            artifact_name: vibe-remote-desktop-x86_64-unknown-linux-gnu
+            archive_basename: vibe-remote-desktop-x86_64-unknown-linux-gnu
+            archive_name: vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz
+          - label: Windows
+            os: windows-2022
+            artifact_name: vibe-remote-desktop-x86_64-pc-windows-msvc
+            archive_basename: vibe-remote-desktop-x86_64-pc-windows-msvc
+            archive_name: vibe-remote-desktop-x86_64-pc-windows-msvc.zip
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -199,13 +278,14 @@ jobs:
 
       - name: Build Tauri desktop bundles
         working-directory: apps/vibe-app
-        run: npm run tauri -- build
+        run: npm run tauri -- build --ci
 
-      - name: Package desktop archive
+      - name: Package Linux desktop archive
+        if: runner.os == 'Linux'
         shell: bash
         env:
-          ARCHIVE_BASENAME: vibe-remote-desktop-x86_64-unknown-linux-gnu
-          ARCHIVE_NAME: vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz
+          ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
+          ARCHIVE_NAME: ${{ matrix.archive_name }}
           ARCHIVE_FORMAT: gztar
         run: |
           set -euo pipefail
@@ -222,7 +302,7 @@ jobs:
 
           export STAGING_DIR="$staging_dir"
           export ARCHIVE_BASE_PATH="$GITHUB_WORKSPACE/$ARCHIVE_BASENAME"
-          python - <<'PY'
+          python3 - <<'PY'
           import os
           import shutil
 
@@ -235,11 +315,43 @@ jobs:
 
           test -f "$GITHUB_WORKSPACE/$ARCHIVE_NAME"
 
+      - name: Package Windows desktop archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
+          ARCHIVE_NAME: ${{ matrix.archive_name }}
+        run: |
+          $bundleDir = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Directory |
+            Where-Object { $_.FullName -match '[\\/]+target[\\/]+release[\\/]+bundle$' } |
+            Select-Object -First 1
+          if (-not $bundleDir) {
+            throw "Failed to locate Tauri bundle output"
+          }
+
+          $stagingDir = Join-Path $env:RUNNER_TEMP $env:ARCHIVE_BASENAME
+          New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
+          Copy-Item README.md, README.en.md, LICENSE -Destination $stagingDir
+          Copy-Item -Recurse $bundleDir.FullName (Join-Path $stagingDir "bundle")
+
+          $archivePath = Join-Path $env:GITHUB_WORKSPACE $env:ARCHIVE_NAME
+          if (Test-Path $archivePath) {
+            Remove-Item $archivePath -Force
+          }
+
+          Push-Location $stagingDir
+          Compress-Archive -Path * -DestinationPath $archivePath
+          Pop-Location
+
+          if (-not (Test-Path $archivePath)) {
+            throw "Failed to create $archivePath"
+          }
+
       - name: Upload desktop artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vibe-remote-desktop-x86_64-unknown-linux-gnu
-          path: ${{ github.workspace }}/vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz
+          name: ${{ matrix.artifact_name }}
+          path: ${{ github.workspace }}/${{ matrix.archive_name }}
           if-no-files-found: error
           retention-days: 14
 

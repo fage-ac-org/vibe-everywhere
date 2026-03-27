@@ -76,6 +76,7 @@ This is not a traditional remote desktop product. It is a control system for mul
 - Node.js 20+
 - `protobuf-compiler` or another working `protoc`
 - WebKitGTK / GTK development packages when building Tauri on Linux
+- On Windows, install Npcap with WinPcap API-compatible mode enabled if you want EasyTier / overlay networking features
 - At least one provider CLI installed locally if you want to execute AI tasks
   - `codex`
   - `claude`
@@ -195,10 +196,10 @@ The repository includes two workflows:
 
 - `CI`
   - Triggers on `push` to `main`, `pull_request`, and manual dispatch
-  - Runs formatting checks, workspace builds, workspace tests, frontend build, and `relay_polling` smoke tests
+  - Runs formatting checks, workspace builds, workspace tests, frontend build, `relay_polling` smoke tests, and Windows Rust/Tauri compatibility validation
 - `Release`
   - Triggers on `v*` tags
-  - Runs full verification, best-effort `overlay` smoke tests, Linux CLI packaging, Linux Tauri desktop packaging, and GitHub Release asset publishing
+  - Runs full verification, best-effort `overlay` smoke tests, Linux and Windows CLI packaging, Linux and Windows Tauri desktop packaging, and GitHub Release asset publishing
 
 Release example:
 
@@ -211,6 +212,8 @@ Expected release assets include:
 
 - `vibe-remote-cli-x86_64-unknown-linux-gnu.tar.gz`
 - `vibe-remote-desktop-x86_64-unknown-linux-gnu.tar.gz`
+- `vibe-remote-cli-x86_64-pc-windows-msvc.zip`
+- `vibe-remote-desktop-x86_64-pc-windows-msvc.zip`
 - `SHA256SUMS.txt`
 
 ## Common Environment Variables
