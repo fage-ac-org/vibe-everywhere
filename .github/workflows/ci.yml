@@ -126,10 +126,6 @@ jobs:
           echo "NDK_HOME=$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
 
-      - name: Validate Android toolchain
-        working-directory: apps/vibe-app
-        run: npm run android:doctor
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -148,6 +144,10 @@ jobs:
       - name: Install frontend dependencies
         working-directory: apps/vibe-app
         run: npm ci
+
+      - name: Validate Android toolchain
+        working-directory: apps/vibe-app
+        run: npm run android:doctor
 
       - name: Ensure loopback binding
         shell: bash
