@@ -20,6 +20,8 @@ New-Item -ItemType Directory -Path $TmpDir | Out-Null
 $RelayProcess = $null
 $AgentProcess = $null
 $Succeeded = $false
+$InvokeRestMethodSupportsNoProxy = (Get-Command Invoke-RestMethod).Parameters.ContainsKey("NoProxy")
+$StartProcessSupportsEnvironment = (Get-Command Start-Process).Parameters.ContainsKey("Environment")
 
 function Stop-ChildProcess {
   param([System.Diagnostics.Process]$Process)
@@ -71,12 +73,97 @@ function Invoke-JsonRequest {
     [object]$Body = $null
   )
 
+  $invokeArgs = @{
+    Uri = $Uri
+    Method = $Method
+    TimeoutSec = 5
+  }
+  if ($InvokeRestMethodSupportsNoProxy) {
+    $invokeArgs.NoProxy = $true
+  }
+
   if ($null -eq $Body) {
-    return Invoke-RestMethod -Uri $Uri -Method $Method -TimeoutSec 5
+    return Invoke-RestMethod @invokeArgs
   }
 
   $jsonBody = $Body | ConvertTo-Json -Compress -Depth 10
-  return Invoke-RestMethod -Uri $Uri -Method $Method -ContentType "application/json" -Body $jsonBody -TimeoutSec 5
+  $invokeArgs.ContentType = "application/json"
+  $invokeArgs.Body = $jsonBody
+  return Invoke-RestMethod @invokeArgs
+}
+
+function Test-TcpEndpoint {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Address,
+    [Parameter(Mandatory = $true)]
+    [int]$Port,
+    [int]$TimeoutMs = 500
+  )
+
+  $client = [System.Net.Sockets.TcpClient]::new()
+  try {
+    $connectTask = $client.ConnectAsync($Address, $Port)
+    if (-not $connectTask.Wait($TimeoutMs)) {
+      return $false
+    }
+
+    return $client.Connected
+  } catch {
+    return $false
+  } finally {
+    $client.Dispose()
+  }
+}
+
+function Assert-ProcessRunning {
+  param(
+    [System.Diagnostics.Process]$Process,
+    [string]$Label
+  )
+
+  if ($null -eq $Process) {
+    return
+  }
+
+  $Process.Refresh()
+  if ($Process.HasExited) {
+    throw "$Label exited unexpectedly with code $($Process.ExitCode)"
+  }
+}
+
+function Start-LoggedProcess {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$FilePath,
+    [Parameter(Mandatory = $true)]
+    [string]$WorkingDirectory,
+    [Parameter(Mandatory = $true)]
+    [string]$StdoutPath,
+    [Parameter(Mandatory = $true)]
+    [string]$StderrPath,
+    [hashtable]$Environment = @{}
+  )
+
+  if (-not $StartProcessSupportsEnvironment) {
+    foreach ($entry in $Environment.GetEnumerator()) {
+      Set-Item -Path ("Env:{0}" -f $entry.Key) -Value ([string]$entry.Value)
+    }
+  }
+
+  $startArgs = @{
+    FilePath = $FilePath
+    WorkingDirectory = $WorkingDirectory
+    RedirectStandardOutput = $StdoutPath
+    RedirectStandardError = $StderrPath
+    PassThru = $true
+  }
+
+  if ($StartProcessSupportsEnvironment -and $Environment.Count -gt 0) {
+    $startArgs.Environment = $Environment
+  }
+
+  return Start-Process @startArgs
 }
 
 try {
@@ -118,21 +205,30 @@ exit /b 0
 '@ | Set-Content -Path $FakeCodex -Encoding Ascii
 
   Write-Host "starting vibe-relay on $BaseUrl (mode=$Mode)"
-  $env:VIBE_RELAY_HOST = $HostIp
-  $env:VIBE_RELAY_PORT = [string]$RelayPort
-  $env:VIBE_PUBLIC_RELAY_BASE_URL = $BaseUrl
-  $env:VIBE_RELAY_STATE_FILE = (Join-Path $TmpDir "relay-state.json")
-  $env:VIBE_RELAY_FORWARD_HOST = $HostIp
-  $env:VIBE_RELAY_FORWARD_BIND_HOST = $HostIp
-  $RelayProcess = Start-Process `
+  $RelayEnv = @{
+    VIBE_RELAY_HOST = $HostIp
+    VIBE_RELAY_PORT = [string]$RelayPort
+    VIBE_PUBLIC_RELAY_BASE_URL = $BaseUrl
+    VIBE_RELAY_STATE_FILE = (Join-Path $TmpDir "relay-state.json")
+    VIBE_RELAY_FORWARD_HOST = $HostIp
+    VIBE_RELAY_FORWARD_BIND_HOST = $HostIp
+  }
+  $RelayProcess = Start-LoggedProcess `
     -FilePath (Join-Path $RootDir "target\debug\vibe-relay.exe") `
     -WorkingDirectory $RootDir `
-    -RedirectStandardOutput $RelayStdout `
-    -RedirectStandardError $RelayStderr `
-    -PassThru
+    -StdoutPath $RelayStdout `
+    -StderrPath $RelayStderr `
+    -Environment $RelayEnv
 
   $RelayHealthy = $false
   for ($attempt = 0; $attempt -lt 100; $attempt++) {
+    Assert-ProcessRunning -Process $RelayProcess -Label "relay process"
+
+    if (-not (Test-TcpEndpoint -Address $HostIp -Port $RelayPort)) {
+      Start-Sleep -Milliseconds 200
+      continue
+    }
+
     try {
       $null = Invoke-JsonRequest -Uri "$BaseUrl/api/health"
       $RelayHealthy = $true
@@ -142,23 +238,26 @@ exit /b 0
     }
   }
   if (-not $RelayHealthy) {
+    Assert-ProcessRunning -Process $RelayProcess -Label "relay process"
     throw "relay did not become healthy in time"
   }
 
   Write-Host "starting vibe-agent"
-  $env:VIBE_RELAY_URL = $BaseUrl
-  $env:VIBE_DEVICE_ID = $DeviceId
-  $env:VIBE_DEVICE_NAME = $DeviceName
-  $env:VIBE_WORKING_ROOT = $RootDir
-  $env:VIBE_POLL_INTERVAL_MS = "200"
-  $env:VIBE_HEARTBEAT_INTERVAL_MS = "500"
-  $env:VIBE_CODEX_COMMAND = $FakeCodex
-  $AgentProcess = Start-Process `
+  $AgentEnv = @{
+    VIBE_RELAY_URL = $BaseUrl
+    VIBE_DEVICE_ID = $DeviceId
+    VIBE_DEVICE_NAME = $DeviceName
+    VIBE_WORKING_ROOT = $RootDir
+    VIBE_POLL_INTERVAL_MS = "200"
+    VIBE_HEARTBEAT_INTERVAL_MS = "500"
+    VIBE_CODEX_COMMAND = $FakeCodex
+  }
+  $AgentProcess = Start-LoggedProcess `
     -FilePath (Join-Path $RootDir "target\debug\vibe-agent.exe") `
     -WorkingDirectory $RootDir `
-    -RedirectStandardOutput $AgentStdout `
-    -RedirectStandardError $AgentStderr `
-    -PassThru
+    -StdoutPath $AgentStdout `
+    -StderrPath $AgentStderr `
+    -Environment $AgentEnv
 
   Write-Host "waiting for agent registration"
   $RegisteredDevice = $null
