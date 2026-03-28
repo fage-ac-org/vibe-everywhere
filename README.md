@@ -6,32 +6,136 @@
 
 [中文](./README.md) | [English](./README.en.md)
 
-Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Tauri 2 app`。
+Vibe Everywhere 是一个面向自建场景的远程 AI 控制面。它不是传统远程桌面，而是把远程开发流程组织成
+`Relay + Agent + Control App` 三层：你在自己的服务器或工作站上运行 `vibe-relay` 和
+`vibe-agent`，再通过 Web、桌面端或 Android 控制端发起 AI Session、查看工作区、查看 Git
+状态、打开预览，必要时再进入终端和高级网络工具。
 
-它不是传统远程桌面，而是一个以 AI Session 为中心的远程开发控制系统。服务端负责设备注册、状态维护和控制面 API，Agent 运行在被控设备上执行 AI 会话、工作区相关操作和高级诊断能力，控制端可以通过 Web、Tauri 桌面壳和 Android 壳连接整个系统。
+## 适合谁
 
-## 项目状态
+- 想把 AI 编码任务放到远程机器执行，但仍希望从统一控制面查看状态和结果的人
+- 想自建而不是依赖托管服务的人
+- 需要同时管理多台设备、多个工作区、不同 AI Provider CLI 的个人或小团队
+- 希望后续逐步演进到更完整企业能力，但当前先要一个实用 MVP 的团队
 
-- 当前定位：个人版 MVP / 开源实验项目
-- 当前主流程：按 `Sessions / Devices / Connections / Advanced` 四个一级分区组织，围绕 AI Session、设备运行态、连接配置和高级工具展开
-- 当前技术方向：以 Rust 为核心，控制端统一走 Vue + Tauri，服务端和 Agent 统一协议
-- 当前移动端：Android arm64 APK / AAB 已打通，iOS 待补齐
-- 当前适用场景：个人远程 AI 工作台、自托管多设备控制面、跨平台实验性远程协作
+## 当前能力
 
-## 核心能力
+- AI Session 创建、执行、取消、事件流展示
+- 设备注册、在线状态、Provider 可用性展示
+- 工作区浏览、文本文件预览、Git 检视
+- 预览 / 转发能力，以及需要时的终端与高级连接能力
+- Web、Tauri 桌面端、Android 控制端
+- 中文 / 英文界面，浅色 / 深色 / 跟随系统主题
+- 自建优先的 relay 配置模型，不依赖固定域名或 `127.0.0.1` 产品默认值
 
-- Rust workspace 架构，协议、服务端、Agent、桌面端共享同一仓库
-- `vibe-relay` 提供 Axum API、设备状态管理、AI Session 调度、工作区浏览、Git 检视、Shell、Preview 与 Port Forward 控制面
-- `vibe-agent` 提供设备注册、轮询执行、Provider 适配、Workspace / Git 运行时，以及 Shell / Tunnel / Port Forward 能力
-- `vibe-app` 提供 Vue 3.5 控制台，当前以 AI Session 工作台为主，使用路由承载的 `Sessions / Devices / Connections / Advanced` 分区，集成部署元信息、当前客户端信息、工作区浏览与 Git 检视，`src-tauri` 提供桌面壳和 Android 移动壳
-- 支持 `Codex`、`Claude Code`、`OpenCode` Provider 接入
-- 支持 Relay-first AI Session、Terminal、TCP 预览/转发
-- 支持基于 EasyTier 的 Overlay 辅助传输
-- 控制台支持中文 / 英文、浅色 / 深色 / 跟随系统主题
-- 支持 Tauri Android arm64 调试 APK、release APK 与 AAB 构建
-- 支持 SSE / WebSocket / Tunnel 等多种实时通道
+## 三分钟上手
 
-## 架构概览
+### 1. 部署 Relay
+
+推荐先看自建部署指南：
+
+- [自建部署指南](./docs/self-hosted.md)
+
+当前仓库提供两套一键安装脚本：
+
+- Linux `systemd`
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fage-ac-org/vibe-everywhere/main/scripts/install-relay.sh -o install-relay.sh
+sudo RELAY_PUBLIC_BASE_URL=https://relay.example.com \
+  RELAY_ACCESS_TOKEN=change-me \
+  bash install-relay.sh
+```
+
+- Windows 自动启动任务
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-relay.ps1 `
+  -PublicRelayBaseUrl https://relay.example.com `
+  -RelayAccessToken change-me
+```
+
+说明：
+
+- 脚本会优先安装最新 GitHub Release；也可以通过 `VIBE_RELEASE_TAG` 或 `-ReleaseTag` 安装指定版本
+- 脚本不会写死公网地址、token 或 preview host，这些都由参数或环境变量注入
+- 当前没有仓库内置的 macOS 一键 relay 安装脚本，因为仓库还没有发布对应的 macOS 产物
+
+### 2. 在目标机器启动 Agent
+
+Agent 与 relay 分离运行。你可以从 GitHub Release 下载 CLI 包，解压后启动 `vibe-agent`：
+
+```bash
+VIBE_RELAY_URL=https://relay.example.com \
+VIBE_RELAY_ACCESS_TOKEN=change-me \
+VIBE_DEVICE_NAME=build-node-01 \
+./vibe-agent
+```
+
+如果你希望执行 AI Session，目标机器还需要安装至少一个 Provider CLI：
+
+- `codex`
+- `claude`
+- `opencode`
+
+### 3. 打开控制端
+
+控制端可以通过三种形态连接同一套 relay：
+
+- Web
+- Tauri 桌面端
+- Android 客户端
+
+当前推荐流程：
+
+1. 先部署 relay
+2. 在目标机器启动 agent
+3. 打开 Web 或桌面端验证连接
+4. 需要移动访问时再安装 Android 客户端
+
+## 下载与发布
+
+发布资产在 GitHub Release 页面提供，命名包含版本号，便于下载后直接识别。例如：
+
+- `vibe-everywhere-cli-v0.1.4-x86_64-unknown-linux-gnu.tar.gz`
+- `vibe-everywhere-cli-v0.1.4-x86_64-pc-windows-msvc.zip`
+- `vibe-everywhere-desktop-v0.1.4-linux-x86_64.AppImage`
+- `vibe-everywhere-desktop-v0.1.4-linux-x86_64.deb`
+- `vibe-everywhere-desktop-v0.1.4-windows-x86_64.exe`
+- `vibe-everywhere-desktop-v0.1.4-windows-x86_64.msi`
+- `vibe-everywhere-android-v0.1.4-arm64-debug.apk`
+- `vibe-everywhere-android-v0.1.4-arm64-release-unsigned.apk`
+- `vibe-everywhere-android-v0.1.4-arm64-release.aab`
+- `SHA256SUMS.txt`
+
+发布说明也已经固化到仓库中：
+
+- [Release Notes Workflow](./docs/releases/README.md)
+- 下一版草稿：[docs/releases/unreleased.md](./docs/releases/unreleased.md)
+
+说明：
+
+- Release 资产不再重复打包仓库 README 等文档，仓库文档直接在仓库中维护
+- 如果仓库未配置 Android 签名 Secret，release APK 会保持 `unsigned`
+
+## 自建配置要点
+
+这些值不应该写死在客户端或部署脚本里：
+
+- `VIBE_PUBLIC_RELAY_BASE_URL`
+- `VIBE_RELAY_ACCESS_TOKEN`
+- `VIBE_RELAY_FORWARD_HOST`
+- `VIBE_RELAY_URL`
+
+请区分三类地址：
+
+- relay 监听地址，例如 `0.0.0.0:8787`
+- agent 访问 relay 的地址，例如 `https://relay.example.com`
+- 用户打开 preview 时使用的公开地址或 host
+
+如果你要让手机或其他机器访问控制面，不要把公网 / 局域网访问地址设置成 `127.0.0.1`。
+
+## 产品结构
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
@@ -41,14 +145,14 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
                             │ HTTP / SSE / WebSocket
 ┌───────────────────────────▼──────────────────────────────┐
 │                      vibe-relay                          │
-│ device registry · task/workspace/git · shell · proxy    │
-│   auth · persistence · overlay-aware transport choice    │
+│  device registry · AI sessions · workspace · preview    │
+│        auth · config · transport selection               │
 └───────────────────────────┬──────────────────────────────┘
-                            │ HTTP polling / bridge / tunnel
+                            │ polling / stream / tunnel
 ┌───────────────────────────▼──────────────────────────────┐
 │                      vibe-agent                          │
-│ provider adapters · task/workspace/git runtime           │
-│ shell/port-forward runtime · embedded overlay node       │
+│ provider adapters · workspace/git runtime · shell       │
+│      preview / forward runtime · overlay support         │
 └───────────────────────────┬──────────────────────────────┘
                             │ local process / local TCP
                     ┌───────▼────────┐
@@ -56,7 +160,11 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
                     └────────────────┘
 ```
 
-## 仓库结构
+## 开发者入口
+
+如果你是来做二次开发、调试或本地构建，可以从这里开始。
+
+### 仓库结构
 
 ```text
 .
@@ -64,68 +172,40 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 │   ├── vibe-relay        # Relay API / control plane
 │   ├── vibe-agent        # Device agent / runtimes / providers
 │   └── vibe-app          # Vue control app
-│       └── src-tauri     # Tauri desktop shell
-│           └── gen/android  # Generated Tauri Android project
+│       └── src-tauri     # Tauri desktop shell + Android shell
 ├── crates
 │   └── vibe-core         # Shared protocol / models
-├── scripts               # Smoke tests and helper scripts
-└── TESTING.md            # Testing strategy and validation matrix
+├── docs
+│   ├── plans            # 版本化迭代 / 修复计划
+│   └── releases         # 版本化发布说明与下一版草稿
+├── scripts               # 安装脚本、烟测脚本、Android doctor
+└── TESTING.md            # 测试策略与回归清单
 ```
 
-## 快速开始
-
-### 依赖要求
+### 本地依赖
 
 - Rust stable toolchain
 - Node.js 24.14.x
 - `protobuf-compiler` 或可用的 `protoc`
-- Linux 下构建 Tauri 时需要 WebKitGTK / GTK 相关开发包
-- Android 构建需要 JDK 17、Android SDK cmdline-tools，以及 `platforms;android-36`、`build-tools;35.0.0`、`ndk;25.2.9519653`
-- Windows 下如果要启用 EasyTier / Overlay 相关能力，建议安装 Npcap，并启用 WinPcap API-compatible Mode
-- 如果要实际执行 AI 任务，需要本机至少安装一个 Provider CLI
-  - `codex`
-  - `claude`
-  - `opencode`
+- Linux 构建 Tauri 时需要 WebKitGTK / GTK 相关开发包
+- Android 构建需要 JDK 17、Android SDK cmdline-tools、`platforms;android-36`、`build-tools;35.0.0`、`ndk;25.2.9519653`
+- Windows 启用 EasyTier / Overlay 相关能力时建议安装 Npcap，并启用 WinPcap API-compatible Mode
 
-### 1. 克隆仓库
+### 本地开发命令
 
-```bash
-git clone https://github.com/fage-ac-org/vibe-everywhere.git
-cd vibe-everywhere
-```
-
-### 2. 启动 relay
+启动 relay：
 
 ```bash
 cargo run -p vibe-relay
 ```
 
-默认绑定 `0.0.0.0:8787`。
-
-同机本地开发时，可以通过 `http://127.0.0.1:8787` 访问 relay。
-
-如果要让桌面端以外的设备访问，或需要生成可从外部打开的 Preview 链接，请显式配置：
-
-```bash
-export VIBE_PUBLIC_RELAY_BASE_URL=https://relay.example.com
-export VIBE_RELAY_FORWARD_HOST=relay.example.com
-```
-
-如果你希望开启单用户访问控制，可以在启动前设置：
-
-```bash
-export VIBE_RELAY_ACCESS_TOKEN=change-me
-```
-
-### 3. 启动 agent
+启动 agent：
 
 ```bash
 cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787
 ```
 
-如果没有安装任何 Provider CLI，设备仍然可以注册上线，但 AI 任务能力会显示不可用。
-
-### 4. 启动 Web 控制台
+启动 Web 控制台：
 
 ```bash
 cd apps/vibe-app
@@ -133,18 +213,7 @@ npm ci
 npm run dev
 ```
 
-默认访问地址：
-
-- `http://127.0.0.1:1420`
-
-如果 relay 开启了访问令牌，可在页面右上区域填入 token，或者在前端环境变量中设置：
-
-```bash
-export VITE_RELAY_BASE_URL=http://127.0.0.1:8787
-export VITE_RELAY_ACCESS_TOKEN=change-me
-```
-
-### 5. 启动桌面壳
+启动桌面壳：
 
 ```bash
 cd apps/vibe-app
@@ -152,19 +221,17 @@ npm ci
 npm run tauri dev
 ```
 
-Tauri 桌面壳会读取：
+构建前端：
 
-- `VIBE_PUBLIC_RELAY_BASE_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
+```bash
+cd apps/vibe-app
+npm ci
+npm run build
+```
 
-说明：
+### Android 构建
 
-- 调试态桌面壳会保留同机开发用的本地 relay 回退
-- 正常发布或自建部署请显式提供 `VIBE_PUBLIC_RELAY_BASE_URL`
-
-### 6. 构建 Android 测试包
-
-如果你要从 Android 手机远程控制服务器，可以直接构建 Tauri Android 包：
+调试 APK：
 
 ```bash
 rustup target add aarch64-linux-android
@@ -181,11 +248,7 @@ npm run android:doctor
 npm run android:build:debug:apk
 ```
 
-默认调试 APK 输出路径：
-
-- `apps/vibe-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk`
-
-如果你要生成 release 产物：
+release APK / AAB：
 
 ```bash
 cd apps/vibe-app
@@ -193,229 +256,61 @@ npm run android:build:apk
 npm run android:build:aab
 ```
 
-对应输出路径：
-
-- `apps/vibe-app/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
-- `apps/vibe-app/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
-
-如果你要让 release APK / AAB 直接带签名，可以在
-`apps/vibe-app/src-tauri/gen/android/app/keystore.properties`
-写入签名信息，或在构建时导出环境变量：
-
-```properties
-storeFile=/absolute/path/to/vibe-everywhere-release.jks
-storePassword=your-store-password
-keyAlias=vibe-everywhere
-keyPassword=your-key-password
-```
-
-支持的环境变量如下，且优先级高于 `keystore.properties`：
+如果需要签名 release APK / AAB，可通过以下环境变量或
+`apps/vibe-app/src-tauri/gen/android/app/keystore.properties` 提供签名信息：
 
 - `VIBE_ANDROID_KEYSTORE_PATH`
 - `VIBE_ANDROID_KEYSTORE_PASSWORD`
 - `VIBE_ANDROID_KEY_ALIAS`
 - `VIBE_ANDROID_KEY_PASSWORD`
 
-当签名配置齐全后，再执行：
-
-```bash
-cd apps/vibe-app
-npm run android:build:apk
-npm run android:build:aab
-```
-
-此时 release APK 输出路径会变成：
-
-- `apps/vibe-app/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`
-
-如果你希望 GitHub Actions 在发布时自动签名，需要在仓库或组织的
-Actions Secrets 中配置以下 4 个 Secret：
-
-- `VIBE_ANDROID_KEYSTORE_BASE64`
-- `VIBE_ANDROID_KEYSTORE_PASSWORD`
-- `VIBE_ANDROID_KEY_ALIAS`
-- `VIBE_ANDROID_KEY_PASSWORD`
-
-其中 `VIBE_ANDROID_KEYSTORE_BASE64` 是 keystore 文件内容的 Base64。
-例如本地可以这样生成：
-
-```bash
-base64 -w 0 /absolute/path/to/vibe-everywhere-release.jks
-```
-
-macOS 如果没有 `-w` 参数，可以用：
-
-```bash
-base64 < /absolute/path/to/vibe-everywhere-release.jks | tr -d '\n'
-```
-
-配置完成后，GitHub 的 release 工作流会自动把 keystore 解码到 runner
-临时目录，并通过 `VIBE_ANDROID_*` 环境变量注入构建。未配置这些 Secret
-时，工作流仍会继续执行，但 release APK 会保持 `unsigned`。
-
-注意：
-
-- Android 控制端默认不会预填 `127.0.0.1:8787`；首次启动请手动填写 relay 所在机器的局域网 IP 或 HTTPS 公网地址，除非你显式设置了 `VIBE_PUBLIC_RELAY_BASE_URL`
-- 手机上的 relay 地址应该配置为 `http://<服务器局域网IP>:8787` 或 HTTPS 公网地址，不要使用 `http://127.0.0.1:8787`
-- 当前 Android 包默认允许 HTTP 明文流量，方便自托管局域网 relay；如果对外发布，仍然建议使用 HTTPS
-- 如果 `tauri android build` 报 NDK `source.properties` 缺失，说明 SDK 里有半安装状态的 NDK；先运行 `npm run android:doctor`，再重装对应 NDK 或显式导出 `NDK_HOME`
-- `apps/vibe-app/src-tauri/gen/android/app/keystore.properties` 和任何 `.jks` / `.keystore` 文件都不应该提交到仓库
-
-### 7. 验证链路
-
-完成以上步骤后，你应该可以看到：
-
-- 控制台能连上 relay
-- Agent 设备出现在设备列表里
-- 桌面端使用侧边导航、移动端使用底部导航，在 `Sessions / Devices / Connections / Advanced` 间切换
-- `Connections` 页面展示部署元信息和当前客户端信息，治理面默认隐藏
-- 如果安装了可用 Provider，可以创建并执行任务
-- 可以浏览工作区、预览文件并查看 Git 状态
-- 可以创建 Shell Session
-- 可以创建 TCP 端口转发
-
-## 开发命令
-
-```bash
-cargo check -p vibe-relay -p vibe-agent -p vibe-app
-cargo test --workspace --all-targets -- --nocapture
-cd apps/vibe-app && npm ci && npm run build
-```
-
-常用启动方式：
-
-```bash
-cargo run -p vibe-relay
-cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787  # 同机开发示例
-cd apps/vibe-app && npm run dev
-cd apps/vibe-app && npm run tauri dev
-cd apps/vibe-app && npm run android:build:debug:apk
-cd apps/vibe-app && npm run android:build:apk
-cd apps/vibe-app && npm run android:build:aab
-```
-
-## 测试
-
-完整测试方案见 [TESTING.md](./TESTING.md)。
-
-当前推荐的本地最小验证集：
+### 常用验证命令
 
 ```bash
 cargo fmt --all --check
-cargo check -p vibe-relay -p vibe-agent -p vibe-app
-cargo test --workspace --all-targets -- --nocapture
-cd apps/vibe-app && npm ci && npm run build
+cargo check --locked -p vibe-relay -p vibe-agent -p vibe-app
+cargo test --locked --workspace --all-targets -- --nocapture
+cd apps/vibe-app && npm run build
 ./scripts/dual-process-smoke.sh relay_polling
-```
-
-涉及工作区浏览 / Git 检视控制面改动时，建议额外执行：
-
-```bash
-cargo test -p vibe-relay -- --nocapture
-```
-
-涉及 Android 移动端改动时，建议额外执行：
-
-```bash
-cd apps/vibe-app && npm run android:build:debug:apk
-cd apps/vibe-app && npm run android:build:apk
-cd apps/vibe-app && npm run android:build:aab
-```
-
-涉及 Overlay / EasyTier / Shell / 端口转发传输路径时，建议额外执行：
-
-```bash
 ./scripts/dual-process-smoke.sh overlay
 ```
 
+更完整的策略见：
+
+- [TESTING.md](./TESTING.md)
+
 ## GitHub Actions
 
-仓库内置两套工作流：
+仓库内置两套主要工作流：
 
 - `CI`
-  - 触发时机：`push` 到 `main`、`pull_request`、手动触发
-  - 执行内容：Rust 格式检查、workspace 编译、workspace 测试、前端构建、`relay_polling` 烟测、Windows Rust 编译与 Tauri MSI 打包兼容性校验、Android debug APK 构建与产物上传
+  - 触发：`main` 分支 push、`pull_request`、手动触发
+  - 内容：格式检查、workspace 编译、测试、前端构建、`relay_polling` 烟测、Windows 兼容性校验、Android debug APK 构建
 - `Release`
-  - 触发时机：推送 `v*` tag
-  - 执行内容：完整验证、阻塞式 `overlay` 烟测、Linux / Windows CLI 与 Tauri 桌面包构建、Android debug APK / release APK / AAB 构建、GitHub Release 资产上传
+  - 触发：推送 `v*` tag
+  - 内容：完整验证、阻塞式 `overlay` 烟测、CLI / 桌面端 / Android 打包、校验和生成、GitHub Release 发布
 
-发布方式示例：
+发布前需要：
+
+1. 更新版本号
+2. 更新 [docs/releases/unreleased.md](./docs/releases/unreleased.md)
+3. 生成对应版本的 `docs/releases/vX.Y.Z.md`
+4. 推送 tag
+
+示例：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.4
+git push origin v0.1.4
 ```
-
-Release 工作流会上传类似以下资产：
-
-- `vibe-everywhere-cli-x86_64-unknown-linux-gnu.tar.gz`
-- `vibe-everywhere-desktop-x86_64-unknown-linux-gnu.tar.gz`
-- `vibe-everywhere-cli-x86_64-pc-windows-msvc.zip`
-- `vibe-everywhere-desktop-x86_64-pc-windows-msvc.zip`
-- `vibe-everywhere-android-arm64-debug.apk`
-- `vibe-everywhere-android-arm64-release-unsigned.apk`
-- `vibe-everywhere-android-arm64-release.aab`
-- `SHA256SUMS.txt`
-
-说明：
-
-- 当前仓库还没有内置 Android 发布签名密钥，所以 release APK 默认为 `unsigned`
-- 如果要直接安装测试版，请优先使用 debug APK
-
-## 常用环境变量
-
-### relay
-
-- `VIBE_RELAY_HOST`
-- `VIBE_RELAY_PORT`
-- `VIBE_PUBLIC_RELAY_BASE_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
-- `VIBE_RELAY_STATE_FILE`
-- `VIBE_RELAY_FORWARD_HOST`
-- `VIBE_RELAY_FORWARD_BIND_HOST`
-
-### agent
-
-- `VIBE_RELAY_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
-- `VIBE_DEVICE_NAME`
-- `VIBE_DEVICE_ID`
-- `VIBE_WORKING_ROOT`
-- `VIBE_CODEX_COMMAND`
-- `VIBE_CLAUDE_COMMAND`
-- `VIBE_OPENCODE_COMMAND`
-
-### overlay
-
-- `VIBE_EASYTIER_RELAY_ENABLED`
-- `VIBE_EASYTIER_NETWORK_NAME`
-- `VIBE_EASYTIER_NETWORK_SECRET`
-- `VIBE_EASYTIER_BOOTSTRAP_URL`
-- `VIBE_EASYTIER_LISTENERS`
-
-### frontend / desktop
-
-- `VITE_RELAY_BASE_URL`
-- `VITE_RELAY_ACCESS_TOKEN`
-- `VIBE_PUBLIC_RELAY_BASE_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
-
-### android signing
-
-- `VIBE_ANDROID_KEYSTORE_PATH`
-- `VIBE_ANDROID_KEYSTORE_PASSWORD`
-- `VIBE_ANDROID_KEY_ALIAS`
-- `VIBE_ANDROID_KEY_PASSWORD`
-- `VIBE_ANDROID_KEYSTORE_BASE64`（仅 GitHub Actions Secret 使用）
 
 ## 路线图
 
-- 增强认证、审计和生产化部署能力
-- 补充前端自动化测试和协议 round-trip 测试
-- 补齐 iOS 客户端和移动端发布自动化链路
-- 继续压缩 `main.rs` 中的聚合逻辑，稳定模块边界
-- 扩展更完整的文件同步、工作区浏览和通知能力
-- 完善桌面端和移动端体验
+- 补齐 iOS 客户端与移动端发布链路
+- 继续提高部署体验和运维入口
+- 完善企业级认证、审计和角色模型
+- 增强前端自动化测试和协议 round-trip 测试
+- 继续收敛高级能力与主流程之间的信息架构边界
 
 ## 贡献
 

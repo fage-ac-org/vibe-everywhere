@@ -18,7 +18,7 @@ The planning system is intentionally split into:
 | Plan Type | Active Version | Summary | Details | Status |
 | --- | --- | --- | --- | --- |
 | Iteration roadmap | v1 | [`iterations/v1-summary.md`](./iterations/v1-summary.md) | [`iterations/v1-details.md`](./iterations/v1-details.md) | baseline complete |
-| Problem remediation | v2 | [`remediation/v2-summary.md`](./remediation/v2-summary.md) | [`remediation/v2-details.md`](./remediation/v2-details.md) | complete |
+| Problem remediation | v3 | [`remediation/v3-summary.md`](./remediation/v3-summary.md) | [`remediation/v3-details.md`](./remediation/v3-details.md) | complete |
 | Process governance | shared | [`process.md`](./process.md) | n/a | mandatory |
 
 ## Query Guide
@@ -50,3 +50,5 @@ The planning system is intentionally split into:
   [`../../AGENTS.md`](../../AGENTS.md).
 - After code is pushed to GitHub, the triggered Actions workflows must be checked and their outcome
   reported before the delivery is considered complete.
+- Release-affecting work must also update the next-release note source under
+  `docs/releases/` in the same change set.

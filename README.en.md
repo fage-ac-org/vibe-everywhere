@@ -6,32 +6,142 @@
 
 [中文](./README.md) | [English](./README.en.md)
 
-Rust-first remote AI control plane: `Rust relay + Rust agent + Vue 3.5 + Tauri 2 app`.
+Vibe Everywhere is a self-hosted remote AI control plane. It is not a traditional remote desktop
+product. Instead, it organizes remote development around `Relay + Agent + Control App`: run
+`vibe-relay` and `vibe-agent` on your own infrastructure, then use the Web UI, desktop shell, or
+Android client to drive AI sessions, inspect workspaces, review Git state, open previews, and only
+drop into terminal or advanced networking tools when needed.
 
-This is not a traditional remote desktop product. It is an AI-session-first remote development control system. The relay provides the control-plane API and shared state, the agent runs on the target machine to execute AI sessions plus advanced diagnostics, and the control UI connects through Web, a Tauri desktop shell, or the Android shell.
+## Who It Is For
 
-## Status
+- people who want AI coding tasks to run on remote machines while keeping one control surface
+- teams that prefer self-hosting over a managed service
+- operators managing multiple devices, workspaces, and provider CLIs
+- teams that want a practical MVP now and a path toward stronger enterprise capabilities later
 
-- Positioning: personal-edition MVP / open source experimental project
-- Primary flow: organized around the four top-level sections `Sessions / Devices / Connections / Advanced`, covering AI sessions, device runtime state, connection setup, and advanced tools
-- Technical direction: Rust for protocol, backend, and agent; Vue + Tauri for the control client
-- Mobile status: Android arm64 APK / AAB packaging is working, iOS is still pending
-- Best-fit use cases: self-hosted personal AI operations console, multi-device control plane, cross-platform experimentation
+## What It Can Do Today
 
-## Features
+- create, stream, and cancel AI sessions
+- register devices, track presence, and show provider availability
+- browse workspaces, preview text files, and inspect Git state
+- expose preview / forwarding flows plus terminal and advanced connection tools when needed
+- connect through Web, Tauri desktop, and Android control clients
+- ship bilingual UI support for English and Simplified Chinese, plus light / dark / system themes
+- follow a self-hosted-first relay model without product defaults that assume fixed loopback
+  addresses
 
-- Rust workspace with shared protocol, backend, agent, and desktop app
-- `vibe-relay` for Axum APIs, device state, AI-session scheduling, workspace browsing, Git inspection, shell, preview, and port-forward control-plane flows
-- `vibe-agent` for registration, polling, provider adapters, workspace / Git runtime, and shell / tunnel / port-forward execution
-- `vibe-app` for the Vue 3.5 control UI, now centered on an AI session workspace with route-backed `Sessions / Devices / Connections / Advanced` sections, deployment metadata, current-client visibility, workspace browsing, and Git inspection, plus `src-tauri` as the desktop and Android shell
-- Provider integration for `Codex`, `Claude Code`, and `OpenCode`
-- Relay-first AI session, terminal, and TCP preview/forwarding paths
-- EasyTier-based overlay-assisted transport
-- Bilingual UI support for English and Simplified Chinese, plus light / dark / system theme modes
-- Tauri Android arm64 debug APK, release APK, and AAB builds
-- SSE / WebSocket / tunnel based real-time updates
+## Three-Minute Start
 
-## Architecture
+### 1. Deploy the Relay
+
+Start with the operator guide:
+
+- [Self-Hosted Deployment Guide](./docs/self-hosted.md)
+
+The repository currently ships two bootstrap installers:
+
+- Linux with `systemd`
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fage-ac-org/vibe-everywhere/main/scripts/install-relay.sh -o install-relay.sh
+sudo RELAY_PUBLIC_BASE_URL=https://relay.example.com \
+  RELAY_ACCESS_TOKEN=change-me \
+  bash install-relay.sh
+```
+
+- Windows with a startup task
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-relay.ps1 `
+  -PublicRelayBaseUrl https://relay.example.com `
+  -RelayAccessToken change-me
+```
+
+Notes:
+
+- both installers default to the latest GitHub Release, but you can pin a version with
+  `VIBE_RELEASE_TAG` or `-ReleaseTag`
+- the scripts do not hardcode public relay addresses, tokens, or preview hosts
+- the repository does not yet ship a one-click macOS relay installer because macOS release assets
+  are not published yet
+
+### 2. Start an Agent on the Target Machine
+
+Download the CLI release package, extract `vibe-agent`, and start it with the values for your own
+environment:
+
+```bash
+VIBE_RELAY_URL=https://relay.example.com \
+VIBE_RELAY_ACCESS_TOKEN=change-me \
+VIBE_DEVICE_NAME=build-node-01 \
+./vibe-agent
+```
+
+To execute AI sessions, the target machine still needs at least one provider CLI:
+
+- `codex`
+- `claude`
+- `opencode`
+
+### 3. Open a Control Client
+
+The same relay can be reached from:
+
+- Web
+- Tauri desktop
+- Android
+
+Recommended flow:
+
+1. deploy the relay
+2. start at least one agent
+3. validate from Web or desktop first
+4. add the Android client when mobile access is needed
+
+## Downloads And Releases
+
+GitHub Release assets are now versioned so operators can identify them after download. Examples:
+
+- `vibe-everywhere-cli-v0.1.4-x86_64-unknown-linux-gnu.tar.gz`
+- `vibe-everywhere-cli-v0.1.4-x86_64-pc-windows-msvc.zip`
+- `vibe-everywhere-desktop-v0.1.4-linux-x86_64.AppImage`
+- `vibe-everywhere-desktop-v0.1.4-linux-x86_64.deb`
+- `vibe-everywhere-desktop-v0.1.4-windows-x86_64.exe`
+- `vibe-everywhere-desktop-v0.1.4-windows-x86_64.msi`
+- `vibe-everywhere-android-v0.1.4-arm64-debug.apk`
+- `vibe-everywhere-android-v0.1.4-arm64-release-unsigned.apk`
+- `vibe-everywhere-android-v0.1.4-arm64-release.aab`
+- `SHA256SUMS.txt`
+
+Release notes are also repository-owned now:
+
+- [Release Notes Workflow](./docs/releases/README.md)
+- next release draft: [docs/releases/unreleased.md](./docs/releases/unreleased.md)
+
+Notes:
+
+- release assets no longer repackage repository README files
+- if Android signing secrets are not configured, the release APK remains `unsigned`
+
+## Self-Hosted Configuration Basics
+
+These values must remain deployment-time configuration, not hardcoded product defaults:
+
+- `VIBE_PUBLIC_RELAY_BASE_URL`
+- `VIBE_RELAY_ACCESS_TOKEN`
+- `VIBE_RELAY_FORWARD_HOST`
+- `VIBE_RELAY_URL`
+
+Keep these address roles distinct:
+
+- the relay bind address, for example `0.0.0.0:8787`
+- the relay origin that agents use
+- the public origin or host that users open for preview links
+
+If phones or other machines need to connect, do not use `127.0.0.1` as the user-facing relay
+origin.
+
+## Product Layout
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
@@ -41,14 +151,14 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
                             │ HTTP / SSE / WebSocket
 ┌───────────────────────────▼──────────────────────────────┐
 │                      vibe-relay                          │
-│ device registry · task/workspace/git · shell · proxy    │
-│   auth · persistence · overlay-aware transport choice    │
+│  device registry · AI sessions · workspace · preview    │
+│        auth · config · transport selection               │
 └───────────────────────────┬──────────────────────────────┘
-                            │ HTTP polling / bridge / tunnel
+                            │ polling / stream / tunnel
 ┌───────────────────────────▼──────────────────────────────┐
 │                      vibe-agent                          │
-│ provider adapters · task/workspace/git runtime           │
-│ shell/port-forward runtime · embedded overlay node       │
+│ provider adapters · workspace/git runtime · shell       │
+│      preview / forward runtime · overlay support         │
 └───────────────────────────┬──────────────────────────────┘
                             │ local process / local TCP
                     ┌───────▼────────┐
@@ -56,7 +166,12 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
                     └────────────────┘
 ```
 
-## Repository Layout
+## Developer Entry
+
+If you are here to build from source or contribute changes, start here instead of the operator
+sections above.
+
+### Repository Layout
 
 ```text
 .
@@ -64,68 +179,41 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
 │   ├── vibe-relay        # Relay API / control plane
 │   ├── vibe-agent        # Device agent / runtimes / providers
 │   └── vibe-app          # Vue control app
-│       └── src-tauri     # Tauri desktop shell
-│           └── gen/android  # Generated Tauri Android project
+│       └── src-tauri     # Tauri desktop shell + Android shell
 ├── crates
 │   └── vibe-core         # Shared protocol / models
-├── scripts               # Smoke tests and helper scripts
-└── TESTING.md            # Testing strategy and validation matrix
+├── docs
+│   ├── plans            # Versioned iteration / remediation plans
+│   └── releases         # Versioned release notes and next-release draft
+├── scripts               # Installers, smoke tests, Android doctor
+└── TESTING.md            # Test strategy and regression checklist
 ```
 
-## Quick Start
-
-### Prerequisites
+### Local Prerequisites
 
 - Rust stable toolchain
 - Node.js 24.14.x
 - `protobuf-compiler` or another working `protoc`
 - WebKitGTK / GTK development packages when building Tauri on Linux
-- Android builds require JDK 17, Android SDK cmdline-tools, plus `platforms;android-36`, `build-tools;35.0.0`, and `ndk;25.2.9519653`
-- On Windows, install Npcap with WinPcap API-compatible mode enabled if you want EasyTier / overlay networking features
-- At least one provider CLI installed locally if you want to execute AI tasks
-  - `codex`
-  - `claude`
-  - `opencode`
+- JDK 17, Android SDK cmdline-tools, `platforms;android-36`, `build-tools;35.0.0`, and
+  `ndk;25.2.9519653` for Android builds
+- Npcap with WinPcap API-compatible mode enabled on Windows if you need EasyTier / overlay support
 
-### 1. Clone the repository
+### Local Development Commands
 
-```bash
-git clone https://github.com/fage-ac-org/vibe-everywhere.git
-cd vibe-everywhere
-```
-
-### 2. Start the relay
+Start the relay:
 
 ```bash
 cargo run -p vibe-relay
 ```
 
-By default the relay binds to `0.0.0.0:8787`.
-
-For same-machine local development, you can reach it at `http://127.0.0.1:8787`.
-
-If other devices need to connect, or if you want externally usable Preview URLs, configure:
-
-```bash
-export VIBE_PUBLIC_RELAY_BASE_URL=https://relay.example.com
-export VIBE_RELAY_FORWARD_HOST=relay.example.com
-```
-
-To enable single-user access control:
-
-```bash
-export VIBE_RELAY_ACCESS_TOKEN=change-me
-```
-
-### 3. Start the agent
+Start an agent:
 
 ```bash
 cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787
 ```
 
-If no provider CLI is installed, the device will still register successfully, but AI task execution will be unavailable.
-
-### 4. Start the Web control UI
+Start the Web UI:
 
 ```bash
 cd apps/vibe-app
@@ -133,18 +221,7 @@ npm ci
 npm run dev
 ```
 
-Default UI address:
-
-- `http://127.0.0.1:1420`
-
-If the relay requires an access token, you can enter it in the UI or set:
-
-```bash
-export VITE_RELAY_BASE_URL=http://127.0.0.1:8787
-export VITE_RELAY_ACCESS_TOKEN=change-me
-```
-
-### 5. Start the desktop shell
+Start the desktop shell:
 
 ```bash
 cd apps/vibe-app
@@ -152,19 +229,17 @@ npm ci
 npm run tauri dev
 ```
 
-The Tauri shell reads:
+Build the frontend:
 
-- `VIBE_PUBLIC_RELAY_BASE_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
+```bash
+cd apps/vibe-app
+npm ci
+npm run build
+```
 
-Notes:
+### Android Builds
 
-- debug desktop builds keep a same-machine local relay fallback for development
-- release or self-hosted usage should set `VIBE_PUBLIC_RELAY_BASE_URL` explicitly
-
-### 6. Build an Android test package
-
-If you want to control your server from an Android phone, you can build the Tauri Android app directly:
+Debug APK:
 
 ```bash
 rustup target add aarch64-linux-android
@@ -181,11 +256,7 @@ npm run android:doctor
 npm run android:build:debug:apk
 ```
 
-Default debug APK output:
-
-- `apps/vibe-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk`
-
-For release artifacts:
+Release APK / AAB:
 
 ```bash
 cd apps/vibe-app
@@ -193,231 +264,63 @@ npm run android:build:apk
 npm run android:build:aab
 ```
 
-Output paths:
-
-- `apps/vibe-app/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk`
-- `apps/vibe-app/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`
-
-To sign the release APK / AAB during the build, add
-`apps/vibe-app/src-tauri/gen/android/app/keystore.properties`
-or export the signing values as environment variables:
-
-```properties
-storeFile=/absolute/path/to/vibe-everywhere-release.jks
-storePassword=your-store-password
-keyAlias=vibe-everywhere
-keyPassword=your-key-password
-```
-
-The following environment variables are supported and override
-`keystore.properties`:
+To sign release APK / AAB outputs, provide the signing values through environment variables or
+`apps/vibe-app/src-tauri/gen/android/app/keystore.properties`:
 
 - `VIBE_ANDROID_KEYSTORE_PATH`
 - `VIBE_ANDROID_KEYSTORE_PASSWORD`
 - `VIBE_ANDROID_KEY_ALIAS`
 - `VIBE_ANDROID_KEY_PASSWORD`
 
-With signing configured, run:
-
-```bash
-cd apps/vibe-app
-npm run android:build:apk
-npm run android:build:aab
-```
-
-The signed release APK will be written to:
-
-- `apps/vibe-app/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`
-
-If you want GitHub Actions to sign Android release artifacts automatically,
-configure these four repository or organization Actions secrets:
-
-- `VIBE_ANDROID_KEYSTORE_BASE64`
-- `VIBE_ANDROID_KEYSTORE_PASSWORD`
-- `VIBE_ANDROID_KEY_ALIAS`
-- `VIBE_ANDROID_KEY_PASSWORD`
-
-`VIBE_ANDROID_KEYSTORE_BASE64` must contain the Base64-encoded keystore file.
-For example:
-
-```bash
-base64 -w 0 /absolute/path/to/vibe-everywhere-release.jks
-```
-
-On macOS, if `base64` does not support `-w`, use:
-
-```bash
-base64 < /absolute/path/to/vibe-everywhere-release.jks | tr -d '\n'
-```
-
-Once these secrets are present, the release workflow decodes the keystore into
-the runner temp directory and injects the `VIBE_ANDROID_*` signing variables for
-the Android build. If the secrets are absent, the workflow still succeeds, but
-the release APK remains unsigned.
-
-Notes:
-
-- The Android control client no longer prefills `127.0.0.1:8787`; on first launch, enter the relay machine's LAN IP or an HTTPS public URL unless you explicitly set `VIBE_PUBLIC_RELAY_BASE_URL`
-- On the phone, point the relay URL to `http://<server-lan-ip>:8787` or a public HTTPS relay URL, not `http://127.0.0.1:8787`
-- The Android app currently allows cleartext HTTP traffic for self-hosted LAN relays; use HTTPS for public deployments
-- If `tauri android build` fails because `source.properties` is missing from an NDK directory, the SDK contains a partial NDK install. Run `npm run android:doctor`, then reinstall that NDK or explicitly export `NDK_HOME`
-- Never commit `apps/vibe-app/src-tauri/gen/android/app/keystore.properties` or any `.jks` / `.keystore` files
-
-### 7. Verify the stack
-
-After the steps above, you should be able to:
-
-- connect the UI to the relay
-- see the agent in the device list
-- move between `Sessions / Devices / Connections / Advanced`, using sidebar navigation on desktop and bottom navigation on mobile
-- see deployment metadata and the current client on the `Connections` page, while governance stays hidden by default
-- create and execute tasks if a provider CLI is available
-- browse the workspace, preview files, and inspect Git state
-- open shell sessions
-- create TCP port forwards
-
-## Development
-
-```bash
-cargo check -p vibe-relay -p vibe-agent -p vibe-app
-cargo test --workspace --all-targets -- --nocapture
-cd apps/vibe-app && npm ci && npm run build
-```
-
-Common local entrypoints:
-
-```bash
-cargo run -p vibe-relay
-cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787  # same-machine development example
-cd apps/vibe-app && npm run dev
-cd apps/vibe-app && npm run tauri dev
-cd apps/vibe-app && npm run android:build:debug:apk
-cd apps/vibe-app && npm run android:build:apk
-cd apps/vibe-app && npm run android:build:aab
-```
-
-## Testing
-
-See [TESTING.md](./TESTING.md) for the full test strategy.
-
-Recommended local baseline:
+### Common Validation Commands
 
 ```bash
 cargo fmt --all --check
-cargo check -p vibe-relay -p vibe-agent -p vibe-app
-cargo test --workspace --all-targets -- --nocapture
-cd apps/vibe-app && npm ci && npm run build
+cargo check --locked -p vibe-relay -p vibe-agent -p vibe-app
+cargo test --locked --workspace --all-targets -- --nocapture
+cd apps/vibe-app && npm run build
 ./scripts/dual-process-smoke.sh relay_polling
-```
-
-For workspace browsing or Git inspection control-plane changes, also run:
-
-```bash
-cargo test -p vibe-relay -- --nocapture
-```
-
-For Android changes, also run:
-
-```bash
-cd apps/vibe-app && npm run android:build:debug:apk
-cd apps/vibe-app && npm run android:build:apk
-cd apps/vibe-app && npm run android:build:aab
-```
-
-For overlay, EasyTier, shell, and forwarding transport changes, also run:
-
-```bash
 ./scripts/dual-process-smoke.sh overlay
 ```
 
+See also:
+
+- [TESTING.md](./TESTING.md)
+
 ## GitHub Actions
 
-The repository includes two workflows:
+The repository ships two primary workflows:
 
 - `CI`
-  - Triggers on `push` to `main`, `pull_request`, and manual dispatch
-  - Runs formatting checks, workspace builds, workspace tests, frontend build, `relay_polling` smoke tests, Windows Rust/Tauri MSI bundling validation, and Android debug APK builds with artifact upload
+  - triggers on pushes to `main`, pull requests, and manual dispatch
+  - runs formatting, workspace builds, tests, frontend build, `relay_polling` smoke, Windows
+    compatibility checks, and Android debug APK packaging
 - `Release`
-  - Triggers on `v*` tags
-  - Runs full verification, blocking `overlay` smoke tests, Linux and Windows CLI packaging, Linux and Windows Tauri desktop packaging, Android debug APK / release APK / AAB packaging, and GitHub Release asset publishing
+  - triggers on `v*` tags
+  - runs full verification, blocking `overlay` smoke, CLI / desktop / Android packaging, checksum
+    generation, and GitHub Release publication
 
-Release example:
+Before pushing a release tag:
+
+1. update the version
+2. update [docs/releases/unreleased.md](./docs/releases/unreleased.md)
+3. create the matching `docs/releases/vX.Y.Z.md`
+4. push the tag
+
+Example:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.4
+git push origin v0.1.4
 ```
-
-Expected release assets include:
-
-- `vibe-everywhere-cli-x86_64-unknown-linux-gnu.tar.gz`
-- `vibe-everywhere-desktop-x86_64-unknown-linux-gnu.tar.gz`
-- `vibe-everywhere-cli-x86_64-pc-windows-msvc.zip`
-- `vibe-everywhere-desktop-x86_64-pc-windows-msvc.zip`
-- `vibe-everywhere-android-arm64-debug.apk`
-- `vibe-everywhere-android-arm64-release-unsigned.apk`
-- `vibe-everywhere-android-arm64-release.aab`
-- `SHA256SUMS.txt`
-
-Notes:
-
-- The repository does not yet ship Android release signing keys, so the release APK is currently `unsigned`
-- Use the debug APK when you need an immediately installable test build
-
-## Common Environment Variables
-
-### relay
-
-- `VIBE_RELAY_HOST`
-- `VIBE_RELAY_PORT`
-- `VIBE_PUBLIC_RELAY_BASE_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
-- `VIBE_RELAY_STATE_FILE`
-- `VIBE_RELAY_FORWARD_HOST`
-- `VIBE_RELAY_FORWARD_BIND_HOST`
-
-### agent
-
-- `VIBE_RELAY_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
-- `VIBE_DEVICE_NAME`
-- `VIBE_DEVICE_ID`
-- `VIBE_WORKING_ROOT`
-- `VIBE_CODEX_COMMAND`
-- `VIBE_CLAUDE_COMMAND`
-- `VIBE_OPENCODE_COMMAND`
-
-### overlay
-
-- `VIBE_EASYTIER_RELAY_ENABLED`
-- `VIBE_EASYTIER_NETWORK_NAME`
-- `VIBE_EASYTIER_NETWORK_SECRET`
-- `VIBE_EASYTIER_BOOTSTRAP_URL`
-- `VIBE_EASYTIER_LISTENERS`
-
-### frontend / desktop
-
-- `VITE_RELAY_BASE_URL`
-- `VITE_RELAY_ACCESS_TOKEN`
-- `VIBE_PUBLIC_RELAY_BASE_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
-
-### android signing
-
-- `VIBE_ANDROID_KEYSTORE_PATH`
-- `VIBE_ANDROID_KEYSTORE_PASSWORD`
-- `VIBE_ANDROID_KEY_ALIAS`
-- `VIBE_ANDROID_KEY_PASSWORD`
-- `VIBE_ANDROID_KEYSTORE_BASE64` (GitHub Actions secret only)
 
 ## Roadmap
 
-- stronger authentication, auditing, and production deployment support
-- frontend automated tests and protocol round-trip tests
-- iOS packaging and broader mobile release automation
-- continued extraction of large `main.rs` responsibilities into stable modules
-- richer file sync, workspace browsing, and notification capabilities
-- better desktop and mobile UX
+- add iOS client support and a broader mobile release path
+- continue improving deployment and operator onboarding
+- deepen enterprise authentication, audit, and role management
+- add stronger frontend automation and protocol round-trip coverage
+- keep separating advanced capabilities from the main user workflow more cleanly
 
 ## Contributing
 

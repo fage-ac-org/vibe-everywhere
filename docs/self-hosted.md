@@ -1,145 +1,167 @@
-# Self-Hosted Deployment Notes
+# Self-Hosted Deployment Guide
 
 Last updated: 2026-03-28
 
-This document describes the current self-hosted deployment shape for Vibe Everywhere.
+Vibe Everywhere is designed to run in self-hosted mode first. This guide is for operators who want
+to deploy the relay, keep it running after reboot, and connect Web, desktop, or Android clients
+without hardcoded loopback assumptions.
 
-## Product Assumptions
+## What You Need To Decide Up Front
 
-- Self-hosted is the default operating mode.
-- Relay URL, access token, tenant, user, storage, and preview host are runtime configuration, not
-  product constants.
-- Web, Tauri Desktop, and Android must all be able to connect to the same relay without changing
-  compiled frontend code.
-- Clients must not assume `localhost`, `127.0.0.1`, or any fixed domain is reachable from the
-  current device.
+Before installation, decide these runtime values:
 
-## Deployment Modes
+- the public relay URL clients will actually use, for example
+  `https://relay.example.com` or `http://192.168.1.20:8787`
+- whether the relay requires an access token
+- which host should be used for preview/forward links
+- where you want relay state persisted on disk
 
-The relay exposes deployment metadata through `app-config`.
+Do not hardcode `127.0.0.1` or `localhost` as the user-facing relay origin for cross-device use.
 
-- `self_hosted`: the default mode for personal, team, and private infrastructure deployments.
-- `hosted_compatible`: a compatibility mode for future managed or semi-managed deployment surfaces.
+## Supported Bootstrap Automation
 
-The current codebase still runs the same relay binary in both modes. The difference is product
-metadata and client guidance, not a separate backend fork.
+The repository currently ships automation for:
 
-## Relay Configuration
+- Linux: [`scripts/install-relay.sh`](../scripts/install-relay.sh)
+  - downloads the published Linux CLI archive unless you point it to a local archive
+  - installs `vibe-relay`
+  - writes `/etc/vibe-relay/relay.env`
+  - creates and optionally starts a `systemd` service
+- Windows: [`scripts/install-relay.ps1`](../scripts/install-relay.ps1)
+  - downloads the published Windows CLI archive unless you point it to a local archive
+  - installs `vibe-relay.exe`
+  - writes `relay-env.ps1` plus a launcher script
+  - creates and optionally starts a Windows Scheduled Task for auto-start
 
-Important relay environment variables:
+Current boundary:
 
-- `VIBE_RELAY_HOST`
-- `VIBE_RELAY_PORT`
-- `VIBE_PUBLIC_RELAY_BASE_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
-- `VIBE_RELAY_DEPLOYMENT_MODE`
-- `VIBE_RELAY_DOCUMENTATION_URL`
-- `VIBE_RELAY_STORAGE_KIND`
-- `VIBE_RELAY_STATE_FILE`
-- `VIBE_RELAY_FORWARD_HOST`
-- `VIBE_RELAY_FORWARD_BIND_HOST`
-- `VIBE_RELAY_FORWARD_PORT_START`
-- `VIBE_RELAY_FORWARD_PORT_END`
-- `VIBE_DEFAULT_TENANT_ID`
-- `VIBE_DEFAULT_USER_ID`
-- `VIBE_DEFAULT_USER_ROLE`
+- macOS release automation is not shipped yet, so there is no repository-supported one-click relay
+  installer for macOS at this time
 
-Guidance:
+## Linux Quick Install
 
-- `VIBE_PUBLIC_RELAY_BASE_URL` should point to the actual URL clients can reach. Do not rely on the
-  bind address for mobile or cross-machine access.
-- `VIBE_RELAY_FORWARD_HOST` must resolve correctly from the client opening Preview URLs. It must not
-  be hardcoded in frontend components.
-- `VIBE_RELAY_FORWARD_BIND_HOST` controls where the relay binds preview listeners. This can remain a
-  local interface even when the public relay origin is external.
-
-## Agent Configuration
-
-Important agent environment variables:
-
-- `VIBE_RELAY_URL`
-- `VIBE_RELAY_ACCESS_TOKEN`
-- `VIBE_DEVICE_ID`
-- `VIBE_DEVICE_NAME`
-- `VIBE_WORKING_ROOT`
-- `VIBE_TENANT_ID`
-- `VIBE_USER_ID`
-- `VIBE_EASYTIER_NETWORK_NAME`
-- `VIBE_EASYTIER_BOOTSTRAP_URL`
-- `VIBE_EASYTIER_NODE_IP`
-
-Guidance:
-
-- Agents now send explicit tenant, user, and role headers to the relay. Do not rely on fallback
-  personal-mode identities unless that is the intended deployment.
-- `VIBE_TENANT_ID` and `VIBE_USER_ID` should be set by runtime configuration or deployment tooling,
-  not compiled into the binary or frontend.
-- `VIBE_WORKING_ROOT` remains the bounding root for workspace browse and preview features.
-
-## Client Configuration Precedence
-
-For relay URL and access token, clients must follow this order:
-
-1. explicit user input
-2. persisted client setting
-3. relay or local `app-config`
-4. safe fallback default
-
-This precedence is already implemented in the app runtime and must be preserved in future
-iterations.
-
-## Storage Modes
-
-Current storage options:
-
-- `file`: persisted JSON snapshot on disk
-- `memory`: in-memory runtime store for tests or ephemeral environments
-- `external`: compatibility placeholder that currently reuses file-backed behavior
-
-`external` exists to preserve configuration compatibility while the enterprise storage substrate is
-still evolving. Do not treat it as a completed external database integration.
-
-## Governance And Audit
-
-Current governance foundations:
-
-- actor identity is derived from relay default config or explicit request headers
-- resources are filtered by tenant at the relay layer
-- write operations are bounded by actor role
-- audit records are persisted and queryable through `/api/audit/events`
-
-This is an enterprise foundation, not a finished enterprise auth system. There is no full SSO,
-directory sync, or signed user session model yet.
-
-## Preview And Mobile Networking
-
-- Preview URLs are derived from runtime relay origin plus relay-provided host and port data.
-- Mobile clients should use a LAN or public relay origin, not loopback.
-- Frontend code must not concatenate preview URLs from fixed hostnames.
-- If Preview works on desktop but fails on mobile, check `VIBE_PUBLIC_RELAY_BASE_URL` and
-  `VIBE_RELAY_FORWARD_HOST` first.
-
-## Example Development Layout
-
-Relay:
+Run the installer from a cloned repository or a downloaded copy of
+[`scripts/install-relay.sh`](../scripts/install-relay.sh):
 
 ```bash
-VIBE_RELAY_HOST=0.0.0.0 \
-VIBE_RELAY_PORT=8787 \
-VIBE_PUBLIC_RELAY_BASE_URL=http://192.168.1.20:8787 \
-VIBE_RELAY_ACCESS_TOKEN=dev-token \
-cargo run -p vibe-relay
+curl -fsSL https://raw.githubusercontent.com/fage-ac-org/vibe-everywhere/main/scripts/install-relay.sh -o install-relay.sh
+sudo RELAY_PUBLIC_BASE_URL=https://relay.example.com \
+  RELAY_ACCESS_TOKEN=change-me \
+  bash install-relay.sh
 ```
 
-Agent:
+Optional inputs:
+
+- `VIBE_RELEASE_TAG`
+  - install a specific GitHub release tag instead of the latest release
+- `RELAY_CLI_ARCHIVE_URL`
+  - override the download URL entirely
+- `RELAY_CLI_ARCHIVE_PATH`
+  - install from a local CLI archive path
+- `RELAY_BIND_HOST`
+  - defaults to `0.0.0.0`
+- `RELAY_PORT`
+  - defaults to `8787`
+- `RELAY_FORWARD_HOST`
+  - defaults to the host parsed from `RELAY_PUBLIC_BASE_URL` when provided
+- `RELAY_ACCESS_TOKEN`
+  - optional access token
+- `CREATE_SYSTEMD_SERVICE`
+  - set to `0` if you only want the binary and env file
+- `ENABLE_AND_START_SERVICE`
+  - set to `0` if you want to inspect the config before first start
+
+Resulting paths:
+
+- binary: `/usr/local/bin/vibe-relay`
+- env file: `/etc/vibe-relay/relay.env`
+- state file default: `/var/lib/vibe-relay/relay-state.json`
+- service file: `/etc/systemd/system/vibe-relay.service`
+
+Useful commands:
 
 ```bash
-VIBE_RELAY_URL=http://192.168.1.20:8787 \
-VIBE_RELAY_ACCESS_TOKEN=dev-token \
-VIBE_TENANT_ID=personal \
-VIBE_USER_ID=local-admin \
-cargo run -p vibe-agent
+sudo systemctl status vibe-relay
+sudo journalctl -u vibe-relay -f
+sudo systemctl restart vibe-relay
 ```
 
-These values are examples only. They must be replaced by environment-specific settings in real
-deployments.
+## Windows Quick Install
+
+Run the installer from an elevated PowerShell session:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-relay.ps1 `
+  -PublicRelayBaseUrl https://relay.example.com `
+  -RelayAccessToken change-me
+```
+
+Optional inputs:
+
+- `-ReleaseTag`
+  - install a specific GitHub release tag instead of the latest release
+- `-ArchiveUrl`
+  - override the download URL entirely
+- `-ArchivePath`
+  - install from a local CLI archive path
+- `-RelayBindHost`
+  - defaults to `0.0.0.0`
+- `-RelayPort`
+  - defaults to `8787`
+- `-RelayForwardHost`
+  - defaults to the host parsed from `-PublicRelayBaseUrl` when provided
+- `-RelayAccessToken`
+  - optional access token
+- `-SkipStartupTask`
+  - install the binary and config without registering auto-start
+
+Resulting paths:
+
+- binary: `C:\Program Files\Vibe Everywhere\vibe-relay.exe`
+- env script: `C:\Program Files\Vibe Everywhere\relay-env.ps1`
+- launcher: `C:\Program Files\Vibe Everywhere\Start-VibeRelay.ps1`
+- state file default: `%ProgramData%\Vibe Everywhere\state\relay-state.json`
+
+Useful commands:
+
+```powershell
+Get-ScheduledTask -TaskName VibeRelay
+Start-ScheduledTask -TaskName VibeRelay
+Stop-Process -Name vibe-relay
+```
+
+## Agent Connection Example
+
+Once the relay is reachable, start an agent on the target machine with values for your actual
+environment:
+
+```bash
+VIBE_RELAY_URL=https://relay.example.com \
+VIBE_RELAY_ACCESS_TOKEN=change-me \
+VIBE_DEVICE_NAME=build-node-01 \
+./vibe-agent
+```
+
+Notes:
+
+- agents still need a provider CLI such as `codex`, `claude`, or `opencode` if you want AI session
+  execution
+- `VIBE_RELAY_URL` should match the real relay origin the agent can reach
+- preview/mobile users depend on `VIBE_PUBLIC_RELAY_BASE_URL` and `VIBE_RELAY_FORWARD_HOST` being
+  configured correctly on the relay side
+
+## Configuration Guardrails
+
+Keep these rules in place for production-style self-hosting:
+
+- relay bind host and public relay URL are different concerns
+- public/mobile clients must not rely on loopback defaults
+- relay URL, access token, and preview host must stay runtime configuration, not compiled constants
+- user choice and persisted client settings still override relay-provided config in the app
+
+## Related Documents
+
+- [README.md](../README.md)
+- [README.en.md](../README.en.md)
+- [TESTING.md](../TESTING.md)
+- [docs/releases/README.md](./releases/README.md)

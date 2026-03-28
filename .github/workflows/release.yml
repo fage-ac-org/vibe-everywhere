@@ -22,6 +22,7 @@ env:
   ANDROID_BUILD_TOOLS_VERSION: "35.0.0"
   ANDROID_NDK_VERSION: "25.2.9519653"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  RELEASE_TAG: ${{ github.ref_name }}
 
 jobs:
   verify:
@@ -107,13 +108,13 @@ jobs:
             os: ubuntu-24.04
             artifact_name: vibe-everywhere-cli-x86_64-unknown-linux-gnu
             archive_basename: vibe-everywhere-cli-x86_64-unknown-linux-gnu
-            archive_name: vibe-everywhere-cli-x86_64-unknown-linux-gnu.tar.gz
+            platform_suffix: x86_64-unknown-linux-gnu
             bin_ext: ""
           - label: Windows
             os: windows-2022
             artifact_name: vibe-everywhere-cli-x86_64-pc-windows-msvc
             archive_basename: vibe-everywhere-cli-x86_64-pc-windows-msvc
-            archive_name: vibe-everywhere-cli-x86_64-pc-windows-msvc.zip
+            platform_suffix: x86_64-pc-windows-msvc
             bin_ext: ".exe"
 
     steps:
@@ -162,20 +163,21 @@ jobs:
         shell: bash
         env:
           ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
-          ARCHIVE_NAME: ${{ matrix.archive_name }}
+          PLATFORM_SUFFIX: ${{ matrix.platform_suffix }}
           ARCHIVE_FORMAT: gztar
           BIN_EXT: ${{ matrix.bin_ext }}
         run: |
           set -euo pipefail
-          staging_dir="$RUNNER_TEMP/$ARCHIVE_BASENAME"
+          archive_basename="vibe-everywhere-cli-${RELEASE_TAG}-${PLATFORM_SUFFIX}"
+          archive_name="${archive_basename}.tar.gz"
+          staging_dir="$RUNNER_TEMP/$archive_basename"
           mkdir -p "$staging_dir"
 
           cp "target/release/vibe-relay$BIN_EXT" "$staging_dir/"
           cp "target/release/vibe-agent$BIN_EXT" "$staging_dir/"
-          cp README.md README.en.md LICENSE "$staging_dir/"
 
           export STAGING_DIR="$staging_dir"
-          export ARCHIVE_BASE_PATH="$GITHUB_WORKSPACE/$ARCHIVE_BASENAME"
+          export ARCHIVE_BASE_PATH="$GITHUB_WORKSPACE/$archive_basename"
           python3 - <<'PY'
           import os
           import shutil
@@ -187,24 +189,25 @@ jobs:
           )
           PY
 
-          test -f "$GITHUB_WORKSPACE/$ARCHIVE_NAME"
+          test -f "$GITHUB_WORKSPACE/$archive_name"
 
       - name: Package Windows CLI archive
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
-          ARCHIVE_NAME: ${{ matrix.archive_name }}
+          PLATFORM_SUFFIX: ${{ matrix.platform_suffix }}
           BIN_EXT: ${{ matrix.bin_ext }}
         run: |
-          $stagingDir = Join-Path $env:RUNNER_TEMP $env:ARCHIVE_BASENAME
+          $archiveBaseName = "vibe-everywhere-cli-$env:RELEASE_TAG-$env:PLATFORM_SUFFIX"
+          $archiveName = "$archiveBaseName.zip"
+          $stagingDir = Join-Path $env:RUNNER_TEMP $archiveBaseName
           New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
 
           Copy-Item "target/release/vibe-relay$env:BIN_EXT" $stagingDir
           Copy-Item "target/release/vibe-agent$env:BIN_EXT" $stagingDir
-          Copy-Item README.md, README.en.md, LICENSE -Destination $stagingDir
 
-          $archivePath = Join-Path $env:GITHUB_WORKSPACE $env:ARCHIVE_NAME
+          $archivePath = Join-Path $env:GITHUB_WORKSPACE $archiveName
           if (Test-Path $archivePath) {
             Remove-Item $archivePath -Force
           }
@@ -220,8 +223,8 @@ jobs:
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ github.workspace }}/${{ matrix.archive_name }}
+          name: ${{ matrix.artifact_name }}-${{ github.ref_name }}
+          path: ${{ github.workspace }}/vibe-everywhere-cli-${{ github.ref_name }}-${{ matrix.platform_suffix }}*
           if-no-files-found: error
           retention-days: 14
 
@@ -236,14 +239,12 @@ jobs:
         include:
           - label: Linux
             os: ubuntu-24.04
-            artifact_name: vibe-everywhere-desktop-x86_64-unknown-linux-gnu
-            archive_basename: vibe-everywhere-desktop-x86_64-unknown-linux-gnu
-            archive_name: vibe-everywhere-desktop-x86_64-unknown-linux-gnu.tar.gz
+            artifact_name: vibe-everywhere-desktop-linux-x86_64
+            platform_slug: linux-x86_64
           - label: Windows
             os: windows-2022
-            artifact_name: vibe-everywhere-desktop-x86_64-pc-windows-msvc
-            archive_basename: vibe-everywhere-desktop-x86_64-pc-windows-msvc
-            archive_name: vibe-everywhere-desktop-x86_64-pc-windows-msvc.zip
+            artifact_name: vibe-everywhere-desktop-windows-x86_64
+            platform_slug: windows-x86_64
 
     steps:
       - name: Checkout
@@ -289,13 +290,9 @@ jobs:
         working-directory: apps/vibe-app
         run: npm run tauri -- build --ci
 
-      - name: Package Linux desktop archive
+      - name: Collect Linux desktop artifacts
         if: runner.os == 'Linux'
         shell: bash
-        env:
-          ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
-          ARCHIVE_NAME: ${{ matrix.archive_name }}
-          ARCHIVE_FORMAT: gztar
         run: |
           set -euo pipefail
           bundle_dir="$(find "$GITHUB_WORKSPACE" -type d -path '*/target/release/bundle' | head -n 1)"
@@ -304,32 +301,30 @@ jobs:
             exit 1
           fi
 
-          staging_dir="$RUNNER_TEMP/$ARCHIVE_BASENAME"
-          mkdir -p "$staging_dir"
-          cp README.md README.en.md LICENSE "$staging_dir/"
-          cp -R "$bundle_dir" "$staging_dir/bundle"
-
-          export STAGING_DIR="$staging_dir"
-          export ARCHIVE_BASE_PATH="$GITHUB_WORKSPACE/$ARCHIVE_BASENAME"
-          python3 - <<'PY'
-          import os
-          import shutil
-
-          shutil.make_archive(
-              os.environ["ARCHIVE_BASE_PATH"],
-              os.environ["ARCHIVE_FORMAT"],
-              os.environ["STAGING_DIR"],
+          mapfile -t bundle_files < <(
+            find "$bundle_dir" -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) | sort
           )
-          PY
+          if [[ ${#bundle_files[@]} -eq 0 ]]; then
+            echo "Failed to locate Linux desktop bundle outputs" >&2
+            exit 1
+          fi
 
-          test -f "$GITHUB_WORKSPACE/$ARCHIVE_NAME"
+          for bundle_file in "${bundle_files[@]}"; do
+            case "$bundle_file" in
+              *.AppImage) dest_name="vibe-everywhere-desktop-${RELEASE_TAG}-linux-x86_64.AppImage" ;;
+              *.deb) dest_name="vibe-everywhere-desktop-${RELEASE_TAG}-linux-x86_64.deb" ;;
+              *.rpm) dest_name="vibe-everywhere-desktop-${RELEASE_TAG}-linux-x86_64.rpm" ;;
+              *) continue ;;
+            esac
 
-      - name: Package Windows desktop archive
+            cp "$bundle_file" "$GITHUB_WORKSPACE/$dest_name"
+          done
+
+          compgen -G "$GITHUB_WORKSPACE/vibe-everywhere-desktop-${RELEASE_TAG}-linux-x86_64.*" > /dev/null
+
+      - name: Collect Windows desktop artifacts
         if: runner.os == 'Windows'
         shell: pwsh
-        env:
-          ARCHIVE_BASENAME: ${{ matrix.archive_basename }}
-          ARCHIVE_NAME: ${{ matrix.archive_name }}
         run: |
           $bundleDir = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Directory |
             Where-Object { $_.FullName -match '[\\/]+target[\\/]+release[\\/]+bundle$' } |
@@ -338,29 +333,39 @@ jobs:
             throw "Failed to locate Tauri bundle output"
           }
 
-          $stagingDir = Join-Path $env:RUNNER_TEMP $env:ARCHIVE_BASENAME
-          New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
-          Copy-Item README.md, README.en.md, LICENSE -Destination $stagingDir
-          Copy-Item -Recurse $bundleDir.FullName (Join-Path $stagingDir "bundle")
-
-          $archivePath = Join-Path $env:GITHUB_WORKSPACE $env:ARCHIVE_NAME
-          if (Test-Path $archivePath) {
-            Remove-Item $archivePath -Force
+          $bundleFiles = Get-ChildItem -Path $bundleDir.FullName -Recurse -File |
+            Where-Object {
+              $_.Extension -eq '.msi' -or (
+                $_.Extension -eq '.exe' -and
+                $_.FullName -match '[\\/]+bundle[\\/]+nsis[\\/]'
+              )
+            }
+          if (-not $bundleFiles) {
+            throw "Failed to locate Windows desktop bundle outputs"
           }
 
-          Push-Location $stagingDir
-          Compress-Archive -Path * -DestinationPath $archivePath
-          Pop-Location
+          foreach ($bundleFile in $bundleFiles) {
+            $destName = switch ($bundleFile.Extension.ToLowerInvariant()) {
+              '.msi' { "vibe-everywhere-desktop-$env:RELEASE_TAG-windows-x86_64.msi" }
+              '.exe' { "vibe-everywhere-desktop-$env:RELEASE_TAG-windows-x86_64.exe" }
+              default { $null }
+            }
 
-          if (-not (Test-Path $archivePath)) {
-            throw "Failed to create $archivePath"
+            if ($null -ne $destName) {
+              Copy-Item $bundleFile.FullName (Join-Path $env:GITHUB_WORKSPACE $destName) -Force
+            }
+          }
+
+          $expectedAssets = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter "vibe-everywhere-desktop-$env:RELEASE_TAG-windows-x86_64.*"
+          if (-not $expectedAssets) {
+            throw "Failed to stage Windows desktop release assets"
           }
 
       - name: Upload desktop artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ github.workspace }}/${{ matrix.archive_name }}
+          name: ${{ matrix.artifact_name }}-${{ github.ref_name }}
+          path: ${{ github.workspace }}/vibe-everywhere-desktop-${{ github.ref_name }}-${{ matrix.platform_slug }}.*
           if-no-files-found: error
           retention-days: 14
 
@@ -480,22 +485,22 @@ jobs:
           test -n "$release_apk" && test -f "$release_apk"
           test -n "$release_aab" && test -f "$release_aab"
 
-          cp "$debug_apk" "$GITHUB_WORKSPACE/vibe-everywhere-android-arm64-debug.apk"
+          cp "$debug_apk" "$GITHUB_WORKSPACE/vibe-everywhere-android-${RELEASE_TAG}-arm64-debug.apk"
 
-          release_apk_name="vibe-everywhere-android-arm64-release.apk"
+          release_apk_name="vibe-everywhere-android-${RELEASE_TAG}-arm64-release.apk"
           if [[ "$release_apk" == *unsigned.apk ]]; then
-            release_apk_name="vibe-everywhere-android-arm64-release-unsigned.apk"
+            release_apk_name="vibe-everywhere-android-${RELEASE_TAG}-arm64-release-unsigned.apk"
           fi
           cp "$release_apk" "$GITHUB_WORKSPACE/$release_apk_name"
-          cp "$release_aab" "$GITHUB_WORKSPACE/vibe-everywhere-android-arm64-release.aab"
+          cp "$release_aab" "$GITHUB_WORKSPACE/vibe-everywhere-android-${RELEASE_TAG}-arm64-release.aab"
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v7
         with:
-          name: vibe-everywhere-android-arm64
+          name: vibe-everywhere-android-arm64-${{ github.ref_name }}
           path: |
-            ${{ github.workspace }}/vibe-everywhere-android-arm64-*.apk
-            ${{ github.workspace }}/vibe-everywhere-android-arm64-*.aab
+            ${{ github.workspace }}/vibe-everywhere-android-${{ github.ref_name }}-arm64-*.apk
+            ${{ github.workspace }}/vibe-everywhere-android-${{ github.ref_name }}-arm64-*.aab
           if-no-files-found: error
           retention-days: 14
 
@@ -509,6 +514,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Download release artifacts
         uses: actions/download-artifact@v8
         with:
@@ -521,11 +529,14 @@ jobs:
           cd release-assets
           sha256sum * > SHA256SUMS.txt
 
+      - name: Render release notes
+        run: ./scripts/render-release-notes.sh "${{ github.ref_name }}" release-assets > release-notes.md
+
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
+          body_path: release-notes.md
           fail_on_unmatched_files: true
           files: |
             release-assets/*

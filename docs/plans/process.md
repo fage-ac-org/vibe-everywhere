@@ -76,7 +76,9 @@ After implementation and verification:
 6. if the primary user-facing model changed, update [`../../README.md`](../../README.md),
    [`../../README.en.md`](../../README.en.md), and the manual checklist in
    [`../../TESTING.md`](../../TESTING.md) before closing the item
-7. after pushing to GitHub, monitor the triggered GitHub Actions runs and do not consider the task
+7. if the work affects a shipped release, release packaging, release notes, or operator deployment
+   flow, update the next-release note source under `docs/releases/` before closing the item
+8. after pushing to GitHub, monitor the triggered GitHub Actions runs and do not consider the task
    delivered until the relevant workflows are either green or have a clearly documented failure
    diagnosis
 
@@ -86,6 +88,8 @@ Relevant workflow rule:
 - a pushed release tag such as `vX.Y.Z` requires monitoring both `CI` and `Release`
 - if a workflow fails or behaves abnormally, capture the run URL, failing job, final conclusion,
   and next action in the delivery report
+- release asset changes must also verify that published asset names remain versioned and that the
+  release body is sourced from repository-owned notes rather than GitHub auto-generation alone
 
 ## Remediation Approval Rule
 
@@ -99,6 +103,12 @@ Before coding a remediation item:
 4. wait for that item-level choice before implementation
 
 This is mandatory even when the overall remediation track is already approved.
+
+Exception:
+
+- if the user has already explicitly specified the repair shape, target structure, or delivery mode
+  in a way that clearly maps to one repair mode, record that mode as `user-specified` and proceed
+  without re-asking the same choice
 
 ## Iteration Approval Rule
 
@@ -124,3 +134,4 @@ Examples include:
 - platform-surfacing rules
 - documentation/update workflow rules
 - verification/test-integrity rules
+- release-packaging and release-notes workflow rules

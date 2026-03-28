@@ -18,6 +18,7 @@ The test plan must catch:
 - frontend contract drift against relay APIs
 - Android mobile packaging and runtime wiring regression
 - environment/configuration regression before release
+- release packaging drift, missing release notes, or broken operator bootstrap scripts
 
 ## Test Layers
 
@@ -125,6 +126,43 @@ Recommended frequency:
 
 - run the debug APK build on every PR in CI
 - run all three commands before any release tag intended to ship Android artifacts
+
+### Layer 0.9: Release Packaging And Operator Onboarding Gate
+
+Purpose:
+
+- catch release-asset naming regressions before publishing
+- ensure repository-owned release notes exist for the next or current release
+- verify bootstrap installers remain syntactically valid after deployment-doc changes
+
+Execution checks:
+
+```bash
+bash -n scripts/install-relay.sh
+./scripts/render-release-notes.sh v0.0.0 >/dev/null
+```
+
+```powershell
+pwsh -NoProfile -Command "[void][System.Management.Automation.Language.Parser]::ParseFile('scripts/install-relay.ps1',[ref]`$null,[ref]`$null)"
+```
+
+Manual review:
+
+- confirm release asset names in `.github/workflows/release.yml` include the tag/version
+- confirm release packaging no longer copies repository README files into published artifacts
+- confirm `docs/releases/unreleased.md` or the target `docs/releases/vX.Y.Z.md` exists and matches
+  the shipped work
+
+Pass criteria:
+
+- installer scripts parse successfully
+- the release notes renderer succeeds against the repository note source
+- release asset naming and note-source rules remain aligned with the workflow
+
+Recommended frequency:
+
+- before cutting any release tag
+- whenever release workflow, README onboarding, or deployment scripts change
 
 ### Layer 1: Rust Unit and Contract Tests
 

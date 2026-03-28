@@ -22,8 +22,8 @@ The active plan set is:
 - process governance: [`docs/plans/process.md`](./docs/plans/process.md)
 - active iteration summary: [`docs/plans/iterations/v1-summary.md`](./docs/plans/iterations/v1-summary.md)
 - active iteration details: [`docs/plans/iterations/v1-details.md`](./docs/plans/iterations/v1-details.md)
-- active remediation summary: [`docs/plans/remediation/v2-summary.md`](./docs/plans/remediation/v2-summary.md)
-- active remediation details: [`docs/plans/remediation/v2-details.md`](./docs/plans/remediation/v2-details.md)
+- active remediation summary: [`docs/plans/remediation/v3-summary.md`](./docs/plans/remediation/v3-summary.md)
+- active remediation details: [`docs/plans/remediation/v3-details.md`](./docs/plans/remediation/v3-details.md)
 
 Every completed iteration or remediation item must update this file and the active versioned plan
 files listed above.
@@ -155,10 +155,12 @@ Current planned implementation target:
 
 - Iteration 0 through Iteration 11 are completed for the current roadmap baseline.
 - The active execution track is now the problem-driven remediation plan in
-  `docs/plans/remediation/v2-summary.md`.
+  `docs/plans/remediation/v3-summary.md`.
 - Remediation plan `v1` is complete.
 - Remediation plan `v2` is complete after restoring blocking overlay smoke verification and auditing
   the repository for similar compromised checks.
+- Remediation plan `v3` is complete after release hygiene, release notes governance, and
+  user-facing onboarding/deployment improvements were implemented and validated locally.
 
 Most recent completed tranche:
 
@@ -348,6 +350,15 @@ These items are treated as completed foundation work, not future roadmap items.
   test-only loopback bootstrap path, deterministic overlay node IP, and richer timeout diagnostics.
 - 2026-03-28: Completed Remediation v2 R2 by auditing the repository for similar compromised
   verification patterns and removing the release overlay smoke forced-success bypass.
+- 2026-03-28: Started remediation plan `v3` to clean up release artifacts, version release asset
+  names, make release notes repository-owned, and rewrite the operator onboarding path.
+- 2026-03-28: Completed Remediation v3 R1 by shrinking release packaging to meaningful binaries and
+  installers only, and by versioning all published asset names.
+- 2026-03-28: Completed Remediation v3 R2 by moving GitHub Release bodies to repository-owned note
+  sources under `docs/releases/` and wiring release-note rendering into the release workflow.
+- 2026-03-28: Completed Remediation v3 R3 by rewriting the top-level README flow around operators,
+  replacing the self-hosted note with a deployment guide, and adding Linux/Windows relay bootstrap
+  installers with auto-start setup.
 - 2026-03-26: Completed relay and agent runtime modularization, frontend port-forward MVP wiring, and capability-boundary alignment as foundational architecture work.
 
 ## Verification Log
@@ -404,6 +415,23 @@ These items are treated as completed foundation work, not future roadmap items.
   verification-integrity repair.
 - 2026-03-28: repository search for forced-success or best-effort verification markers confirmed
   that no release-critical smoke test remains intentionally non-blocking after Remediation v2.
+- 2026-03-28: documentation-only verification completed for remediation plan `v3`, including the
+  active-plan pointer changes and the release-notes/process governance updates.
+- 2026-03-28: `cargo check --locked -p vibe-relay -p vibe-agent -p vibe-app` succeeded after
+  Remediation v3 release/workflow and versioning changes.
+- 2026-03-28: `cargo test --locked --workspace --all-targets -- --nocapture` succeeded after
+  Remediation v3 release/workflow and onboarding changes.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Remediation v3 README and
+  deployment-doc rewrites.
+- 2026-03-28: `./scripts/dual-process-smoke.sh relay_polling` succeeded after Remediation v3
+  release asset packaging changes.
+- 2026-03-28: `./scripts/dual-process-smoke.sh overlay` succeeded after Remediation v3 release
+  asset packaging changes.
+- 2026-03-28: `bash -n scripts/install-relay.sh` and `./scripts/render-release-notes.sh v0.1.4`
+  succeeded after Remediation v3 deployment and release-note additions.
+- 2026-03-28: local PowerShell parser validation for `scripts/install-relay.ps1` could not be run
+  because `pwsh` was not installed in the local environment; Windows GitHub Actions validation is
+  still required after push.
 - 2026-03-26: `cargo fmt --all` succeeded after the capability-advertisement alignment.
 - 2026-03-26: `cargo test -p vibe-agent -- --nocapture` succeeded after the capability-advertisement alignment.
 - 2026-03-26: `cd apps/vibe-app && npm run build` succeeded after the capability-advertisement alignment.
