@@ -335,12 +335,12 @@ exit /b 0
       deviceId = $DeviceId
       cwd = $null
     }
-  $ShellId = $CreateShellResponse.session.id
+  $VibeShellId = $CreateShellResponse.session.id
 
-  Write-Host "waiting for shell session $ShellId to become active"
+  Write-Host "waiting for shell session $VibeShellId to become active"
   $ShellDetail = $null
   for ($attempt = 0; $attempt -lt 150; $attempt++) {
-    $ShellDetail = Invoke-JsonRequest -Uri "$BaseUrl/api/shell/sessions/$ShellId"
+    $ShellDetail = Invoke-JsonRequest -Uri "$BaseUrl/api/shell/sessions/$VibeShellId"
     $ShellStatus = $ShellDetail.session.status
     $ShellTransport = $ShellDetail.session.transport
 
@@ -363,16 +363,16 @@ exit /b 0
 
   Write-Host "sending shell input"
   $null = Invoke-JsonRequest `
-    -Uri "$BaseUrl/api/shell/sessions/$ShellId/input" `
+    -Uri "$BaseUrl/api/shell/sessions/$VibeShellId/input" `
     -Method "POST" `
     -Body @{
       data = "echo __VIBE_SHELL_SMOKE__`r`nexit`r`n"
     }
 
-  Write-Host "waiting for shell session $ShellId output and completion"
+  Write-Host "waiting for shell session $VibeShellId output and completion"
   $MarkerFound = $false
   for ($attempt = 0; $attempt -lt 180; $attempt++) {
-    $ShellDetail = Invoke-JsonRequest -Uri "$BaseUrl/api/shell/sessions/$ShellId"
+    $ShellDetail = Invoke-JsonRequest -Uri "$BaseUrl/api/shell/sessions/$VibeShellId"
     $ShellStatus = $ShellDetail.session.status
     $Outputs = @($ShellDetail.outputs)
     $MarkerFound = (@($Outputs | Where-Object { $_.data -like "*__VIBE_SHELL_SMOKE__*" })).Count -gt 0
