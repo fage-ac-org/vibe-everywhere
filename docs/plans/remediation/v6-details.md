@@ -126,3 +126,6 @@ Reason:
   `scripts/dual-process-smoke.ps1`, and `scripts/install-relay.ps1` could not be run because
   `pwsh` was not installed in the local environment; Windows GitHub Actions validation is still
   required after push.
+  `2026-03-28`: GitHub-hosted `CI` run `23687362451` completed successfully after the follow-up
+  PowerShell staging-parser and smoke-harness variable-collision fixes; `Windows Compatibility`
+  job `69009094041` reported success and the `Run Windows relay smoke test` step passed.

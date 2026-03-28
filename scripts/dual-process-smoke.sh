@@ -83,18 +83,59 @@ PY2
 )}
 OVERLAY_BOOTSTRAP_HOST=""
 OVERLAY_AGENT_NODE_IP=""
+USED_PORTS=()
 
 pick_port() {
-  python3 - "$1" <<'PY2'
+  python3 - "$1" "${2:-}" <<'PY2'
 import socket, sys
+
 host = sys.argv[1]
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.bind((host, 0))
-print(sock.getsockname()[1])
+excluded = {
+    int(value)
+    for value in sys.argv[2].split(",")
+    if value.strip()
+}
+
+for _ in range(256):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind((host, 0))
+        candidate = probe.getsockname()[1]
+
+    if candidate in excluded:
+        continue
+
+    ok = True
+    for sock_type in (socket.SOCK_STREAM, socket.SOCK_DGRAM):
+        with socket.socket(socket.AF_INET, sock_type) as sock:
+            try:
+                sock.bind((host, candidate))
+            except OSError:
+                ok = False
+                break
+
+    if ok:
+        print(candidate)
+        raise SystemExit(0)
+
+raise SystemExit(f"failed to allocate a free TCP/UDP port for {host}")
 PY2
 }
 
-RELAY_PORT=$(pick_port "$HOST")
+reserve_port() {
+  local target_var=$1
+  local excluded=""
+  local port
+
+  if [[ ${#USED_PORTS[@]} -gt 0 ]]; then
+    excluded=$(IFS=,; echo "${USED_PORTS[*]}")
+  fi
+
+  port=$(pick_port "$HOST" "$excluded")
+  USED_PORTS+=("$port")
+  printf -v "$target_var" '%s' "$port"
+}
+
+reserve_port RELAY_PORT
 BASE_URL="http://$HOST:$RELAY_PORT"
 DEVICE_ID="smoke-agent"
 DEVICE_NAME="Dual Process Smoke Agent"
@@ -104,8 +145,8 @@ RELAY_EXTRA_ENV=()
 AGENT_EXTRA_ENV=()
 
 if [[ "$MODE" == "overlay" ]]; then
-  EASYTIER_PORT=$(pick_port "$HOST")
-  AGENT_EASYTIER_PORT=$(pick_port "$HOST")
+  reserve_port EASYTIER_PORT
+  reserve_port AGENT_EASYTIER_PORT
   EASYTIER_NETWORK_NAME="vibe-smoke-net"
   EASYTIER_SECRET="vibe-smoke-secret"
   OVERLAY_RECOVERY_COOLDOWN_MS=${VIBE_TEST_OVERLAY_RECOVERY_COOLDOWN_MS:-250}
@@ -554,7 +595,7 @@ print(json.dumps({
 }, ensure_ascii=False))
 PY2
 
-  TARGET_PORT=$(pick_port "$HOST")
+  reserve_port TARGET_PORT
   echo "starting overlay port-forward target on $HOST:$TARGET_PORT"
   python3 - "$HOST" "$TARGET_PORT" "$TMP_DIR/target-server.log" <<'PY2' &
 import socket, sys
@@ -750,7 +791,7 @@ PY2
 fi
 
 if [[ "$MODE" != "overlay" ]]; then
-  TARGET_PORT=$(pick_port "$HOST")
+  reserve_port TARGET_PORT
   echo "starting relay-tunnel port-forward target on $HOST:$TARGET_PORT"
   python3 - "$HOST" "$TARGET_PORT" "$TMP_DIR/target-server.log" <<'PY2' &
 import socket, sys

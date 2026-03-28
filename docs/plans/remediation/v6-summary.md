@@ -24,10 +24,10 @@ Full implementation detail lives in [`v6-details.md`](./v6-details.md).
 ## Current Target
 
 - Active item:
-  `completed locally`
+  `completed`
 - Required next step:
-  push the packaging repair and monitor the triggered GitHub Actions workflows, especially `CI`
-  on `main`, before treating remediation `v6` as fully closed
+  remediation plan `v6` is complete; if another post-delivery repair tranche is needed, start a
+  new versioned remediation plan instead of extending this file into a different phase
 - Previous completed plan:
   remediation plan `v5`, covering overlay truthfulness, README boundary tightening, and Android
   workflow throughput

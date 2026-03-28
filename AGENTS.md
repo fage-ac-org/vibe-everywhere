@@ -64,6 +64,9 @@ Prefer focused Rust unit or integration-style tests near parsing, request orches
   named diagnostic job, keep it out of the required verify path, and record the deferred root-cause
   in the active versioned plan before merging.
 - Test-only loopback or fixed-address defaults are allowed only inside dedicated local/CI harnesses, must stay out of product/runtime defaults, and must be documented as harness-only behavior.
+- Local or CI harnesses that allocate multiple listener ports for cooperating processes must track
+  reserved ports across the whole harness and validate every required protocol binding instead of
+  repeatedly probing anonymous TCP ports independently.
 - If README, deployment docs, or developer-entry documents move or change materially, the manual verification and release/onboarding checks in `TESTING.md` must be updated in the same change set.
 - Windows smoke or installer validation that depends on EasyTier runtime files must exercise the
   packaged side-by-side layout rather than assuming raw `target/` outputs are sufficient.

@@ -22,8 +22,8 @@ The active plan set is:
 - process governance: [`docs/plans/process.md`](./docs/plans/process.md)
 - active iteration summary: [`docs/plans/iterations/v2-summary.md`](./docs/plans/iterations/v2-summary.md)
 - active iteration details: [`docs/plans/iterations/v2-details.md`](./docs/plans/iterations/v2-details.md)
-- active remediation summary: [`docs/plans/remediation/v5-summary.md`](./docs/plans/remediation/v5-summary.md)
-- active remediation details: [`docs/plans/remediation/v5-details.md`](./docs/plans/remediation/v5-details.md)
+- active remediation summary: [`docs/plans/remediation/v7-summary.md`](./docs/plans/remediation/v7-summary.md)
+- active remediation details: [`docs/plans/remediation/v7-details.md`](./docs/plans/remediation/v7-details.md)
 
 Every completed iteration or remediation item must update this file and the active versioned plan
 files listed above.
@@ -159,7 +159,7 @@ Current planned implementation target:
 - Iteration 12 adds Windows smoke coverage, moves GitHub-hosted Linux `overlay` smoke into
   explicit diagnostic jobs, and records the hosted-runner instability as deferred follow-up work.
 - The active remediation track remains the problem-driven remediation plan in
-  `docs/plans/remediation/v5-summary.md`.
+  `docs/plans/remediation/v7-summary.md`.
 - Remediation plan `v1` is complete.
 - Remediation plan `v2` is complete after restoring blocking overlay smoke verification and auditing
   the repository for similar compromised checks.
@@ -172,6 +172,11 @@ Current planned implementation target:
   reporting, stricter README operator-surface boundaries, and bounded Android SDK-component
   caching; GitHub Actions monitoring is still required after push before the tranche is fully
   closed.
+- Remediation plan `v6` is complete after Windows EasyTier side-by-side packaging plus follow-up
+  PowerShell smoke-harness fixes were validated by GitHub-hosted `CI`.
+- Remediation plan `v7` is implemented locally for GitHub-hosted Linux overlay diagnostic
+  stabilization; GitHub Actions monitoring is still required after push before the tranche is
+  fully closed.
 
 Most recent completed tranche:
 
@@ -404,6 +409,16 @@ These items are treated as completed foundation work, not future roadmap items.
 - 2026-03-28: Completed Remediation v6 R1 by switching Windows smoke to a package-style
   side-by-side runtime directory, routing Windows CLI archive staging through the shared runtime
   staging script, and making the Windows relay installer copy the packaged EasyTier runtime files.
+- 2026-03-28: Closed remediation plan `v6` after GitHub-hosted `CI` run `23687362451` reported
+  `Windows Compatibility` success and the Windows relay smoke passed after the follow-up
+  PowerShell script fixes.
+- 2026-03-28: Started remediation plan `v7` to stabilize GitHub-hosted Linux overlay diagnostics
+  by reserving unique multi-protocol harness ports and preserving the raw embedded EasyTier agent
+  stop reason in smoke artifacts.
+- 2026-03-28: Completed Remediation v7 R1 locally by replacing independent anonymous-port probes in
+  `scripts/dual-process-smoke.sh` with harness-local reservations that keep relay, agent, and
+  target helper ports unique and TCP/UDP-capable, and by preserving the original EasyTier stop
+  reason in agent overlay status instead of overwriting it with a generic wrapper message.
 - 2026-03-26: Completed relay and agent runtime modularization, frontend port-forward MVP wiring, and capability-boundary alignment as foundational architecture work.
 
 ## Verification Log
@@ -484,6 +499,20 @@ These items are treated as completed foundation work, not future roadmap items.
   `scripts/dual-process-smoke.ps1`, and `scripts/install-relay.ps1` could not be run because
   `pwsh` was not installed in the local environment; Windows GitHub Actions validation is still
   required after push.
+- 2026-03-28: GitHub-hosted Windows `CI` run `23687362451` completed successfully after
+  Remediation v6 Windows runtime packaging plus follow-up PowerShell harness fixes; job
+  `69009094041` (`Windows Compatibility`) and its `Run Windows relay smoke test` step both
+  succeeded.
+- 2026-03-28: `bash -n scripts/dual-process-smoke.sh` succeeded after Remediation v7 Linux
+  overlay diagnostic harness stabilization.
+- 2026-03-28: `cargo fmt --all --check` succeeded after Remediation v7 Linux overlay diagnostic
+  harness stabilization.
+- 2026-03-28: `cargo check --locked -p vibe-relay -p vibe-agent` succeeded after Remediation v7
+  Linux overlay diagnostic harness stabilization.
+- 2026-03-28: `./scripts/dual-process-smoke.sh overlay` succeeded after Remediation v7 Linux
+  overlay diagnostic harness stabilization.
+- 2026-03-28: `./scripts/dual-process-smoke.sh relay_polling` succeeded after Remediation v7
+  Linux overlay diagnostic harness stabilization.
 - 2026-03-28: `cargo fmt --all` succeeded after Remediation v4 runtime, documentation, and
   workflow updates.
 - 2026-03-28: `cargo check --locked -p vibe-relay -p vibe-agent -p vibe-app` succeeded after

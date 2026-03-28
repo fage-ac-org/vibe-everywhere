@@ -219,12 +219,12 @@ async fn monitor_instance(
                         overlay,
                         OverlayState::Unavailable,
                         options.node_ip.as_deref().map(strip_cidr_suffix).map(str::to_string),
-                        Some(error),
+                        Some(error.clone()),
                         options.network_name.clone(),
                         options.peers.clone(),
                     )
                     .await;
-                    bail!("embedded EasyTier agent instance stopped");
+                    return Err(anyhow::Error::msg(error));
                 }
 
                 sync_overlay(instance, options, overlay).await;
