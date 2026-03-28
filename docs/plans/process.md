@@ -92,6 +92,9 @@ Relevant workflow rule:
   and next action in the delivery report
 - release asset changes must also verify that published asset names remain versioned and that the
   release body is sourced from repository-owned notes rather than GitHub auto-generation alone
+- if a known unstable diagnostic must stay non-blocking temporarily, move it into a separately
+  named diagnostic job, keep it out of the required verify path, and record the deferred root-cause
+  plus re-entry condition in the active versioned plan
 
 ## Remediation Approval Rule
 

@@ -20,8 +20,8 @@ The active plan set is:
 
 - planning index: [`docs/plans/README.md`](./docs/plans/README.md)
 - process governance: [`docs/plans/process.md`](./docs/plans/process.md)
-- active iteration summary: [`docs/plans/iterations/v1-summary.md`](./docs/plans/iterations/v1-summary.md)
-- active iteration details: [`docs/plans/iterations/v1-details.md`](./docs/plans/iterations/v1-details.md)
+- active iteration summary: [`docs/plans/iterations/v2-summary.md`](./docs/plans/iterations/v2-summary.md)
+- active iteration details: [`docs/plans/iterations/v2-details.md`](./docs/plans/iterations/v2-details.md)
 - active remediation summary: [`docs/plans/remediation/v5-summary.md`](./docs/plans/remediation/v5-summary.md)
 - active remediation details: [`docs/plans/remediation/v5-details.md`](./docs/plans/remediation/v5-details.md)
 
@@ -148,13 +148,17 @@ When an iteration is completed and verified:
 | 9 | Platform Harmonization | completed |
 | 10 | Self-Hosted Server Productization | completed |
 | 11 | Enterprise Foundations | completed |
+| 12 | Delivery Verification Hardening | implemented locally |
 
 ## Current Iteration
 
 Current planned implementation target:
 
 - Iteration 0 through Iteration 11 are completed for the current roadmap baseline.
-- The active execution track is now the problem-driven remediation plan in
+- Iteration roadmap `v2` is active for post-baseline delivery verification hardening.
+- Iteration 12 adds Windows smoke coverage, moves GitHub-hosted Linux `overlay` smoke into
+  explicit diagnostic jobs, and records the hosted-runner instability as deferred follow-up work.
+- The active remediation track remains the problem-driven remediation plan in
   `docs/plans/remediation/v5-summary.md`.
 - Remediation plan `v1` is complete.
 - Remediation plan `v2` is complete after restoring blocking overlay smoke verification and auditing
@@ -286,6 +290,22 @@ Most recent completed tranche:
 - Dependencies: Iteration 10.
 - Notes: completed on 2026-03-28; enterprise UX remains future work, but tenant/user/role/audit/storage boundaries are now explicit in the backend and visible in the app.
 
+### Iteration 12: Delivery Verification Hardening
+
+- Objective: strengthen cross-platform delivery verification while honestly tracking the unresolved
+  GitHub-hosted Linux overlay instability as deferred follow-up work.
+- Scope summary: add a Windows-native relay smoke path, keep Linux relay-polling smoke blocking,
+  and move GitHub-hosted Linux `overlay` smoke into explicit non-blocking diagnostic jobs.
+- Key deliverables: Windows relay-plus-agent smoke coverage in CI, separately named Linux overlay
+  diagnostics in `CI` and `Release`, and recorded plan/process tracking for the deferred hosted-runner
+  issue.
+- Exit criteria: Windows is no longer validated only by compile and packaging checks, and the
+  deferred hosted-runner overlay issue is visible in the versioned plan instead of being silently
+  dropped.
+- Dependencies: Iteration roadmap `v1` baseline.
+- Notes: implemented locally on 2026-03-28; GitHub Actions verification is still required after
+  push.
+
 ## Completed Foundation Work
 
 The repository already completed substantial groundwork before this product plan replaced the old
@@ -337,6 +357,8 @@ These items are treated as completed foundation work, not future roadmap items.
 - 2026-03-28: Marked the Iteration 0-11 baseline roadmap as complete and reset the current target to future planning.
 - 2026-03-28: Added `docs/problem-remediation-plan.md` to track the post-baseline dashboard, deployment-guidance, platform-surfacing, and loopback-default repair work item by item.
 - 2026-03-28: Introduced the versioned planning system under `docs/plans/`, with shared process governance plus `summary` and `details` files for iteration plan v1 and remediation plan v1.
+- 2026-03-28: Started iteration roadmap `v2` to track post-baseline delivery verification hardening and the deferred GitHub-hosted Linux overlay instability.
+- 2026-03-28: Implemented Iteration 12 locally by adding Windows relay smoke coverage in CI, moving GitHub-hosted Linux `overlay` smoke into explicit non-blocking diagnostic jobs in both `CI` and `Release`, and recording the deferred issue in the versioned plan and workflow guardrails.
 - 2026-03-28: Completed Remediation R1 by replacing the single-route control dashboard with route-backed `Sessions`, `Devices`, `Connections`, and `Advanced` sections inside a shared responsive shell.
 - 2026-03-28: Added desktop sidebar navigation and mobile bottom navigation so the primary workflows no longer coexist as one long screen.
 - 2026-03-28: Completed Remediation R2 by gating the `Governance And Audit` surface behind the explicit `governance_audit_console` feature flag and hiding it from the default user flow.
@@ -463,6 +485,19 @@ These items are treated as completed foundation work, not future roadmap items.
   runtime, documentation, and workflow updates.
 - 2026-03-28: `./scripts/dual-process-smoke.sh overlay` succeeded after Remediation v4 overlay
   runtime fallback and auto-recovery changes.
+- 2026-03-28: `cargo fmt --all --check` succeeded after Iteration 12 delivery-verification
+  updates.
+- 2026-03-28: `cargo test --locked --workspace --all-targets -- --nocapture` succeeded after
+  Iteration 12 delivery-verification updates.
+- 2026-03-28: `bash -n scripts/dual-process-smoke.sh` succeeded after Iteration 12
+  delivery-verification updates.
+- 2026-03-28: `./scripts/dual-process-smoke.sh relay_polling` succeeded after Iteration 12
+  delivery-verification updates.
+- 2026-03-28: `./scripts/render-release-notes.sh v0.0.0 >/dev/null` succeeded after Iteration 12
+  delivery-verification updates.
+- 2026-03-28: local execution of `scripts/dual-process-smoke.ps1` could not be performed because
+  `pwsh` was not installed in the local environment; Windows GitHub Actions validation remains
+  required after push.
 - 2026-03-26: `cargo fmt --all` succeeded after the capability-advertisement alignment.
 - 2026-03-26: `cargo test -p vibe-agent -- --nocapture` succeeded after the capability-advertisement alignment.
 - 2026-03-26: `cd apps/vibe-app && npm run build` succeeded after the capability-advertisement alignment.
@@ -508,6 +543,12 @@ These items are treated as completed foundation work, not future roadmap items.
   rules from Remediation R4.
 - 2026-03-28: Remediation v2 classified the remaining Android signing `exit 0` branch in the
   release workflow as a packaging fallback for missing secrets, not as a compromised test gate.
+- 2026-03-28: Iteration 12 keeps GitHub-hosted Linux `overlay` smoke visible as diagnostic signal
+  instead of deleting it, but explicitly removes it from the required verify path until the hosted-runner
+  root cause is reopened and repaired.
+- 2026-03-28: Iteration 12 currently has only static local review for the new Windows smoke script
+  because the local environment does not provide `pwsh`; GitHub-hosted Windows validation is the
+  next required check after push.
 - 2026-03-28: Remediation v4 keeps overlay recovery scoped to future work selection rather than
   trying to migrate an already running task/session/forward back onto overlay mid-flight.
 - 2026-03-28: Remediation v4 reaffirms that top-level README files are user/operator surfaces,

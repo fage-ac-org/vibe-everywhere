@@ -93,8 +93,49 @@ jobs:
       - name: Run relay polling smoke test
         run: ./scripts/dual-process-smoke.sh relay_polling
 
-      - name: Run overlay smoke test
+  overlay-diagnostics-linux:
+    name: Overlay Diagnostics (Linux, non-blocking)
+    needs: verify
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            libdbus-1-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup protoc
+        uses: ./.github/actions/setup-protoc
+        with:
+          version: ${{ env.PROTOC_VERSION }}
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run overlay smoke diagnostic
+        env:
+          TMPDIR: ${{ runner.temp }}
         run: ./scripts/dual-process-smoke.sh overlay
+
+      - name: Upload overlay diagnostic artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: overlay-diagnostics-linux-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vibe-everywhere-dual-process.*
+          if-no-files-found: ignore
+          retention-days: 14
 
   android-mobile:
     name: Android Mobile
@@ -238,6 +279,20 @@ jobs:
       - name: Check Windows Rust targets
         run: cargo check --locked -p vibe-relay -p vibe-agent
 
+      - name: Run Windows relay smoke test
+        shell: pwsh
+        run: ./scripts/dual-process-smoke.ps1 relay_polling
+
+      - name: Upload Windows smoke artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-relay-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vibe-everywhere-windows-smoke-*
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Check Windows Tauri MSI bundle
+        if: ${{ success() }}
         working-directory: apps/vibe-app
         run: npm run tauri -- build --debug --bundles msi --no-sign --ci

@@ -56,18 +56,21 @@ Recommended frequency:
 - every local change before handoff
 - every PR in CI
 
-### Layer 0.5: Windows Compatibility Gate
+### Layer 0.5: Windows Compatibility And Smoke Gate
 
 Purpose:
 
 - catch Windows-only linker/resource regressions before release
 - verify `pnet` can resolve `Packet.lib` under the MSVC toolchain
 - verify the Tauri shell still compiles when Windows-specific assets such as `icon.ico` are required
+- verify a real Windows relay-plus-agent relay-polling path still works outside in-process unit
+  tests
 
 Execution in CI:
 
 ```powershell
 cargo check --locked -p vibe-relay -p vibe-agent
+./scripts/dual-process-smoke.ps1 relay_polling
 cd apps/vibe-app
 npm run tauri -- build --debug --bundles msi --no-sign --ci
 ```
@@ -80,6 +83,8 @@ Environment notes:
 Pass criteria:
 
 - `vibe-relay` and `vibe-agent` compile on `x86_64-pc-windows-msvc`
+- a Windows runner can start real relay and agent processes, register the device, complete a task,
+  and complete a relay-polling shell smoke path
 - Tauri desktop MSI bundling succeeds on Windows without missing icon/resource errors
 - the frontend build invoked by `tauri build` succeeds
 
@@ -236,6 +241,7 @@ Existing smoke entrypoint:
 
 - `scripts/dual-process-smoke.sh relay_polling`
 - `scripts/dual-process-smoke.sh overlay`
+- `scripts/dual-process-smoke.ps1 relay_polling` on Windows CI
 
 `relay_polling` mode validates:
 
@@ -244,6 +250,8 @@ Existing smoke entrypoint:
 - provider availability detection
 - task creation and completion through relay polling
 - relay-tunnel port-forward creation, activation, traffic forwarding, and close
+- on Windows CI, task creation/completion and relay-polling shell execution through real Windows
+  processes
 
 `overlay` mode validates:
 
@@ -257,6 +265,15 @@ Existing smoke entrypoint:
 - same-host CI harness stability through a test-only bootstrap host and explicit overlay node IP,
   a dedicated harness-only agent listener, faster harness-only EasyTier restart/poll cadence, and
   harness-only bridge recovery timers, without changing product/runtime defaults
+
+GitHub-hosted runner note:
+
+- local or self-controlled environments should still treat `./scripts/dual-process-smoke.sh
+  overlay` as the meaningful full overlay smoke path
+- GitHub-hosted Linux currently runs `overlay` smoke as a separately named non-blocking diagnostic
+  job in both `CI` and `Release`
+- that non-blocking status is an explicitly recorded known issue, not a silent pass or deleted
+  check
 
 Execution commands:
 

@@ -28,6 +28,7 @@ Full implementation detail lives in [`v1-details.md`](./v1-details.md).
 ## Current State
 
 - Iteration plan v1 is complete as a baseline roadmap epoch.
+- The next roadmap epoch now lives in [`v2-summary.md`](./v2-summary.md).
 - New work should not be appended here unless it is baseline-history maintenance.
 - Post-baseline UI and connection-model fixes are tracked in
   [`../remediation/v1-summary.md`](../remediation/v1-summary.md).
