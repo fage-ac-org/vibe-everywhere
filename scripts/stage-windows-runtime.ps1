@@ -100,7 +100,7 @@ $WinDivertDll = Find-RequiredFile `
 foreach ($binaryName in $BinaryNames) {
   $binarySource = Join-Path $BuildDir $binaryName
   if (-not (Test-Path $binarySource)) {
-    throw "failed to locate built binary in $BuildDir: $binaryName"
+    throw "failed to locate built binary in ${BuildDir}: $binaryName"
   }
 
   Copy-Item -Path $binarySource -Destination (Join-Path $DestinationDir $binaryName) -Force
