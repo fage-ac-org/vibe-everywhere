@@ -1,13 +1,30 @@
 import type { AppConfig, ControlClientKind, PlatformCapability } from "../types";
 
 const MOBILE_USER_AGENT_PATTERN = /Android|iPhone|iPad|iPod/i;
+const ANDROID_USER_AGENT_PATTERN = /Android/i;
 
 export function detectControlClientKind(): ControlClientKind {
-  if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+  if (isTauriRuntime()) {
+    if (isAndroidUserAgent()) {
+      return "android";
+    }
+
     return "tauri_desktop";
   }
 
   return "web";
+}
+
+export function isTauriRuntime() {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+export function isAndroidUserAgent() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return ANDROID_USER_AGENT_PATTERN.test(window.navigator.userAgent);
 }
 
 export function isMobileUserAgent() {
@@ -27,7 +44,7 @@ export function resolveCurrentPlatformCapability(
 
 export function prefersExplicitRemoteRelayUrl(config?: AppConfig | null) {
   const capability = resolveCurrentPlatformCapability(config);
-  return capability?.prefersExplicitRemoteRelayUrl ?? isMobileUserAgent();
+  return Boolean(capability?.prefersExplicitRemoteRelayUrl) || isMobileUserAgent();
 }
 
 export function supportsSystemNotifications(config?: AppConfig | null) {

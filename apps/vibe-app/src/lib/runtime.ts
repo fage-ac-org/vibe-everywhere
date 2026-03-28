@@ -6,6 +6,7 @@ const LEGACY_RELAY_STORAGE_KEY = "vibe.remote.relay.baseUrl";
 const LEGACY_RELAY_ACCESS_TOKEN_STORAGE_KEY = "vibe.remote.relay.accessToken";
 const MOBILE_USER_AGENT_PATTERN = /Android|iPhone|iPad|iPod/i;
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
+const EXPLICIT_RELAY_PLACEHOLDER = "http://192.168.1.10:8787";
 
 export async function resolveInitialRelayBaseUrl(): Promise<string> {
   const saved = loadStoredValue(RELAY_STORAGE_KEY, LEGACY_RELAY_STORAGE_KEY);
@@ -40,9 +41,11 @@ export function isLoopbackRelayBaseUrl(value: string) {
 }
 
 export function getRelayBaseUrlPlaceholder(prefersExplicitRemoteRelayUrl = isMobileControlClient()) {
-  return prefersExplicitRemoteRelayUrl
-    ? "http://192.168.1.10:8787"
-    : "http://127.0.0.1:8787";
+  if (prefersExplicitRemoteRelayUrl || !allowsLocalRelayDevFallback()) {
+    return EXPLICIT_RELAY_PLACEHOLDER;
+  }
+
+  return "http://127.0.0.1:8787";
 }
 
 export function resolveInitialRelayAccessToken(): string {
@@ -141,4 +144,8 @@ function persistStoredValue(primaryKey: string, legacyKey: string, value: string
     window.localStorage.removeItem(primaryKey);
   }
   window.localStorage.removeItem(legacyKey);
+}
+
+function allowsLocalRelayDevFallback() {
+  return import.meta.env.DEV;
 }

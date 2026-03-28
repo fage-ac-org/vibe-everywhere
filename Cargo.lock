@@ -7280,7 +7280,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vibe-agent"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "cidr",
@@ -7299,7 +7299,7 @@ dependencies = [
 
 [[package]]
 name = "vibe-app"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "serde",
  "tauri",
@@ -7310,7 +7310,7 @@ dependencies = [
 
 [[package]]
 name = "vibe-core"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "serde",
  "uuid",
@@ -7318,7 +7318,7 @@ dependencies = [
 
 [[package]]
 name = "vibe-relay"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-stream",

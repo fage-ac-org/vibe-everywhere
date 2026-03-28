@@ -1238,8 +1238,8 @@ pub fn default_app_config(
             "Linux".to_string(),
         ],
         control_clients: vec![
+            "Web".to_string(),
             "Desktop".to_string(),
-            "iOS".to_string(),
             "Android".to_string(),
         ],
         feature_flags: vec![

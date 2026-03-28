@@ -13,7 +13,7 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
 ## Status
 
 - Positioning: personal-edition MVP / open source experimental project
-- Primary flow: device selection, AI session launch, event-stream supervision, workspace browsing / Git inspection, plus shell / preview / port-forward tools
+- Primary flow: organized around the four top-level sections `Sessions / Devices / Connections / Advanced`, covering AI sessions, device runtime state, connection setup, and advanced tools
 - Technical direction: Rust for protocol, backend, and agent; Vue + Tauri for the control client
 - Mobile status: Android arm64 APK / AAB packaging is working, iOS is still pending
 - Best-fit use cases: self-hosted personal AI operations console, multi-device control plane, cross-platform experimentation
@@ -23,7 +23,7 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
 - Rust workspace with shared protocol, backend, agent, and desktop app
 - `vibe-relay` for Axum APIs, device state, AI-session scheduling, workspace browsing, Git inspection, shell, preview, and port-forward control-plane flows
 - `vibe-agent` for registration, polling, provider adapters, workspace / Git runtime, and shell / tunnel / port-forward execution
-- `vibe-app` for the Vue 3.5 control UI, now centered on an AI session workspace, with deployment metadata, audit trails, workspace browsing, and Git inspection built in, plus `src-tauri` as the desktop and Android shell
+- `vibe-app` for the Vue 3.5 control UI, now centered on an AI session workspace with route-backed `Sessions / Devices / Connections / Advanced` sections, deployment metadata, current-client visibility, workspace browsing, and Git inspection, plus `src-tauri` as the desktop and Android shell
 - Provider integration for `Codex`, `Claude Code`, and `OpenCode`
 - Relay-first AI session, terminal, and TCP preview/forwarding paths
 - EasyTier-based overlay-assisted transport
@@ -36,7 +36,7 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
 ```text
 ┌──────────────────────────────────────────────────────────┐
 │                     Control App                          │
-│           Vue 3.5 Web UI / Tauri Desktop Shell          │
+│      Vue 3.5 Web UI / Tauri Desktop + Android Shell    │
 └───────────────────────────┬──────────────────────────────┘
                             │ HTTP / SSE / WebSocket
 ┌───────────────────────────▼──────────────────────────────┐
@@ -100,7 +100,16 @@ cd vibe-everywhere
 cargo run -p vibe-relay
 ```
 
-The default address is `http://127.0.0.1:8787`.
+By default the relay binds to `0.0.0.0:8787`.
+
+For same-machine local development, you can reach it at `http://127.0.0.1:8787`.
+
+If other devices need to connect, or if you want externally usable Preview URLs, configure:
+
+```bash
+export VIBE_PUBLIC_RELAY_BASE_URL=https://relay.example.com
+export VIBE_RELAY_FORWARD_HOST=relay.example.com
+```
 
 To enable single-user access control:
 
@@ -147,6 +156,11 @@ The Tauri shell reads:
 
 - `VIBE_PUBLIC_RELAY_BASE_URL`
 - `VIBE_RELAY_ACCESS_TOKEN`
+
+Notes:
+
+- debug desktop builds keep a same-machine local relay fallback for development
+- release or self-hosted usage should set `VIBE_PUBLIC_RELAY_BASE_URL` explicitly
 
 ### 6. Build an Android test package
 
@@ -243,7 +257,7 @@ the release APK remains unsigned.
 
 Notes:
 
-- Android and iOS control clients no longer prefill `127.0.0.1:8787`; on first launch, enter the relay machine's LAN IP or an HTTPS public URL unless you explicitly set `VIBE_PUBLIC_RELAY_BASE_URL`
+- The Android control client no longer prefills `127.0.0.1:8787`; on first launch, enter the relay machine's LAN IP or an HTTPS public URL unless you explicitly set `VIBE_PUBLIC_RELAY_BASE_URL`
 - On the phone, point the relay URL to `http://<server-lan-ip>:8787` or a public HTTPS relay URL, not `http://127.0.0.1:8787`
 - The Android app currently allows cleartext HTTP traffic for self-hosted LAN relays; use HTTPS for public deployments
 - If `tauri android build` fails because `source.properties` is missing from an NDK directory, the SDK contains a partial NDK install. Run `npm run android:doctor`, then reinstall that NDK or explicitly export `NDK_HOME`
@@ -255,6 +269,8 @@ After the steps above, you should be able to:
 
 - connect the UI to the relay
 - see the agent in the device list
+- move between `Sessions / Devices / Connections / Advanced`, using sidebar navigation on desktop and bottom navigation on mobile
+- see deployment metadata and the current client on the `Connections` page, while governance stays hidden by default
 - create and execute tasks if a provider CLI is available
 - browse the workspace, preview files, and inspect Git state
 - open shell sessions
@@ -272,7 +288,7 @@ Common local entrypoints:
 
 ```bash
 cargo run -p vibe-relay
-cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787
+cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787  # same-machine development example
 cd apps/vibe-app && npm run dev
 cd apps/vibe-app && npm run tauri dev
 cd apps/vibe-app && npm run android:build:debug:apk

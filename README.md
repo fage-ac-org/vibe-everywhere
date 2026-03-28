@@ -13,7 +13,7 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 ## 项目状态
 
 - 当前定位：个人版 MVP / 开源实验项目
-- 当前主流程：设备选择、AI Session 发起、事件流监督、工作区浏览 / Git 检视，以及 Shell / Preview / Port Forward 工具
+- 当前主流程：按 `Sessions / Devices / Connections / Advanced` 四个一级分区组织，围绕 AI Session、设备运行态、连接配置和高级工具展开
 - 当前技术方向：以 Rust 为核心，控制端统一走 Vue + Tauri，服务端和 Agent 统一协议
 - 当前移动端：Android arm64 APK / AAB 已打通，iOS 待补齐
 - 当前适用场景：个人远程 AI 工作台、自托管多设备控制面、跨平台实验性远程协作
@@ -23,7 +23,7 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 - Rust workspace 架构，协议、服务端、Agent、桌面端共享同一仓库
 - `vibe-relay` 提供 Axum API、设备状态管理、AI Session 调度、工作区浏览、Git 检视、Shell、Preview 与 Port Forward 控制面
 - `vibe-agent` 提供设备注册、轮询执行、Provider 适配、Workspace / Git 运行时，以及 Shell / Tunnel / Port Forward 能力
-- `vibe-app` 提供 Vue 3.5 控制台，当前以 AI Session 工作台为主，集成部署元信息、审计轨迹、工作区浏览与 Git 检视，`src-tauri` 提供桌面壳和 Android 移动壳
+- `vibe-app` 提供 Vue 3.5 控制台，当前以 AI Session 工作台为主，使用路由承载的 `Sessions / Devices / Connections / Advanced` 分区，集成部署元信息、当前客户端信息、工作区浏览与 Git 检视，`src-tauri` 提供桌面壳和 Android 移动壳
 - 支持 `Codex`、`Claude Code`、`OpenCode` Provider 接入
 - 支持 Relay-first AI Session、Terminal、TCP 预览/转发
 - 支持基于 EasyTier 的 Overlay 辅助传输
@@ -36,7 +36,7 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 ```text
 ┌──────────────────────────────────────────────────────────┐
 │                     Control App                          │
-│           Vue 3.5 Web UI / Tauri Desktop Shell          │
+│      Vue 3.5 Web UI / Tauri Desktop + Android Shell    │
 └───────────────────────────┬──────────────────────────────┘
                             │ HTTP / SSE / WebSocket
 ┌───────────────────────────▼──────────────────────────────┐
@@ -100,7 +100,16 @@ cd vibe-everywhere
 cargo run -p vibe-relay
 ```
 
-默认监听 `http://127.0.0.1:8787`。
+默认绑定 `0.0.0.0:8787`。
+
+同机本地开发时，可以通过 `http://127.0.0.1:8787` 访问 relay。
+
+如果要让桌面端以外的设备访问，或需要生成可从外部打开的 Preview 链接，请显式配置：
+
+```bash
+export VIBE_PUBLIC_RELAY_BASE_URL=https://relay.example.com
+export VIBE_RELAY_FORWARD_HOST=relay.example.com
+```
 
 如果你希望开启单用户访问控制，可以在启动前设置：
 
@@ -147,6 +156,11 @@ Tauri 桌面壳会读取：
 
 - `VIBE_PUBLIC_RELAY_BASE_URL`
 - `VIBE_RELAY_ACCESS_TOKEN`
+
+说明：
+
+- 调试态桌面壳会保留同机开发用的本地 relay 回退
+- 正常发布或自建部署请显式提供 `VIBE_PUBLIC_RELAY_BASE_URL`
 
 ### 6. 构建 Android 测试包
 
@@ -241,7 +255,7 @@ base64 < /absolute/path/to/vibe-everywhere-release.jks | tr -d '\n'
 
 注意：
 
-- Android / iOS 控制端默认不会预填 `127.0.0.1:8787`；首次启动请手动填写 relay 所在机器的局域网 IP 或 HTTPS 公网地址，除非你显式设置了 `VIBE_PUBLIC_RELAY_BASE_URL`
+- Android 控制端默认不会预填 `127.0.0.1:8787`；首次启动请手动填写 relay 所在机器的局域网 IP 或 HTTPS 公网地址，除非你显式设置了 `VIBE_PUBLIC_RELAY_BASE_URL`
 - 手机上的 relay 地址应该配置为 `http://<服务器局域网IP>:8787` 或 HTTPS 公网地址，不要使用 `http://127.0.0.1:8787`
 - 当前 Android 包默认允许 HTTP 明文流量，方便自托管局域网 relay；如果对外发布，仍然建议使用 HTTPS
 - 如果 `tauri android build` 报 NDK `source.properties` 缺失，说明 SDK 里有半安装状态的 NDK；先运行 `npm run android:doctor`，再重装对应 NDK 或显式导出 `NDK_HOME`
@@ -253,6 +267,8 @@ base64 < /absolute/path/to/vibe-everywhere-release.jks | tr -d '\n'
 
 - 控制台能连上 relay
 - Agent 设备出现在设备列表里
+- 桌面端使用侧边导航、移动端使用底部导航，在 `Sessions / Devices / Connections / Advanced` 间切换
+- `Connections` 页面展示部署元信息和当前客户端信息，治理面默认隐藏
 - 如果安装了可用 Provider，可以创建并执行任务
 - 可以浏览工作区、预览文件并查看 Git 状态
 - 可以创建 Shell Session
@@ -270,7 +286,7 @@ cd apps/vibe-app && npm ci && npm run build
 
 ```bash
 cargo run -p vibe-relay
-cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787
+cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787  # 同机开发示例
 cd apps/vibe-app && npm run dev
 cd apps/vibe-app && npm run tauri dev
 cd apps/vibe-app && npm run android:build:debug:apk

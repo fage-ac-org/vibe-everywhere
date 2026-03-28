@@ -7,17 +7,26 @@ Last updated: 2026-03-28
 This file is the authoritative execution record for the repository's product, platform, and
 architecture evolution.
 
-Detailed, decision-complete implementation guidance lives in
-[`docs/iteration-specs.md`](./docs/iteration-specs.md). This file stays concise and records:
+Detailed, decision-complete implementation guidance now lives in the versioned planning system
+under [`docs/plans/README.md`](./docs/plans/README.md). This file stays concise and records:
 
 - product direction
 - current MVP baseline
-- iteration status and exit criteria
+- active plan-set pointers
 - completion, validation, risk, and decision logs
-- engineering guardrails that apply to every iteration
+- engineering guardrails that apply to every iteration and remediation phase
 
-Every completed iteration must update both this file and
-[`docs/iteration-specs.md`](./docs/iteration-specs.md).
+The active plan set is:
+
+- planning index: [`docs/plans/README.md`](./docs/plans/README.md)
+- process governance: [`docs/plans/process.md`](./docs/plans/process.md)
+- active iteration summary: [`docs/plans/iterations/v1-summary.md`](./docs/plans/iterations/v1-summary.md)
+- active iteration details: [`docs/plans/iterations/v1-details.md`](./docs/plans/iterations/v1-details.md)
+- active remediation summary: [`docs/plans/remediation/v1-summary.md`](./docs/plans/remediation/v1-summary.md)
+- active remediation details: [`docs/plans/remediation/v1-details.md`](./docs/plans/remediation/v1-details.md)
+
+Every completed iteration or remediation item must update this file and the active versioned plan
+files listed above.
 
 ## Product Direction
 
@@ -145,7 +154,11 @@ When an iteration is completed and verified:
 Current planned implementation target:
 
 - Iteration 0 through Iteration 11 are completed for the current roadmap baseline.
-- No further iteration is active in this file until a new roadmap revision is defined.
+- The active execution track is now the problem-driven remediation plan in
+  `docs/plans/remediation/v1-summary.md`.
+- Remediation R1 through R7 are completed.
+- Remediation plan `v1` is complete. Any new remediation phase should start a new versioned plan
+  instead of extending the finished `v1` files into a different phase.
 
 Most recent completed tranche:
 
@@ -313,6 +326,22 @@ These items are treated as completed foundation work, not future roadmap items.
 - 2026-03-28: Completed Iteration 10 by extending `AppConfig` with deployment/auth/storage metadata, updating the Tauri shell config path, and adding `docs/self-hosted.md`.
 - 2026-03-28: Completed Iteration 11 by introducing tenant/user/membership/audit/store abstractions, actor-aware relay write/read boundaries, agent-provided actor headers, and audit/event governance UI.
 - 2026-03-28: Marked the Iteration 0-11 baseline roadmap as complete and reset the current target to future planning.
+- 2026-03-28: Added `docs/problem-remediation-plan.md` to track the post-baseline dashboard, deployment-guidance, platform-surfacing, and loopback-default repair work item by item.
+- 2026-03-28: Introduced the versioned planning system under `docs/plans/`, with shared process governance plus `summary` and `details` files for iteration plan v1 and remediation plan v1.
+- 2026-03-28: Completed Remediation R1 by replacing the single-route control dashboard with route-backed `Sessions`, `Devices`, `Connections`, and `Advanced` sections inside a shared responsive shell.
+- 2026-03-28: Added desktop sidebar navigation and mobile bottom navigation so the primary workflows no longer coexist as one long screen.
+- 2026-03-28: Completed Remediation R2 by gating the `Governance And Audit` surface behind the explicit `governance_audit_console` feature flag and hiding it from the default user flow.
+- 2026-03-28: Aligned governance visibility with audit-event loading so the default app path no longer fetches or renders that unfinished enterprise-facing surface.
+- 2026-03-28: Completed Remediation R3 by removing inline deployment/operator guidance and relay warning copy from the primary `Connections` screen.
+- 2026-03-28: Replaced the deployment card description with neutral metadata-oriented copy and kept self-hosted detail in documentation links instead of persistent dashboard prose.
+- 2026-03-28: Completed Remediation R4 by keeping loopback fallback only on explicit debug/development paths and removing silent loopback defaults from relay/public-origin product behavior.
+- 2026-03-28: Cleaned up relay public-origin and forward-host derivation, made preview creation fail explicitly when no public relay host is configured, limited desktop/agent loopback bootstrap to dev paths, and fixed the connections screen to fall back when relay-public-origin is an empty string.
+- 2026-03-28: Completed Remediation R5 by replacing the misleading client-capability matrix with a current-client runtime summary plus a read-only control-client form explanation.
+- 2026-03-28: Kept deployment metadata visible, restored governance gating to the actual governance card, and removed the impression that Web/Desktop/Android can be switched from inside the current page.
+- 2026-03-28: Completed Remediation R6 by adding explicit Android-native current-client detection and aligning platform-related defaults with the clients the UI can actually represent.
+- 2026-03-28: Simplified the main connections surface back to the current client only, while keeping mobile relay behavior safe by treating mobile user agents as explicit-remote relay clients even when they are running in a browser.
+- 2026-03-28: Completed Remediation R7 by reconciling README, testing guidance, planning-process rules, and repository guardrails with the repaired navigation, visibility, and networking model.
+- 2026-03-28: Added durable manual QA expectations for sidebar/bottom-nav sections, current-client-only platform surfacing, governance default hiding, and development-only loopback behavior.
 - 2026-03-26: Completed relay and agent runtime modularization, frontend port-forward MVP wiring, and capability-boundary alignment as foundational architecture work.
 
 ## Verification Log
@@ -343,6 +372,24 @@ These items are treated as completed foundation work, not future roadmap items.
 - 2026-03-28: `cargo check -p vibe-relay -p vibe-agent -p vibe-app` succeeded after the Iteration 8-11 integration tranche.
 - 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after the Iteration 8-11 integration tranche.
 - 2026-03-28: `cargo test --workspace --all-targets -- --nocapture` succeeded after the Iteration 8-11 integration tranche.
+- 2026-03-28: documentation-only verification completed for `docs/problem-remediation-plan.md` and the related `PLAN.md`/`AGENTS.md` updates before any code-level remediation begins.
+- 2026-03-28: documentation-only verification completed for the versioned planning structure under `docs/plans/` plus the compatibility-pointer updates in `docs/iteration-specs.md` and `docs/problem-remediation-plan.md`.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Remediation R1 route-backed navigation refactor.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Remediation R2 governance/audit feature gating.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Remediation R3 deployment-guidance relocation.
+- 2026-03-28: `cargo fmt --all` succeeded after Remediation R4 loopback/public-origin cleanup.
+- 2026-03-28: `cargo check -p vibe-relay -p vibe-agent -p vibe-app` succeeded after Remediation R4 loopback/public-origin cleanup.
+- 2026-03-28: `cargo test --workspace --all-targets -- --nocapture` succeeded after Remediation R4 loopback/public-origin cleanup.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Remediation R4 loopback/public-origin cleanup.
+- 2026-03-28: `./scripts/dual-process-smoke.sh relay_polling` succeeded after Remediation R4 loopback/public-origin cleanup.
+- 2026-03-28: `cargo fmt --all` succeeded after Remediation R5 platform-surface semantic correction.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Remediation R5 platform-surface semantic correction.
+- 2026-03-28: `cargo fmt --all` succeeded after Remediation R6 current-client detection alignment.
+- 2026-03-28: `cargo check -p vibe-relay -p vibe-agent -p vibe-app` succeeded after Remediation R6 current-client detection alignment.
+- 2026-03-28: `cargo test --workspace --all-targets -- --nocapture` succeeded after Remediation R6 current-client detection alignment.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Remediation R6 current-client detection alignment.
+- 2026-03-28: file-content review completed after Remediation R7 docs/tests/process realignment.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Remediation R7 docs/tests/process realignment.
 - 2026-03-26: `cargo fmt --all` succeeded after the capability-advertisement alignment.
 - 2026-03-26: `cargo test -p vibe-agent -- --nocapture` succeeded after the capability-advertisement alignment.
 - 2026-03-26: `cd apps/vibe-app && npm run build` succeeded after the capability-advertisement alignment.
@@ -374,3 +421,12 @@ These items are treated as completed foundation work, not future roadmap items.
 - 2026-03-28: Iteration 9 isolates client detection and relay-URL preference rules in frontend runtime helpers, but the current capability matrix still models mobile-native support at the product level rather than maintaining separate Web-mobile and Android-native forks.
 - 2026-03-28: Iteration 10 keeps `external` storage as a compatibility placeholder that still reuses file-backed persistence until a real external store is introduced.
 - 2026-03-28: Iteration 11 enforces tenant and role boundaries in relay handlers and records audit trails, but identity is still derived from configured defaults or explicit headers rather than a full signed user-session model.
+- 2026-03-28: Decided to run the next repair tranche as a problem-driven remediation track instead of reopening the completed Iteration 0-11 roadmap table.
+- 2026-03-28: Remediation R1 intentionally keeps governance, deployment guidance, and platform semantics present inside the new `Connections` route so that R2-R5 can still be repaired item by item without silently changing their chosen modes.
+- 2026-03-28: Remediation R2 keeps the governance/audit implementation code available behind a dedicated feature flag instead of deleting it, so future enterprise work can re-enable it deliberately without default-path leakage.
+- 2026-03-28: Remediation R3 deliberately removes warning-style deployment prose from the main UI; future network/default cleanup belongs to R4 rather than reintroducing operator copy into the dashboard.
+- 2026-03-28: Remediation R4 keeps `0.0.0.0` wildcard listening valid for relay bind addresses and bridge listeners, but no longer treats wildcard or loopback values as production-safe public relay origins.
+- 2026-03-28: Remediation R4 preserves `127.0.0.1` as a valid preview target default for device-local services while requiring explicit non-empty relay/public-origin configuration for product-facing preview links outside debug fallback.
+- 2026-03-28: Remediation R5 treats platform information as descriptive runtime metadata, not as an in-page selector; any future download/open/install actions must become explicit product actions rather than visual implication.
+- 2026-03-28: Remediation R6 keeps the product promise aligned with what the runtime can actually identify: Android native is explicit, mobile web remains `web`, and the default UI avoids showing other platform identities when the user cannot switch to them there.
+- 2026-03-28: Remediation R7 makes documentation and manual verification part of the feature completion bar; UI/model changes are not complete until README, TESTING, plan records, and guardrails are updated in the same tranche.

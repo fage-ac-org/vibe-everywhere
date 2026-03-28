@@ -71,8 +71,8 @@ const TERMINAL_POLL_MS: u64 = 250;
 
 #[derive(Debug, Parser, Clone)]
 struct Cli {
-    #[arg(long, env = "VIBE_RELAY_URL", default_value = "http://127.0.0.1:8787")]
-    relay_url: String,
+    #[arg(long, env = "VIBE_RELAY_URL")]
+    relay_url: Option<String>,
 
     #[arg(long, env = "VIBE_DEVICE_NAME")]
     device_name: Option<String>,
@@ -140,10 +140,22 @@ fn advertised_device_capabilities() -> Vec<DeviceCapability> {
     ]
 }
 
+fn resolve_relay_url(value: Option<&str>, allow_local_dev_fallback: bool) -> Result<String> {
+    if let Some(relay_url) = value.map(str::trim).filter(|value| !value.is_empty()) {
+        return Ok(normalize_base_url(relay_url));
+    }
+
+    if allow_local_dev_fallback {
+        return Ok("http://127.0.0.1:8787".to_string());
+    }
+
+    bail!("missing relay URL; set --relay-url or VIBE_RELAY_URL")
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    let relay_url = normalize_base_url(&cli.relay_url);
+    let relay_url = resolve_relay_url(cli.relay_url.as_deref(), cfg!(debug_assertions))?;
     let working_root = resolve_working_root(&cli.working_root)?;
     let mut profile = AgentProfile {
         tenant_id: cli.tenant_id.clone(),
@@ -577,6 +589,32 @@ mod tests {
                 DeviceCapability::WorkspaceBrowse,
                 DeviceCapability::GitInspect,
             ]
+        );
+    }
+
+    #[test]
+    fn resolve_relay_url_prefers_explicit_value() {
+        let relay_url =
+            resolve_relay_url(Some(" https://relay.example.com/base/ "), false).unwrap();
+
+        assert_eq!(relay_url, "https://relay.example.com/base");
+    }
+
+    #[test]
+    fn resolve_relay_url_keeps_local_dev_fallback_when_enabled() {
+        let relay_url = resolve_relay_url(None, true).unwrap();
+
+        assert_eq!(relay_url, "http://127.0.0.1:8787");
+    }
+
+    #[test]
+    fn resolve_relay_url_requires_explicit_value_outside_dev_fallback() {
+        let error = resolve_relay_url(None, false).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("missing relay URL; set --relay-url or VIBE_RELAY_URL")
         );
     }
 

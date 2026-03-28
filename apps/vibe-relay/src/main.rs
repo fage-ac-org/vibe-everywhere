@@ -2990,6 +2990,46 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_port_forward_requires_configured_forward_host() {
+        let state = test_state_with_store_and_config(
+            RelayStore {
+                devices: HashMap::from([(
+                    "device-1".to_string(),
+                    test_device("device-1", vec![DeviceCapability::Shell]),
+                )]),
+                tasks: HashMap::new(),
+                shell_sessions: HashMap::new(),
+                port_forwards: HashMap::new(),
+                ..RelayStore::default()
+            },
+            |config| {
+                config.public_base_url = String::new();
+                config.forward_host = String::new();
+            },
+        );
+
+        let error = create_port_forward(
+            State(state),
+            test_headers(),
+            Json(CreatePortForwardRequest {
+                device_id: "device-1".to_string(),
+                protocol: vibe_core::PortForwardProtocol::Tcp,
+                target_host: "127.0.0.1".to_string(),
+                target_port: 8080,
+            }),
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(error.code, "forward_host_unconfigured");
+        assert!(
+            error
+                .message
+                .contains("VIBE_RELAY_FORWARD_HOST or VIBE_PUBLIC_RELAY_BASE_URL")
+        );
+    }
+
+    #[tokio::test]
     async fn report_port_forward_state_updates_error_and_terminal_status() {
         let state = test_state_with_store(RelayStore {
             devices: HashMap::from([(

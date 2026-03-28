@@ -236,18 +236,20 @@ Manual checklist:
 
 1. Launch relay and agent locally.
 2. Launch `apps/vibe-app` with `npm run dev`.
-3. Verify relay URL and optional token can be applied from the dashboard.
-4. Verify language switching between English and Simplified Chinese updates visible dashboard copy.
-5. Verify light, dark, and system theme switching updates the dashboard without layout regressions.
-6. Verify health counts, device list, deployment metadata, and governance / audit cards load correctly.
-7. Create a task, observe live event updates, and verify detail rendering.
-8. Cancel a running task and verify terminal status rendering.
-9. Verify the workspace browser loads, path navigation works, and file preview renders text content.
-10. Verify the Git inspection panel loads repo metadata, changed files, and diff counters.
-11. Create a shell session, send input, verify timeline ordering, and close the session.
-12. Create a port forward, verify status updates, relay endpoint display, and close flow.
-13. Toggle task, shell, and port-forward filters to verify selected-device scoping.
-14. Verify mobile-width layout for the dashboard.
+3. Verify desktop uses sidebar navigation and mobile-width uses bottom navigation for `Sessions`, `Devices`, `Connections`, and `Advanced`.
+4. Verify relay URL and optional token can be applied from the `Connections` section.
+5. Verify language switching between English and Simplified Chinese updates visible section copy.
+6. Verify light, dark, and system theme switching updates all primary sections without layout regressions.
+7. Verify `Connections` shows deployment metadata plus the current client only, and does not render a selectable multi-platform matrix.
+8. Verify governance / audit UI stays hidden by default; if the relevant feature flag is enabled, verify it appears intentionally rather than by default leakage.
+9. Create a task in `Sessions`, observe live event updates, and verify detail rendering.
+10. Verify the workspace browser loads, path navigation works, and file preview renders text content.
+11. Verify the Git inspection panel loads repo metadata, changed files, and diff counters.
+12. Verify `Devices` shows inventory, runtime metadata, provider availability, and selected-device workload counts.
+13. Create a shell session in `Advanced`, send input, verify timeline ordering, and close the session.
+14. Create a preview / port forward in `Advanced`, verify status updates, relay endpoint display, and close flow.
+15. Toggle task, shell, and port-forward filters to verify selected-device scoping.
+16. Verify narrow-width layout no longer collapses back into one long all-in-one page.
 
 Recommended frequency:
 
@@ -273,7 +275,8 @@ Manual checks:
 
 - app shell boots with default relay config
 - `VIBE_PUBLIC_RELAY_BASE_URL` and `VIBE_RELAY_ACCESS_TOKEN` are picked up correctly
-- desktop shell can connect to a live relay and render the dashboard
+- desktop shell can connect to a live relay and render the route-backed primary sections
+- desktop shell `Connections` view shows the current client as `Desktop` without listing other platforms as in-page choices
 
 Recommended frequency:
 
@@ -290,9 +293,10 @@ Manual checks:
 
 1. Install the debug APK on a physical Android device.
 2. Configure the relay URL with `http://<server-lan-ip>:8787` or a public HTTPS URL, not `http://127.0.0.1:8787`.
-3. Verify the dashboard loads and device counts render correctly.
-4. Verify task creation, live updates, shell session output, and port-forward flows from the phone.
-5. Verify the mobile layout remains usable in portrait orientation.
+3. Verify the app does not prefill a loopback relay URL by default.
+4. Verify the `Connections` section identifies the current client as `Android` and does not show other platforms as switchable choices.
+5. Verify bottom navigation remains usable in portrait orientation.
+6. Verify task creation, live updates, shell session output, and preview / port-forward flows from the phone.
 
 Recommended frequency:
 
@@ -387,8 +391,9 @@ These areas should be added next if the goal is a more complete automated test s
 5. `apps/vibe-relay/src/workspace.rs` and `apps/vibe-relay/src/git.rs`
    - add dual-process smoke coverage for request timeout, agent completion, and API wiring through real relay / agent binaries
 6. `apps/vibe-app`
-   - introduce `vitest` and cover `src/lib/api.ts`, `src/lib/runtime.ts`, `src/lib/i18n.ts`, `src/lib/theme.ts`, and `src/stores/control.ts`
-   - mock `fetch`, `EventSource`, and `WebSocket` to test reconnect behavior, locale / theme persistence, and workspace / Git loading states
+  - introduce `vitest` and cover `src/lib/api.ts`, `src/lib/runtime.ts`, `src/lib/i18n.ts`, `src/lib/theme.ts`, and `src/stores/control.ts`
+  - mock `fetch`, `EventSource`, and `WebSocket` to test reconnect behavior, locale / theme persistence, and workspace / Git loading states
+   - add focused coverage for `src/lib/platform.ts`, feature-flag visibility rules, relay placeholder behavior, and current-client detection semantics across Web, Tauri Desktop, and Android
 7. cross-platform runtime validation
    - Linux remains the most complete smoke-test baseline
    - Windows now has dedicated compile/package validation in CI and Release, but still lacks runtime smoke coverage
@@ -410,7 +415,7 @@ When validating a change, record:
 
 Date:
 
-- `2026-03-27`
+- `2026-03-28`
 
 Workspace state:
 
@@ -419,22 +424,17 @@ Workspace state:
 Executed commands:
 
 ```bash
-cargo fmt --all --check
+cargo fmt --all
 cargo check -p vibe-relay -p vibe-agent -p vibe-app
 cargo test --workspace --all-targets -- --nocapture
 cd apps/vibe-app && npm run build
 ./scripts/dual-process-smoke.sh relay_polling
-./scripts/dual-process-smoke.sh overlay
-cd apps/vibe-app && npm run android:build:debug:apk
-cd apps/vibe-app && npm run android:build:apk
-cd apps/vibe-app && npm run android:build:aab
 ```
 
 Result:
 
 - all commands passed
 - `relay_polling` smoke passed with successful task execution and relay-tunnel port forwarding
-- `overlay` smoke passed with successful task execution, shell session I/O, and overlay port forwarding
-- Android debug APK, release APK, and release AAB builds passed
+- route-backed primary sections, current-client-only platform surfacing, and relay/public-origin cleanup are now reflected in the docs and manual checklist
 - frontend manual regression not executed in this run
 - Tauri GUI manual validation not executed in this run

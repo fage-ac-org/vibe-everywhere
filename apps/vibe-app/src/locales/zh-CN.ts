@@ -153,6 +153,26 @@ const zhCN = {
     targetPortInvalid: "目标端口必须是 1 到 65535 之间的整数。"
   },
   dashboard: {
+    nav: {
+      sessions: "AI Sessions",
+      devices: "设备",
+      connections: "连接",
+      advanced: "高级"
+    },
+    navDescriptions: {
+      sessions: "发起 AI 工作、查看输出，并结合工作区上下文继续处理。",
+      devices: "查看设备清单、运行态信息以及 provider 就绪情况。",
+      connections: "配置 relay 接入、运行时偏好与部署元信息。",
+      advanced: "仅在需要更深层诊断时再进入 Terminal 和 Preview。"
+    },
+    shell: {
+      badge: "控制台",
+      description:
+        "一级分区改为路由承载后，核心工作流彼此独立，且同一套信息架构可以同时适配桌面与移动端。",
+      connectionState: "Relay 流状态",
+      selectedDevice: "当前设备",
+      noDeviceSelected: "尚未选择设备"
+    },
     heroBadge: "Vue + Tauri 2 + Rust Relay",
     heroDescription:
       "以 AI Sessions 为中心的远程开发控制台。选择设备、发起 AI 会话、监督输出，再按需进入 terminal 或 preview tunnel 处理高级诊断。",
@@ -184,6 +204,7 @@ const zhCN = {
     },
     deployment: {
       title: "部署与连接面",
+      summary: "这里用于查看当前部署元信息与连接端点。更详细的自建部署说明放在文档中。",
       mode: "部署模式",
       authMode: "认证模式",
       storageKind: "存储",
@@ -200,14 +221,16 @@ const zhCN = {
       }
     },
     platform: {
-      title: "客户端能力矩阵",
-      current: "当前",
-      available: "可用",
+      title: "当前客户端",
+      summary: "平台能力按当前运行时识别结果展示。主界面不再列出其它平台，避免形成可切换的误解。",
+      currentClientLabel: "当前使用中",
+      currentlyUsing: "当前使用",
       mobileOptimized: "移动端优化",
       desktopOptimized: "桌面端优化",
       systemNotifications: "系统通知",
       inAppOnly: "仅应用内通知",
       persistedConfig: "运行时配置持久化",
+      sessionOnlyConfig: "仅当前会话配置",
       explicitRelay: "显式远程 Relay",
       loopbackFriendly: "支持本地 Loopback"
     },
@@ -231,7 +254,32 @@ const zhCN = {
       title: "设备",
       registered: "已注册设备 {count} 台",
       sessions: "Sessions {count}",
-      terminals: "Terminal {count}"
+      terminals: "Terminal {count}",
+      previews: "Preview {count}",
+      availableProviders: "可用 Providers",
+      inventoryTitle: "设备清单",
+      inventoryDescription: "先选中一台设备，再检查它的运行态，再决定是否发起 AI 工作或高级工具。",
+      runtimeTitle: "运行态画像",
+      runtimeDescription: "查看当前设备的平台、工作根目录、最近心跳和 overlay 连接信息。",
+      platform: "平台",
+      workingRoot: "工作根目录",
+      lastSeen: "最近在线",
+      currentTask: "当前任务",
+      overlayMode: "Overlay 模式",
+      overlayState: "Overlay 状态",
+      overlayRelay: "Overlay Relay",
+      capabilitiesTitle: "能力与 Providers",
+      capabilitiesDescription: "直接展示 agent 上报的原始能力标签，避免 UI 和真实运行态语义不一致。",
+      capabilitiesLabel: "已上报能力",
+      capabilitiesEmpty: "当前设备还没有上报任何能力标签。",
+      providersTitle: "Provider 可用性",
+      providerAvailable: "可用",
+      providerUnavailable: "不可用",
+      providerVersion: "版本",
+      providerVersionPending: "版本待确认",
+      workloadTitle: "当前负载",
+      workloadDescription: "查看这台设备当前关联的 AI Sessions、Terminals 和 Previews 数量。",
+      emptySelection: "从左侧设备清单选择一台设备后，这里会展示它的运行态、负载和 provider 可用性。"
     },
     sessions: {
       title: "AI Sessions",
@@ -367,7 +415,8 @@ const zhCN = {
       badge: "高级工具",
       title: "Terminal 与 Preview",
       description:
-        "这些能力保留给环境检查、人工兜底和预览访问，不再作为首页主工作流。"
+        "这些能力保留给环境检查、人工兜底和预览访问，不再作为首页主工作流。",
+      empty: "当前部署没有开启可用的高级能力。对应的 Terminal / Preview 功能启用后会显示在这里。"
     },
     terminal: {
       title: "Terminal",

@@ -60,8 +60,10 @@ fn resolve_storage_kind() -> StorageKind {
 fn default_relay_base_url() -> String {
     if cfg!(target_os = "android") || cfg!(target_os = "ios") {
         String::new()
-    } else {
+    } else if cfg!(debug_assertions) {
         "http://127.0.0.1:8787".to_string()
+    } else {
+        String::new()
     }
 }
 

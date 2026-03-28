@@ -27,6 +27,7 @@ import {
   resolveInitialRelayAccessToken,
   resolveInitialRelayBaseUrl
 } from "../lib/runtime";
+import { APP_FEATURE_FLAGS, hasAppFeatureFlag } from "../lib/features";
 import { i18n } from "../lib/i18n";
 import {
   buildPreviewActivity,
@@ -302,6 +303,10 @@ export const useControlStore = defineStore("control", {
 
         this.appConfig = appConfig;
         this.health = health;
+        const shouldLoadAuditEvents = hasAppFeatureFlag(
+          appConfig,
+          APP_FEATURE_FLAGS.governanceAuditConsole
+        );
         const [devices, tasks, shellSessions, portForwards, auditRecords] = await Promise.all([
           fetchDevices(this.relayBaseUrl, this.relayAccessToken),
           fetchTasks(this.relayBaseUrl, this.relayAccessToken, { limit: TASK_HISTORY_LIMIT }),
@@ -311,9 +316,11 @@ export const useControlStore = defineStore("control", {
           fetchPortForwards(this.relayBaseUrl, this.relayAccessToken, {
             limit: PORT_FORWARD_HISTORY_LIMIT
           }),
-          fetchAuditEvents(this.relayBaseUrl, this.relayAccessToken, {
-            limit: AUDIT_HISTORY_LIMIT
-          })
+          shouldLoadAuditEvents
+            ? fetchAuditEvents(this.relayBaseUrl, this.relayAccessToken, {
+                limit: AUDIT_HISTORY_LIMIT
+              })
+            : Promise.resolve([])
         ]);
         this.devices = devices;
         this.tasks = tasks;

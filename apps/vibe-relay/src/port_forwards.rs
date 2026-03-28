@@ -94,6 +94,12 @@ pub(super) async fn create_port_forward(
 
     let (forward, snapshot, start_overlay_proxy) = {
         let mut store = state.store.write().await;
+        if state.config.forward_host.trim().is_empty() {
+            return Err(ApiError::bad_request(
+                "forward_host_unconfigured",
+                "Preview relay host is not configured; set VIBE_RELAY_FORWARD_HOST or VIBE_PUBLIC_RELAY_BASE_URL",
+            ));
+        }
         let device = store
             .devices
             .get(&payload.device_id)

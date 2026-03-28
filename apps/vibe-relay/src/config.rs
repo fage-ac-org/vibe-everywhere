@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use url::Url;
 use vibe_core::{
     ActorIdentity, DEFAULT_TENANT_ID, DEFAULT_USER_ID, DeploymentMetadata, DeploymentMode,
     StorageKind, UserRole,
@@ -26,14 +27,15 @@ pub(crate) struct RelayConfig {
 
 impl RelayConfig {
     pub(crate) fn from_env(bind_host: &str, bind_port: &str) -> Self {
+        let public_base_url = resolve_public_base_url(bind_host, bind_port);
         Self {
-            public_base_url: resolve_public_base_url(bind_host, bind_port),
+            public_base_url: public_base_url.clone(),
             access_token: std::env::var("VIBE_RELAY_ACCESS_TOKEN")
                 .ok()
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty()),
             state_file: resolve_state_file(),
-            forward_host: resolve_forward_host(bind_host),
+            forward_host: resolve_forward_host(bind_host, &public_base_url),
             forward_bind_host: resolve_forward_bind_host(bind_host),
             forward_port_start: resolve_forward_port_start(),
             forward_port_end: resolve_forward_port_end(),
@@ -79,26 +81,19 @@ fn resolve_public_base_url(bind_host: &str, bind_port: &str) -> String {
         return base_url;
     }
 
-    let host = match bind_host {
-        "0.0.0.0" | "::" => "127.0.0.1",
-        value => value,
-    };
-    format!("http://{host}:{bind_port}")
+    default_public_base_url(bind_host, bind_port, allow_local_loopback_fallback())
 }
 
-fn resolve_forward_host(bind_host: &str) -> String {
+fn resolve_forward_host(bind_host: &str, public_base_url: &str) -> String {
     if let Some(host) = std::env::var("VIBE_RELAY_FORWARD_HOST")
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
     {
-        return host;
+        return normalize_public_host(&host);
     }
 
-    match bind_host {
-        "0.0.0.0" | "::" => "127.0.0.1".to_string(),
-        value => value.to_string(),
-    }
+    default_forward_host(bind_host, public_base_url, allow_local_loopback_fallback())
 }
 
 fn resolve_forward_bind_host(bind_host: &str) -> String {
@@ -236,5 +231,90 @@ fn resolve_default_user_role() -> UserRole {
         Some("viewer") => UserRole::Viewer,
         Some("agent") => UserRole::Agent,
         _ => UserRole::Owner,
+    }
+}
+
+fn allow_local_loopback_fallback() -> bool {
+    cfg!(debug_assertions)
+}
+
+fn default_public_base_url(bind_host: &str, bind_port: &str, allow_local_fallback: bool) -> String {
+    if is_wildcard_host(bind_host) {
+        if allow_local_fallback {
+            return format!("http://127.0.0.1:{bind_port}");
+        }
+
+        return String::new();
+    }
+
+    format!("http://{bind_host}:{bind_port}")
+}
+
+fn default_forward_host(
+    bind_host: &str,
+    public_base_url: &str,
+    allow_local_fallback: bool,
+) -> String {
+    if let Some(host) = public_host_from_base_url(public_base_url) {
+        return host;
+    }
+
+    if is_wildcard_host(bind_host) {
+        if allow_local_fallback {
+            return "127.0.0.1".to_string();
+        }
+
+        return String::new();
+    }
+
+    normalize_public_host(bind_host)
+}
+
+fn public_host_from_base_url(base_url: &str) -> Option<String> {
+    Url::parse(base_url)
+        .ok()
+        .and_then(|url| url.host_str().map(normalize_public_host))
+        .filter(|value| !value.is_empty())
+}
+
+fn normalize_public_host(value: &str) -> String {
+    match value.trim() {
+        "0.0.0.0" | "::" => String::new(),
+        host => host.to_string(),
+    }
+}
+
+fn is_wildcard_host(value: &str) -> bool {
+    matches!(value.trim(), "0.0.0.0" | "::")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wildcard_bind_host_requires_explicit_public_origin_outside_dev_mode() {
+        assert_eq!(default_public_base_url("0.0.0.0", "8787", false), "");
+        assert_eq!(default_forward_host("0.0.0.0", "", false), "");
+    }
+
+    #[test]
+    fn wildcard_bind_host_keeps_local_dev_fallback_in_dev_mode() {
+        assert_eq!(
+            default_public_base_url("0.0.0.0", "8787", true),
+            "http://127.0.0.1:8787"
+        );
+        assert_eq!(
+            default_forward_host("0.0.0.0", "http://127.0.0.1:8787", true),
+            "127.0.0.1"
+        );
+    }
+
+    #[test]
+    fn forward_host_prefers_public_base_url_host() {
+        assert_eq!(
+            default_forward_host("0.0.0.0", "https://relay.example.com/base", false),
+            "relay.example.com"
+        );
     }
 }

@@ -153,6 +153,26 @@ const en = {
     targetPortInvalid: "Target port must be an integer between 1 and 65535."
   },
   dashboard: {
+    nav: {
+      sessions: "AI Sessions",
+      devices: "Devices",
+      connections: "Connections",
+      advanced: "Advanced"
+    },
+    navDescriptions: {
+      sessions: "Launch AI work, review outputs, and inspect workspace context.",
+      devices: "Inspect device inventory, runtime state, and provider readiness.",
+      connections: "Configure relay access, runtime preferences, and deployment metadata.",
+      advanced: "Use terminal and preview tools only when deeper diagnosis is required."
+    },
+    shell: {
+      badge: "Operator Console",
+      description:
+        "Route-backed sections keep the core workflows separated, while the same information architecture adapts to desktop and mobile.",
+      connectionState: "Relay Stream",
+      selectedDevice: "Selected Device",
+      noDeviceSelected: "No device selected"
+    },
     heroBadge: "Vue + Tauri 2 + Rust Relay",
     heroDescription:
       "An AI-session-first remote development control plane. Pick a device, launch an AI session, supervise the output, then drop into terminal or preview tunnels only when advanced diagnosis is needed.",
@@ -185,6 +205,8 @@ const en = {
     },
     deployment: {
       title: "Deployment Surface",
+      summary:
+        "Review the current deployment metadata and connection endpoints here. Detailed self-hosted guidance stays in documentation.",
       mode: "Deployment Mode",
       authMode: "Auth Mode",
       storageKind: "Storage",
@@ -201,14 +223,17 @@ const en = {
       }
     },
     platform: {
-      title: "Client Capability Matrix",
-      current: "Current",
-      available: "Available",
+      title: "Current Client",
+      summary:
+        "Platform capabilities are shown from the detected runtime only. Other platforms stay hidden on the main surface to avoid reading this as a switcher.",
+      currentClientLabel: "Currently In Use",
+      currentlyUsing: "In Use",
       mobileOptimized: "Mobile Optimized",
       desktopOptimized: "Desktop Optimized",
       systemNotifications: "System Notifications",
       inAppOnly: "In-App Notifications",
       persistedConfig: "Persisted Runtime Config",
+      sessionOnlyConfig: "Session-Only Config",
       explicitRelay: "Explicit Remote Relay",
       loopbackFriendly: "Loopback Friendly"
     },
@@ -233,7 +258,37 @@ const en = {
       title: "Devices",
       registered: "{count} registered devices",
       sessions: "Sessions {count}",
-      terminals: "Terminal {count}"
+      terminals: "Terminal {count}",
+      previews: "Preview {count}",
+      availableProviders: "Available Providers",
+      inventoryTitle: "Device Inventory",
+      inventoryDescription:
+        "Choose a device to inspect its runtime profile before launching AI work or advanced tools.",
+      runtimeTitle: "Runtime Profile",
+      runtimeDescription:
+        "Review platform, working root, last heartbeat, and overlay connectivity for the selected device.",
+      platform: "Platform",
+      workingRoot: "Working Root",
+      lastSeen: "Last Seen",
+      currentTask: "Current Task",
+      overlayMode: "Overlay Mode",
+      overlayState: "Overlay State",
+      overlayRelay: "Overlay Relay",
+      capabilitiesTitle: "Capabilities And Providers",
+      capabilitiesDescription:
+        "Keep raw capability labels visible so the current runtime behavior stays aligned with what the agent actually reports.",
+      capabilitiesLabel: "Reported Capabilities",
+      capabilitiesEmpty: "This device has not reported any capability tags yet.",
+      providersTitle: "Provider Availability",
+      providerAvailable: "Available",
+      providerUnavailable: "Unavailable",
+      providerVersion: "Version",
+      providerVersionPending: "Version pending",
+      workloadTitle: "Live Workload",
+      workloadDescription:
+        "Track how many AI sessions, terminals, and previews are currently associated with the selected device.",
+      emptySelection:
+        "Select a device from the inventory to inspect its runtime details, workload, and provider availability."
     },
     sessions: {
       title: "AI Sessions",
@@ -380,7 +435,9 @@ const en = {
       badge: "Advanced Tools",
       title: "Terminal And Preview",
       description:
-        "These capabilities stay available for environment checks, manual fallback, and preview access, but they are no longer the homepage's primary workflow."
+        "These capabilities stay available for environment checks, manual fallback, and preview access, but they are no longer the homepage's primary workflow.",
+      empty:
+        "No advanced capabilities are enabled for the current deployment. Terminal and preview surfaces will appear here when the corresponding feature flags are available."
     },
     terminal: {
       title: "Terminal",
