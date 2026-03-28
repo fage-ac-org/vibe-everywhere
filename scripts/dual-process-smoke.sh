@@ -253,6 +253,42 @@ PY2
     echo "overlay did not become ready in time" >&2
     exit 1
   fi
+
+  OVERLAY_READY_NODE_IP=$(python3 - "$TMP_DIR/device.json" <<'PY2'
+import json, sys
+node_ip = json.load(open(sys.argv[1], 'r', encoding='utf-8')).get("nodeIp", "")
+print(str(node_ip).split("/", 1)[0].strip())
+PY2
+  )
+  if [[ -z "$OVERLAY_READY_NODE_IP" ]]; then
+    echo "overlay node IP was empty after readiness check" >&2
+    cat "$TMP_DIR/device.json" >&2
+    exit 1
+  fi
+
+  echo "waiting for overlay bridge listeners on $OVERLAY_READY_NODE_IP"
+  overlay_bridges_ready=0
+  for _ in $(seq 1 120); do
+    if python3 - "$OVERLAY_READY_NODE_IP" 19090 19091 19092 <<'PY2'
+import socket, sys
+
+host = sys.argv[1]
+ports = [int(value) for value in sys.argv[2:]]
+for port in ports:
+    with socket.create_connection((host, port), timeout=0.5):
+        pass
+PY2
+    then
+      overlay_bridges_ready=1
+      break
+    fi
+    sleep 0.5
+  done
+  if [[ "$overlay_bridges_ready" != "1" ]]; then
+    echo "overlay bridge listeners did not become reachable in time" >&2
+    cat "$TMP_DIR/device.json" >&2
+    exit 1
+  fi
 fi
 
 create_smoke_task() {

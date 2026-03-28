@@ -2,6 +2,8 @@
 
 - Overlay smoke now accepts graceful task and shell fallback while keeping hard overlay
   port-forward validation.
+- Overlay smoke now waits for overlay bridge listeners to become reachable before transport
+  assertions start.
 - Main CI now runs both `relay_polling` and `overlay` smoke coverage before release tagging.
 
 ## Included Iterations And Remediations

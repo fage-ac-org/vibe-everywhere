@@ -246,6 +246,7 @@ Existing smoke entrypoint:
 `overlay` mode validates:
 
 - embedded EasyTier bootstrap and agent connectivity
+- overlay bridge listener reachability from the relay side before functional validation starts
 - overlay task dispatch, including graceful fallback to relay polling when the task bridge is not
   ready yet
 - overlay shell session activation, input, output, and completion, including graceful fallback to
