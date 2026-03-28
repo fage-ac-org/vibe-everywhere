@@ -248,7 +248,8 @@ Existing smoke entrypoint:
 - embedded EasyTier bootstrap and agent connectivity
 - overlay task dispatch, including graceful fallback to relay polling when the task bridge is not
   ready yet
-- overlay shell session activation, input, output, and completion
+- overlay shell session activation, input, output, and completion, including graceful fallback to
+  relay polling when the shell bridge is not ready yet
 - overlay port-forward activation, byte forwarding, and close
 - same-host CI harness stability through a test-only bootstrap host and explicit overlay node IP,
   plus harness-only bridge recovery timers, without changing product/runtime defaults
@@ -265,8 +266,8 @@ Pass criteria:
 - both modes exit `0`
 - task status reaches `succeeded`
 - `relay_polling` mode keeps task traffic on relay polling
-- `overlay` mode allows task traffic to fall back to relay polling, but shell and port-forward
-  checks must still exercise real overlay transport
+- `overlay` mode allows task and shell traffic to fall back to relay polling, but the
+  port-forward check must still exercise real overlay transport
 - shell output contains the smoke marker
 - TCP port-forward reply matches the expected payload
 

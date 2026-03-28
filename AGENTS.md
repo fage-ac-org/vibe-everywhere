@@ -8,7 +8,7 @@ This repository is a Rust workspace with one shared crate and three apps. `crate
 - `cargo test --workspace --all-targets -- --nocapture`: run the relay and agent Rust test suites.
 - `./scripts/dual-process-smoke.sh relay_polling`: run the end-to-end relay polling smoke test.
 - `./scripts/dual-process-smoke.sh overlay`: run the end-to-end overlay smoke test with graceful
-  task fallback coverage plus hard overlay shell and port-forward validation.
+  task and shell fallback coverage plus hard overlay port-forward validation.
 - `cargo run -p vibe-relay`: start the relay on port `8787`.
 - `cargo run -p vibe-agent -- --relay-url http://127.0.0.1:8787`: start an agent against the local relay.
 - `cd apps/vibe-app && npm ci && npm run dev`: run the Vue control app locally.

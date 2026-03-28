@@ -1,6 +1,6 @@
 ## Highlights
 
-- Overlay smoke now accepts graceful task fallback while keeping hard overlay shell and
+- Overlay smoke now accepts graceful task and shell fallback while keeping hard overlay
   port-forward validation.
 - Main CI now runs both `relay_polling` and `overlay` smoke coverage before release tagging.
 
