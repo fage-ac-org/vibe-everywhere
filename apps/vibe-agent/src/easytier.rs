@@ -242,11 +242,7 @@ async fn sync_overlay(
         Ok(info) => {
             let node_ip =
                 extract_overlay_node_ip(info.my_node_info.as_ref()).or(configured_node_ip);
-            let state = if info.peers.is_empty() {
-                running_overlay_state(options)
-            } else {
-                OverlayState::Connected
-            };
+            let state = running_overlay_state(options);
             update_overlay(
                 overlay,
                 state,
@@ -260,7 +256,7 @@ async fn sync_overlay(
         Err(error) => {
             update_overlay(
                 overlay,
-                running_overlay_state(options),
+                OverlayState::Degraded,
                 configured_node_ip,
                 Some(format!("embedded EasyTier agent RPC not ready: {error}")),
                 options.network_name.clone(),
@@ -394,6 +390,8 @@ fn parse_ipv4_inet(raw: &str) -> Result<Ipv4Inet> {
         .with_context(|| format!("failed to parse EasyTier node IP: {value}"))
 }
 
+// Once the embedded runtime RPC is readable again, bridge-specific availability is verified
+// separately by the relay and smoke harness.
 fn running_overlay_state(options: &AgentEasyTierOptions) -> OverlayState {
     if options.peers.is_empty() {
         OverlayState::Degraded
@@ -506,5 +504,27 @@ mod tests {
 quic://c:3",
         );
         assert_eq!(values, vec!["tcp://a:1", "ws://b:2", "quic://c:3"]);
+    }
+
+    #[test]
+    fn running_overlay_state_requires_bootstrap_peer_configuration() {
+        let disconnected = AgentEasyTierOptions {
+            device_id: Uuid::new_v4().to_string(),
+            device_name: "Workstation".to_string(),
+            instance_name: "vibe-agent-1234".to_string(),
+            network_name: Some("personal-net".to_string()),
+            network_secret: Some("top-secret".to_string()),
+            peers: vec![],
+            node_ip: Some("10.11.12.13".to_string()),
+            no_listener: true,
+            listeners: vec![],
+        };
+        let connected = AgentEasyTierOptions {
+            peers: vec!["tcp://relay.example.com:11010".to_string()],
+            ..disconnected.clone()
+        };
+
+        assert_eq!(running_overlay_state(&disconnected), OverlayState::Degraded);
+        assert_eq!(running_overlay_state(&connected), OverlayState::Connected);
     }
 }

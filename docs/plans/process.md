@@ -145,6 +145,9 @@ Examples include:
   project-management instructions into the top-level README files.
 - Contributor setup, local build commands, and source-development workflow belong in
   [`../../DEVELOPMENT.md`](../../DEVELOPMENT.md) or another dedicated developer document.
+- Do not turn the top-level README files into a document index for contributor/test/governance
+  materials such as `DEVELOPMENT.md`, `TESTING.md`, `AGENTS.md`, `PLAN.md`, or versioned planning
+  files.
 - Operator docs may explain runtime inputs and deployment steps, but they should stay user-facing
   and operational rather than governance-heavy.
 

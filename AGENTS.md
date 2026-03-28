@@ -48,6 +48,7 @@ Use `cargo fmt --all` for Rust formatting. Follow Rust defaults: `snake_case` fo
 - `README.md` and `README.en.md` are user/operator entry points. Keep them focused on what the product does, how to deploy it, how to connect to it, and where to download it.
 - Do not write internal governance, anti-hardcoding policy, planning workflow, release-process mandates, or project-management requirements into the top-level README files.
 - Contributor, source-build, and local development instructions belong in `DEVELOPMENT.md` or another dedicated developer document, not in the top-level README files.
+- Do not use the top-level README files as a navigation hub for `DEVELOPMENT.md`, `TESTING.md`, `AGENTS.md`, `PLAN.md`, or versioned planning documents. Those files may exist at the repository root, but they are not primary README entry points.
 - Operator docs may explain required runtime inputs and deployment steps, but they should do so as operational guidance rather than repository-governance language.
 - When optimizing CI or release performance with caches, scope cache keys to dependency manifests, lockfiles, or explicit tool-version inputs. Do not add broad caches with unclear invalidation, especially for large SDK trees.
 

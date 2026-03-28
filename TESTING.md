@@ -156,6 +156,8 @@ Manual review:
   the shipped work
 - confirm `README.md` and `README.en.md` stay user/operator-facing and do not absorb developer or
   governance-only content
+- confirm the top-level README files do not present `DEVELOPMENT.md`, `TESTING.md`, `AGENTS.md`,
+  `PLAN.md`, or versioned planning docs as primary documentation entry points
 - confirm `DEVELOPMENT.md` contains the current developer entry path when build or contributor
   instructions change
 

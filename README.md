@@ -118,8 +118,6 @@ VIBE_DEVICE_NAME=build-node-01 \
                     └────────────────┘
 ```
 
-## 文档入口
+## 运维文档
 
 - 自建部署与安装：[docs/self-hosted.md](./docs/self-hosted.md)
-- 开发者与本地构建：[DEVELOPMENT.md](./DEVELOPMENT.md)
-- 测试与回归清单：[TESTING.md](./TESTING.md)

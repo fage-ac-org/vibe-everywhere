@@ -1,14 +1,16 @@
 ## Highlights
 
-- Overlay smoke now accepts graceful task and shell fallback while keeping hard overlay
-  port-forward validation.
-- Overlay smoke now waits for overlay bridge listeners to become reachable before transport
-  assertions start.
-- Main CI now runs both `relay_polling` and `overlay` smoke coverage before release tagging.
+- Embedded EasyTier agents no longer report overlay `connected` while runtime RPC is still not
+  ready, which keeps relay selection, UI state, and smoke readiness aligned.
+- Top-level README files are now stricter user/operator entry points and no longer act as
+  developer/test navigation hubs.
+- Android CI and release jobs now restore fixed-version SDK components from bounded caches in
+  addition to Gradle dependency caching.
 
 ## Included Iterations And Remediations
 
-- Release verification alignment for overlay fallback and recovery behavior.
+- Remediation v5: overlay connectivity truthfulness, README boundary tightening, and Android
+  workflow throughput optimization.
 
 ## Operator Notes
 
@@ -16,6 +18,8 @@
 
 ## Validation
 
+- `cargo test --workspace --all-targets -- --nocapture`
 - `bash -n scripts/dual-process-smoke.sh`
 - `./scripts/dual-process-smoke.sh relay_polling`
 - `./scripts/dual-process-smoke.sh overlay`
+- `./scripts/render-release-notes.sh v0.0.0 >/dev/null`

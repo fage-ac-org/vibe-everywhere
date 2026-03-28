@@ -121,8 +121,6 @@ that matches your platform.
                     └────────────────┘
 ```
 
-## Documentation Entry Points
+## Operator Docs
 
 - self-hosted deployment and install: [docs/self-hosted.md](./docs/self-hosted.md)
-- developer and source-build guide: [DEVELOPMENT.md](./DEVELOPMENT.md)
-- testing and regression checklist: [TESTING.md](./TESTING.md)

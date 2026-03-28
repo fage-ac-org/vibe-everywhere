@@ -22,8 +22,8 @@ The active plan set is:
 - process governance: [`docs/plans/process.md`](./docs/plans/process.md)
 - active iteration summary: [`docs/plans/iterations/v1-summary.md`](./docs/plans/iterations/v1-summary.md)
 - active iteration details: [`docs/plans/iterations/v1-details.md`](./docs/plans/iterations/v1-details.md)
-- active remediation summary: [`docs/plans/remediation/v4-summary.md`](./docs/plans/remediation/v4-summary.md)
-- active remediation details: [`docs/plans/remediation/v4-details.md`](./docs/plans/remediation/v4-details.md)
+- active remediation summary: [`docs/plans/remediation/v5-summary.md`](./docs/plans/remediation/v5-summary.md)
+- active remediation details: [`docs/plans/remediation/v5-details.md`](./docs/plans/remediation/v5-details.md)
 
 Every completed iteration or remediation item must update this file and the active versioned plan
 files listed above.
@@ -155,7 +155,7 @@ Current planned implementation target:
 
 - Iteration 0 through Iteration 11 are completed for the current roadmap baseline.
 - The active execution track is now the problem-driven remediation plan in
-  `docs/plans/remediation/v4-summary.md`.
+  `docs/plans/remediation/v5-summary.md`.
 - Remediation plan `v1` is complete.
 - Remediation plan `v2` is complete after restoring blocking overlay smoke verification and auditing
   the repository for similar compromised checks.
@@ -164,6 +164,10 @@ Current planned implementation target:
 - Remediation plan `v4` is complete after moving overlay fallback into relay runtime behavior,
   restoring the README/developer-doc boundary, and adding bounded Android Gradle caches to CI and
   release workflows.
+- Remediation plan `v5` is implemented and locally verified for truthful overlay connectivity
+  reporting, stricter README operator-surface boundaries, and bounded Android SDK-component
+  caching; GitHub Actions monitoring is still required after push before the tranche is fully
+  closed.
 
 Most recent completed tranche:
 
