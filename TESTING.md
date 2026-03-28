@@ -247,7 +247,7 @@ Existing smoke entrypoint:
 
 - embedded EasyTier bootstrap and agent connectivity
 - overlay task dispatch, including graceful fallback to relay polling when the task bridge is not
-  ready yet and automatic recovery back to overlay on a follow-up task
+  ready yet
 - overlay shell session activation, input, output, and completion
 - overlay port-forward activation, byte forwarding, and close
 - same-host CI harness stability through a test-only bootstrap host and explicit overlay node IP,
@@ -265,10 +265,14 @@ Pass criteria:
 - both modes exit `0`
 - task status reaches `succeeded`
 - `relay_polling` mode keeps task traffic on relay polling
-- `overlay` mode either uses overlay immediately or proves the relay can fall back and then
-  automatically restore overlay for a subsequent task
+- `overlay` mode allows task traffic to fall back to relay polling, but shell and port-forward
+  checks must still exercise real overlay transport
 - shell output contains the smoke marker
 - TCP port-forward reply matches the expected payload
+
+Task-bridge recovery preference remains covered by relay tests, for example
+`overlay_task_bridge_probe_restores_overlay_preference_after_recovery` in
+`apps/vibe-relay/src/main.rs`.
 
 Recommended frequency:
 
