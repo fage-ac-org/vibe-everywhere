@@ -13,7 +13,7 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
 ## Status
 
 - Positioning: personal-edition MVP / open source experimental project
-- Primary flow: device selection, AI session launch, event-stream supervision, plus advanced terminal and preview tools
+- Primary flow: device selection, AI session launch, event-stream supervision, workspace browsing / Git inspection, plus shell / preview / port-forward tools
 - Technical direction: Rust for protocol, backend, and agent; Vue + Tauri for the control client
 - Mobile status: Android arm64 APK / AAB packaging is working, iOS is still pending
 - Best-fit use cases: self-hosted personal AI operations console, multi-device control plane, cross-platform experimentation
@@ -21,12 +21,13 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
 ## Features
 
 - Rust workspace with shared protocol, backend, agent, and desktop app
-- `vibe-relay` for Axum APIs, device state, AI-session scheduling, and terminal/preview control-plane flows
-- `vibe-agent` for registration, polling, provider adapters, workspace-root execution, and advanced terminal/tunnel runtime
-- `vibe-app` for the Vue 3.5 control UI, now centered on an AI session workspace, with `src-tauri` as the desktop and Android shell
+- `vibe-relay` for Axum APIs, device state, AI-session scheduling, workspace browsing, Git inspection, shell, preview, and port-forward control-plane flows
+- `vibe-agent` for registration, polling, provider adapters, workspace / Git runtime, and shell / tunnel / port-forward execution
+- `vibe-app` for the Vue 3.5 control UI, now centered on an AI session workspace, with deployment metadata, audit trails, workspace browsing, and Git inspection built in, plus `src-tauri` as the desktop and Android shell
 - Provider integration for `Codex`, `Claude Code`, and `OpenCode`
 - Relay-first AI session, terminal, and TCP preview/forwarding paths
 - EasyTier-based overlay-assisted transport
+- Bilingual UI support for English and Simplified Chinese, plus light / dark / system theme modes
 - Tauri Android arm64 debug APK, release APK, and AAB builds
 - SSE / WebSocket / tunnel based real-time updates
 
@@ -40,14 +41,14 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
                             │ HTTP / SSE / WebSocket
 ┌───────────────────────────▼──────────────────────────────┐
 │                      vibe-relay                          │
-│   device registry · task control · shell · port proxy   │
+│ device registry · task/workspace/git · shell · proxy    │
 │   auth · persistence · overlay-aware transport choice    │
 └───────────────────────────┬──────────────────────────────┘
                             │ HTTP polling / bridge / tunnel
 ┌───────────────────────────▼──────────────────────────────┐
 │                      vibe-agent                          │
-│ provider adapters · task runtime · shell runtime         │
-│ port-forward runtime · embedded overlay node             │
+│ provider adapters · task/workspace/git runtime           │
+│ shell/port-forward runtime · embedded overlay node       │
 └───────────────────────────┬──────────────────────────────┘
                             │ local process / local TCP
                     ┌───────▼────────┐
@@ -76,7 +77,7 @@ This is not a traditional remote desktop product. It is an AI-session-first remo
 ### Prerequisites
 
 - Rust stable toolchain
-- Node.js 20+
+- Node.js 24.14.x
 - `protobuf-compiler` or another working `protoc`
 - WebKitGTK / GTK development packages when building Tauri on Linux
 - Android builds require JDK 17, Android SDK cmdline-tools, plus `platforms;android-36`, `build-tools;35.0.0`, and `ndk;25.2.9519653`
@@ -255,6 +256,7 @@ After the steps above, you should be able to:
 - connect the UI to the relay
 - see the agent in the device list
 - create and execute tasks if a provider CLI is available
+- browse the workspace, preview files, and inspect Git state
 - open shell sessions
 - create TCP port forwards
 
@@ -290,6 +292,12 @@ cargo check -p vibe-relay -p vibe-agent -p vibe-app
 cargo test --workspace --all-targets -- --nocapture
 cd apps/vibe-app && npm ci && npm run build
 ./scripts/dual-process-smoke.sh relay_polling
+```
+
+For workspace browsing or Git inspection control-plane changes, also run:
+
+```bash
+cargo test -p vibe-relay -- --nocapture
 ```
 
 For Android changes, also run:

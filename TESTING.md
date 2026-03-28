@@ -146,8 +146,16 @@ Existing high-value coverage:
   - CLI task bridge auth and event streaming
 - `apps/vibe-agent/src/port_forward_bridge.rs`
   - tunnel auth and target traffic proxying
+- `apps/vibe-agent/src/workspace_runtime.rs`
+  - workspace path boundary enforcement
+  - browse and preview behavior within the configured working root
+- `apps/vibe-agent/src/git_runtime.rs`
+  - Git status parsing
+  - non-repository handling and changed-file / recent-commit collection
 - `apps/vibe-relay/src/main.rs`
   - task create/claim/cancel/state transitions
+  - workspace browse / preview request claim-complete orchestration
+  - Git inspect request claim-complete orchestration
   - shell create/claim/detail/filter behavior
   - port-forward create/claim/report/close behavior
   - overlay preference and fallback behavior
@@ -229,13 +237,17 @@ Manual checklist:
 1. Launch relay and agent locally.
 2. Launch `apps/vibe-app` with `npm run dev`.
 3. Verify relay URL and optional token can be applied from the dashboard.
-4. Verify health counts and device list load correctly.
-5. Create a task, observe live event updates, and verify detail rendering.
-6. Cancel a running task and verify terminal status rendering.
-7. Create a shell session, send input, verify timeline ordering, and close the session.
-8. Create a port forward, verify status updates, relay endpoint display, and close flow.
-9. Toggle task, shell, and port-forward filters to verify selected-device scoping.
-10. Verify mobile-width layout for the dashboard.
+4. Verify language switching between English and Simplified Chinese updates visible dashboard copy.
+5. Verify light, dark, and system theme switching updates the dashboard without layout regressions.
+6. Verify health counts, device list, deployment metadata, and governance / audit cards load correctly.
+7. Create a task, observe live event updates, and verify detail rendering.
+8. Cancel a running task and verify terminal status rendering.
+9. Verify the workspace browser loads, path navigation works, and file preview renders text content.
+10. Verify the Git inspection panel loads repo metadata, changed files, and diff counters.
+11. Create a shell session, send input, verify timeline ordering, and close the session.
+12. Create a port forward, verify status updates, relay endpoint display, and close flow.
+13. Toggle task, shell, and port-forward filters to verify selected-device scoping.
+14. Verify mobile-width layout for the dashboard.
 
 Recommended frequency:
 
@@ -372,10 +384,12 @@ These areas should be added next if the goal is a more complete automated test s
    - add env parsing tests for polling, heartbeat, working root, and command overrides
 4. `apps/vibe-relay/src/auth.rs`, `apps/vibe-relay/src/config.rs`, `apps/vibe-relay/src/store.rs`
    - add focused unit tests for token extraction, config defaults, and state-file path handling
-5. `apps/vibe-app`
-   - introduce `vitest` and cover `src/lib/api.ts`, `src/lib/runtime.ts`, and `src/stores/control.ts`
-   - mock `fetch`, `EventSource`, and `WebSocket` to test reconnect and filter behavior
-6. cross-platform runtime validation
+5. `apps/vibe-relay/src/workspace.rs` and `apps/vibe-relay/src/git.rs`
+   - add dual-process smoke coverage for request timeout, agent completion, and API wiring through real relay / agent binaries
+6. `apps/vibe-app`
+   - introduce `vitest` and cover `src/lib/api.ts`, `src/lib/runtime.ts`, `src/lib/i18n.ts`, `src/lib/theme.ts`, and `src/stores/control.ts`
+   - mock `fetch`, `EventSource`, and `WebSocket` to test reconnect behavior, locale / theme persistence, and workspace / Git loading states
+7. cross-platform runtime validation
    - Linux remains the most complete smoke-test baseline
    - Windows now has dedicated compile/package validation in CI and Release, but still lacks runtime smoke coverage
    - Android now has dedicated APK/AAB packaging validation, but still lacks emulator or device-level automated smoke coverage

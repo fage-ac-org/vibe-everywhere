@@ -1038,6 +1038,46 @@ mod tests {
         .unwrap()
     }
 
+    async fn wait_for_workspace_claim(
+        state: &AppState,
+        device_id: &str,
+    ) -> vibe_core::WorkspaceOperationRequest {
+        tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                let Json(response) =
+                    claim_next_workspace_request(Path(device_id.to_string()), State(state.clone()))
+                        .await
+                        .unwrap();
+                if let Some(request) = response.request {
+                    return request;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap()
+    }
+
+    async fn wait_for_git_claim(
+        state: &AppState,
+        device_id: &str,
+    ) -> vibe_core::GitOperationRequest {
+        tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                let Json(response) =
+                    claim_next_git_request(Path(device_id.to_string()), State(state.clone()))
+                        .await
+                        .unwrap();
+                if let Some(request) = response.request {
+                    return request;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap()
+    }
+
     async fn read_port_forward_bridge_request_for_test(
         stream: &mut TcpStream,
     ) -> Option<PortForwardBridgeRequest> {
@@ -1308,6 +1348,345 @@ mod tests {
             store.tasks["task-relay"].record.status,
             TaskStatus::Assigned
         );
+    }
+
+    #[tokio::test]
+    async fn browse_workspace_rejects_device_without_capability() {
+        let state = test_state_with_store(RelayStore {
+            devices: HashMap::from([("device-1".to_string(), test_device("device-1", vec![]))]),
+            ..RelayStore::default()
+        });
+
+        let error = browse_workspace(
+            State(state),
+            Json(vibe_core::WorkspaceBrowseRequest {
+                device_id: "device-1".to_string(),
+                session_cwd: Some("src".to_string()),
+                path: Some("docs".to_string()),
+            }),
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(error.status, StatusCode::CONFLICT);
+        assert_eq!(error.code, "workspace_browse_unavailable");
+    }
+
+    #[tokio::test]
+    async fn browse_workspace_round_trip_claims_and_completes_request() {
+        let state = test_state_with_store(RelayStore {
+            devices: HashMap::from([(
+                "device-1".to_string(),
+                test_device("device-1", vec![DeviceCapability::WorkspaceBrowse]),
+            )]),
+            ..RelayStore::default()
+        });
+
+        let browse_state = state.clone();
+        let browse_task = tokio::spawn(async move {
+            browse_workspace(
+                State(browse_state),
+                Json(vibe_core::WorkspaceBrowseRequest {
+                    device_id: "device-1".to_string(),
+                    session_cwd: Some("src".to_string()),
+                    path: Some("docs".to_string()),
+                }),
+            )
+            .await
+        });
+
+        let request = wait_for_workspace_claim(&state, "device-1").await;
+        let request_id = request.id().to_string();
+        match &request {
+            vibe_core::WorkspaceOperationRequest::Browse {
+                device_id,
+                session_cwd,
+                path,
+                ..
+            } => {
+                assert_eq!(device_id, "device-1");
+                assert_eq!(session_cwd.as_deref(), Some("src"));
+                assert_eq!(path.as_deref(), Some("docs"));
+            }
+            other => panic!("unexpected workspace request: {other:?}"),
+        }
+
+        complete_workspace_request(
+            Path(request_id),
+            State(state.clone()),
+            Json(vibe_core::CompleteWorkspaceOperationRequest {
+                device_id: "device-1".to_string(),
+                result: vibe_core::WorkspaceOperationResult::Browse {
+                    response: vibe_core::WorkspaceBrowseResponse {
+                        device_id: "device-1".to_string(),
+                        root_path: "/repo".to_string(),
+                        path: "/repo/docs".to_string(),
+                        parent_path: Some("/repo".to_string()),
+                        entries: vec![vibe_core::WorkspaceEntry {
+                            path: "/repo/docs/readme.md".to_string(),
+                            name: "readme.md".to_string(),
+                            kind: vibe_core::WorkspaceEntryKind::File,
+                            size_bytes: Some(128),
+                            modified_at_epoch_ms: Some(42),
+                        }],
+                    },
+                },
+            }),
+        )
+        .await
+        .unwrap();
+
+        let Json(response) = browse_task.await.unwrap().unwrap();
+        assert_eq!(response.device_id, "device-1");
+        assert_eq!(response.root_path, "/repo");
+        assert_eq!(response.path, "/repo/docs");
+        assert_eq!(response.entries.len(), 1);
+
+        let requests = state.workspace_requests.read().await;
+        assert!(requests.is_empty());
+    }
+
+    #[tokio::test]
+    async fn complete_workspace_request_rejects_device_mismatch() {
+        let state = test_state_with_store(RelayStore {
+            devices: HashMap::from([(
+                "device-1".to_string(),
+                test_device("device-1", vec![DeviceCapability::WorkspaceBrowse]),
+            )]),
+            ..RelayStore::default()
+        });
+
+        let preview_state = state.clone();
+        let preview_task = tokio::spawn(async move {
+            preview_workspace_file(
+                State(preview_state),
+                Json(vibe_core::WorkspaceFilePreviewRequest {
+                    device_id: "device-1".to_string(),
+                    session_cwd: Some("src".to_string()),
+                    path: "README.md".to_string(),
+                    line: Some(2),
+                    limit: Some(3),
+                }),
+            )
+            .await
+        });
+
+        let request = wait_for_workspace_claim(&state, "device-1").await;
+        let request_id = request.id().to_string();
+        let error = complete_workspace_request(
+            Path(request_id.clone()),
+            State(state.clone()),
+            Json(vibe_core::CompleteWorkspaceOperationRequest {
+                device_id: "device-2".to_string(),
+                result: vibe_core::WorkspaceOperationResult::Error {
+                    message: "wrong device".to_string(),
+                },
+            }),
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.code, "workspace_device_mismatch");
+
+        complete_workspace_request(
+            Path(request_id),
+            State(state),
+            Json(vibe_core::CompleteWorkspaceOperationRequest {
+                device_id: "device-1".to_string(),
+                result: vibe_core::WorkspaceOperationResult::Preview {
+                    response: vibe_core::WorkspaceFilePreviewResponse {
+                        device_id: "device-1".to_string(),
+                        root_path: "/repo".to_string(),
+                        path: "/repo/README.md".to_string(),
+                        kind: vibe_core::WorkspacePreviewKind::Text,
+                        content: Some("line 2\nline 3".to_string()),
+                        truncated: false,
+                        line: Some(2),
+                        total_lines: Some(4),
+                        size_bytes: 24,
+                    },
+                },
+            }),
+        )
+        .await
+        .unwrap();
+
+        let Json(response) = preview_task.await.unwrap().unwrap();
+        assert_eq!(response.kind, vibe_core::WorkspacePreviewKind::Text);
+        assert_eq!(response.line, Some(2));
+    }
+
+    #[tokio::test]
+    async fn inspect_git_workspace_rejects_device_without_capability() {
+        let state = test_state_with_store(RelayStore {
+            devices: HashMap::from([("device-1".to_string(), test_device("device-1", vec![]))]),
+            ..RelayStore::default()
+        });
+
+        let error = inspect_git_workspace(
+            State(state),
+            Json(vibe_core::GitInspectRequest {
+                device_id: "device-1".to_string(),
+                session_cwd: Some("src".to_string()),
+            }),
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(error.status, StatusCode::CONFLICT);
+        assert_eq!(error.code, "git_inspect_unavailable");
+    }
+
+    #[tokio::test]
+    async fn inspect_git_workspace_round_trip_claims_and_completes_request() {
+        let state = test_state_with_store(RelayStore {
+            devices: HashMap::from([(
+                "device-1".to_string(),
+                test_device("device-1", vec![DeviceCapability::GitInspect]),
+            )]),
+            ..RelayStore::default()
+        });
+
+        let inspect_state = state.clone();
+        let inspect_task = tokio::spawn(async move {
+            inspect_git_workspace(
+                State(inspect_state),
+                Json(vibe_core::GitInspectRequest {
+                    device_id: "device-1".to_string(),
+                    session_cwd: Some("src".to_string()),
+                }),
+            )
+            .await
+        });
+
+        let request = wait_for_git_claim(&state, "device-1").await;
+        let request_id = request.id().to_string();
+        match &request {
+            vibe_core::GitOperationRequest::Inspect {
+                device_id,
+                session_cwd,
+                ..
+            } => {
+                assert_eq!(device_id, "device-1");
+                assert_eq!(session_cwd.as_deref(), Some("src"));
+            }
+        }
+
+        complete_git_request(
+            Path(request_id),
+            State(state.clone()),
+            Json(vibe_core::CompleteGitOperationRequest {
+                device_id: "device-1".to_string(),
+                result: vibe_core::GitOperationResult::Inspect {
+                    response: vibe_core::GitInspectResponse {
+                        device_id: "device-1".to_string(),
+                        workspace_root: "/repo".to_string(),
+                        repo_root: Some("/repo".to_string()),
+                        scope_path: Some("src".to_string()),
+                        state: vibe_core::GitInspectState::Ready,
+                        branch_name: Some("main".to_string()),
+                        upstream_branch: Some("origin/main".to_string()),
+                        ahead_count: 1,
+                        behind_count: 0,
+                        has_commits: true,
+                        changed_files: vec![vibe_core::GitChangedFile {
+                            path: "/repo/src/main.rs".to_string(),
+                            repo_path: "src/main.rs".to_string(),
+                            status: vibe_core::GitFileStatus::Modified,
+                            staged: false,
+                            unstaged: true,
+                        }],
+                        recent_commits: vec![vibe_core::GitCommitSummary {
+                            id: "0123456789abcdef".to_string(),
+                            short_id: "0123456".to_string(),
+                            summary: "initial".to_string(),
+                            author_name: "Vibe Test".to_string(),
+                            committed_at_epoch_ms: 10,
+                        }],
+                        diff_stats: vibe_core::GitDiffStats {
+                            changed_files: 1,
+                            staged_files: 0,
+                            unstaged_files: 1,
+                            untracked_files: 0,
+                            conflicted_files: 0,
+                            staged_additions: 0,
+                            staged_deletions: 0,
+                            unstaged_additions: 12,
+                            unstaged_deletions: 2,
+                        },
+                    },
+                },
+            }),
+        )
+        .await
+        .unwrap();
+
+        let Json(response) = inspect_task.await.unwrap().unwrap();
+        assert_eq!(response.state, vibe_core::GitInspectState::Ready);
+        assert_eq!(response.branch_name.as_deref(), Some("main"));
+        assert_eq!(response.changed_files.len(), 1);
+
+        let requests = state.git_requests.read().await;
+        assert!(requests.is_empty());
+    }
+
+    #[tokio::test]
+    async fn complete_git_request_rejects_device_mismatch() {
+        let state = test_state_with_store(RelayStore {
+            devices: HashMap::from([(
+                "device-1".to_string(),
+                test_device("device-1", vec![DeviceCapability::GitInspect]),
+            )]),
+            ..RelayStore::default()
+        });
+
+        let inspect_state = state.clone();
+        let inspect_task = tokio::spawn(async move {
+            inspect_git_workspace(
+                State(inspect_state),
+                Json(vibe_core::GitInspectRequest {
+                    device_id: "device-1".to_string(),
+                    session_cwd: None,
+                }),
+            )
+            .await
+        });
+
+        let request = wait_for_git_claim(&state, "device-1").await;
+        let request_id = request.id().to_string();
+        let error = complete_git_request(
+            Path(request_id.clone()),
+            State(state.clone()),
+            Json(vibe_core::CompleteGitOperationRequest {
+                device_id: "device-2".to_string(),
+                result: vibe_core::GitOperationResult::Error {
+                    message: "wrong device".to_string(),
+                },
+            }),
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.code, "git_device_mismatch");
+
+        complete_git_request(
+            Path(request_id),
+            State(state),
+            Json(vibe_core::CompleteGitOperationRequest {
+                device_id: "device-1".to_string(),
+                result: vibe_core::GitOperationResult::Error {
+                    message: "git missing".to_string(),
+                },
+            }),
+        )
+        .await
+        .unwrap();
+
+        let error = inspect_task.await.unwrap().unwrap_err();
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.code, "git_inspect_failed");
     }
 
     #[tokio::test]

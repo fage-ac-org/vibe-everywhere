@@ -13,7 +13,7 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 ## 项目状态
 
 - 当前定位：个人版 MVP / 开源实验项目
-- 当前主流程：设备选择、AI Session 发起、事件流监督、高级 Terminal / Preview 工具
+- 当前主流程：设备选择、AI Session 发起、事件流监督、工作区浏览 / Git 检视，以及 Shell / Preview / Port Forward 工具
 - 当前技术方向：以 Rust 为核心，控制端统一走 Vue + Tauri，服务端和 Agent 统一协议
 - 当前移动端：Android arm64 APK / AAB 已打通，iOS 待补齐
 - 当前适用场景：个人远程 AI 工作台、自托管多设备控制面、跨平台实验性远程协作
@@ -21,12 +21,13 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 ## 核心能力
 
 - Rust workspace 架构，协议、服务端、Agent、桌面端共享同一仓库
-- `vibe-relay` 提供 Axum API、设备状态管理、AI Session 调度、Terminal 与 Preview 控制面
-- `vibe-agent` 提供设备注册、轮询执行、Provider 适配、Workspace 根目录运行时以及高级 Terminal / Tunnel 能力
-- `vibe-app` 提供 Vue 3.5 控制台，当前以 AI Session 工作台为主，`src-tauri` 提供桌面壳和 Android 移动壳
+- `vibe-relay` 提供 Axum API、设备状态管理、AI Session 调度、工作区浏览、Git 检视、Shell、Preview 与 Port Forward 控制面
+- `vibe-agent` 提供设备注册、轮询执行、Provider 适配、Workspace / Git 运行时，以及 Shell / Tunnel / Port Forward 能力
+- `vibe-app` 提供 Vue 3.5 控制台，当前以 AI Session 工作台为主，集成部署元信息、审计轨迹、工作区浏览与 Git 检视，`src-tauri` 提供桌面壳和 Android 移动壳
 - 支持 `Codex`、`Claude Code`、`OpenCode` Provider 接入
 - 支持 Relay-first AI Session、Terminal、TCP 预览/转发
 - 支持基于 EasyTier 的 Overlay 辅助传输
+- 控制台支持中文 / 英文、浅色 / 深色 / 跟随系统主题
 - 支持 Tauri Android arm64 调试 APK、release APK 与 AAB 构建
 - 支持 SSE / WebSocket / Tunnel 等多种实时通道
 
@@ -40,14 +41,14 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
                             │ HTTP / SSE / WebSocket
 ┌───────────────────────────▼──────────────────────────────┐
 │                      vibe-relay                          │
-│   device registry · task control · shell · port proxy   │
+│ device registry · task/workspace/git · shell · proxy    │
 │   auth · persistence · overlay-aware transport choice    │
 └───────────────────────────┬──────────────────────────────┘
                             │ HTTP polling / bridge / tunnel
 ┌───────────────────────────▼──────────────────────────────┐
 │                      vibe-agent                          │
-│ provider adapters · task runtime · shell runtime         │
-│ port-forward runtime · embedded overlay node             │
+│ provider adapters · task/workspace/git runtime           │
+│ shell/port-forward runtime · embedded overlay node       │
 └───────────────────────────┬──────────────────────────────┘
                             │ local process / local TCP
                     ┌───────▼────────┐
@@ -76,7 +77,7 @@ Rust-first 的远程 AI 控制平面：`Rust relay + Rust agent + Vue 3.5 + Taur
 ### 依赖要求
 
 - Rust stable toolchain
-- Node.js 20+
+- Node.js 24.14.x
 - `protobuf-compiler` 或可用的 `protoc`
 - Linux 下构建 Tauri 时需要 WebKitGTK / GTK 相关开发包
 - Android 构建需要 JDK 17、Android SDK cmdline-tools，以及 `platforms;android-36`、`build-tools;35.0.0`、`ndk;25.2.9519653`
@@ -253,6 +254,7 @@ base64 < /absolute/path/to/vibe-everywhere-release.jks | tr -d '\n'
 - 控制台能连上 relay
 - Agent 设备出现在设备列表里
 - 如果安装了可用 Provider，可以创建并执行任务
+- 可以浏览工作区、预览文件并查看 Git 状态
 - 可以创建 Shell Session
 - 可以创建 TCP 端口转发
 
@@ -288,6 +290,12 @@ cargo check -p vibe-relay -p vibe-agent -p vibe-app
 cargo test --workspace --all-targets -- --nocapture
 cd apps/vibe-app && npm ci && npm run build
 ./scripts/dual-process-smoke.sh relay_polling
+```
+
+涉及工作区浏览 / Git 检视控制面改动时，建议额外执行：
+
+```bash
+cargo test -p vibe-relay -- --nocapture
 ```
 
 涉及 Android 移动端改动时，建议额外执行：
