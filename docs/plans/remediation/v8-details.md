@@ -154,5 +154,8 @@ Reason:
   after the hosted no_tun overlay diagnostic changes.
   `2026-03-28`: `./scripts/dual-process-smoke.sh relay_polling` succeeded after the shared smoke
   script changes.
-  `2026-03-28`: GitHub Actions validation is still required after push; `CI` monitoring remains the
-  final close-out step for remediation `v8`.
+  `2026-03-28`: GitHub Actions `CI` run `23688459204` completed successfully after the hosted
+  no_tun overlay diagnostic repair; jobs `69011829330` (`Verify`) and `69011927690`
+  (`Overlay Diagnostics (Linux, non-blocking)`) both succeeded.
+  `2026-03-28`: the hosted Linux no_tun repair is closed in remediation `v8`; later
+  blocking-gate restoration moved into remediation `v9`.

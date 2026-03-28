@@ -25,10 +25,10 @@ Full implementation detail lives in [`v5-details.md`](./v5-details.md).
 ## Current Target
 
 - Active item:
-  `completed locally`
+  `completed`
 - Required next step:
-  push the verified changes and monitor the triggered GitHub Actions workflows before treating
-  remediation `v5` as fully closed
+  remediation plan `v5` is complete; later packaging and hosted-runner follow-up moved into newer
+  versioned remediation plans instead of extending this file into a different phase
 - Previous completed plan:
   remediation plan `v4`, covering overlay runtime fallback, README/developer-guide split, and
   bounded Gradle caching

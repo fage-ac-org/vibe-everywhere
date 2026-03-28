@@ -92,10 +92,9 @@ jobs:
       - name: Run relay polling smoke test
         run: ./scripts/dual-process-smoke.sh relay_polling
 
-  overlay-diagnostics-linux:
-    name: Overlay Diagnostics (Linux, non-blocking)
+  linux-overlay-smoke:
+    name: Linux Overlay Smoke
     needs: verify
-    continue-on-error: true
     runs-on: ubuntu-24.04
     timeout-minutes: 45
 
@@ -122,16 +121,17 @@ jobs:
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Run overlay smoke diagnostic
+      - name: Run hosted Linux overlay smoke
         env:
           TMPDIR: ${{ runner.temp }}
+          VIBE_TEST_EASYTIER_NO_TUN: "1"
         run: ./scripts/dual-process-smoke.sh overlay
 
-      - name: Upload overlay diagnostic artifacts
+      - name: Upload overlay smoke artifacts
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: release-overlay-diagnostics-linux-${{ github.run_id }}-${{ github.run_attempt }}
+          name: release-linux-overlay-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/vibe-everywhere-dual-process.*
           if-no-files-found: ignore
           retention-days: 14
@@ -581,6 +581,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs:
+      - linux-overlay-smoke
       - build-cli
       - build-desktop
       - build-android

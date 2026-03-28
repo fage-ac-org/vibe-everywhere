@@ -22,16 +22,15 @@ Full implementation detail lives in [`v8-details.md`](./v8-details.md).
 
 | Item | Title | Status | Depends On | Recommended Mode |
 | --- | --- | --- | --- | --- |
-| R1 | Linux Hosted Overlay No-TUN Diagnostic Path | implemented locally | v7 | Mode A (user-confirmed) |
+| R1 | Linux Hosted Overlay No-TUN Diagnostic Path | completed | v7 | Mode A (user-confirmed) |
 
 ## Current Target
 
 - Active item:
-  `R1 implemented locally`
+  `completed`
 - Required next step:
-  push the hosted-runner no_tun diagnostic repair and monitor the triggered `CI` workflow,
-  especially `Overlay Diagnostics (Linux, non-blocking)` and `Verify`, before treating
-  remediation `v8` as fully closed
+  remediation plan `v8` is complete after GitHub-hosted `CI` run `23688459204` validated the
+  hosted Linux `no_tun` path; later gate restoration moved into remediation `v9`
 - Previous completed plan:
   remediation `v7`, which stabilized harness port allocation and preserved the raw EasyTier stop
   reason that exposed the hosted-runner TUN-permission limit

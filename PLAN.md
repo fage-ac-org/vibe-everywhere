@@ -20,10 +20,10 @@ The active plan set is:
 
 - planning index: [`docs/plans/README.md`](./docs/plans/README.md)
 - process governance: [`docs/plans/process.md`](./docs/plans/process.md)
-- active iteration summary: [`docs/plans/iterations/v2-summary.md`](./docs/plans/iterations/v2-summary.md)
-- active iteration details: [`docs/plans/iterations/v2-details.md`](./docs/plans/iterations/v2-details.md)
-- active remediation summary: [`docs/plans/remediation/v8-summary.md`](./docs/plans/remediation/v8-summary.md)
-- active remediation details: [`docs/plans/remediation/v8-details.md`](./docs/plans/remediation/v8-details.md)
+- active iteration summary: [`docs/plans/iterations/v3-summary.md`](./docs/plans/iterations/v3-summary.md)
+- active iteration details: [`docs/plans/iterations/v3-details.md`](./docs/plans/iterations/v3-details.md)
+- active remediation summary: [`docs/plans/remediation/v9-summary.md`](./docs/plans/remediation/v9-summary.md)
+- active remediation details: [`docs/plans/remediation/v9-details.md`](./docs/plans/remediation/v9-details.md)
 
 Every completed iteration or remediation item must update this file and the active versioned plan
 files listed above.
@@ -148,18 +148,23 @@ When an iteration is completed and verified:
 | 9 | Platform Harmonization | completed |
 | 10 | Self-Hosted Server Productization | completed |
 | 11 | Enterprise Foundations | completed |
-| 12 | Delivery Verification Hardening | implemented locally |
+| 12 | Delivery Verification Hardening | completed |
+| 13 | Workflow And Release Verification Normalization | implemented locally |
 
 ## Current Iteration
 
 Current planned implementation target:
 
 - Iteration 0 through Iteration 11 are completed for the current roadmap baseline.
-- Iteration roadmap `v2` is active for post-baseline delivery verification hardening.
-- Iteration 12 adds Windows smoke coverage, moves GitHub-hosted Linux `overlay` smoke into
-  explicit diagnostic jobs, and records the hosted-runner instability as deferred follow-up work.
+- Iteration roadmap `v3` is active for workflow and release verification normalization after the
+  hosted Linux overlay repair.
+- Iteration 12 completed the first delivery-verification hardening phase, including Windows smoke
+  coverage and the initial hosted Linux overlay diagnostic split.
+- Iteration 13 restores GitHub-hosted Linux `overlay` smoke as a blocking gate in both `CI` and
+  `Release`, keeps the hosted runner on the harness-only `no_tun` path, aligns release publish
+  dependencies with that gate, and audits workflow/testing/release/plan docs for stale claims.
 - The active remediation track remains the problem-driven remediation plan in
-  `docs/plans/remediation/v8-summary.md`.
+  `docs/plans/remediation/v9-summary.md`.
 - Remediation plan `v1` is complete.
 - Remediation plan `v2` is complete after restoring blocking overlay smoke verification and auditing
   the repository for similar compromised checks.
@@ -168,16 +173,17 @@ Current planned implementation target:
 - Remediation plan `v4` is complete after moving overlay fallback into relay runtime behavior,
   restoring the README/developer-doc boundary, and adding bounded Android Gradle caches to CI and
   release workflows.
-- Remediation plan `v5` is implemented and locally verified for truthful overlay connectivity
-  reporting, stricter README operator-surface boundaries, and bounded Android SDK-component
-  caching; GitHub Actions monitoring is still required after push before the tranche is fully
-  closed.
+- Remediation plan `v5` is complete for truthful overlay connectivity reporting, stricter README
+  operator-surface boundaries, and bounded Android SDK-component caching.
 - Remediation plan `v6` is complete after Windows EasyTier side-by-side packaging plus follow-up
   PowerShell smoke-harness fixes were validated by GitHub-hosted `CI`.
 - Remediation plan `v7` is complete after exposing the hosted Linux runner TUN-permission root
   cause with stable harness ports and raw EasyTier stop reasons.
-- Remediation plan `v8` is implemented locally for the hosted Linux no_tun overlay diagnostic
-  path; GitHub Actions monitoring is still required after push before the tranche is fully closed.
+- Remediation plan `v8` is complete after GitHub-hosted `CI` run `23688459204` validated the
+  hosted Linux `no_tun` overlay diagnostic path.
+- Remediation plan `v9` is implemented locally and locally validated to restore hosted Linux
+  overlay smoke as a required gate, align release publish dependencies, and reconcile stale
+  workflow/documentation claims.
 
 Most recent completed tranche:
 
@@ -309,8 +315,26 @@ Most recent completed tranche:
   deferred hosted-runner overlay issue is visible in the versioned plan instead of being silently
   dropped.
 - Dependencies: Iteration roadmap `v1` baseline.
-- Notes: implemented locally on 2026-03-28; GitHub Actions verification is still required after
-  push.
+- Notes: completed on 2026-03-28 as the first post-baseline verification-hardening phase; later
+  hosted Linux gate restoration moved into Iteration 13.
+
+### Iteration 13: Workflow And Release Verification Normalization
+
+- Objective: normalize GitHub Actions and repository docs now that the hosted Linux overlay path is
+  stable enough to be a required gate again.
+- Scope summary: restore hosted Linux overlay smoke as a blocking job in both `CI` and `Release`,
+  keep the hosted runner on the harness-only EasyTier `no_tun` path, make release publishing depend
+  on the separate Linux overlay gate, and reconcile testing/release/plan docs with that restored
+  behavior.
+- Key deliverables: blocking hosted Linux overlay jobs, truthful `no_tun` harness usage in both
+  workflows, release publish dependency alignment, and documentation that no longer advertises the
+  superseded non-blocking diagnostic phase.
+- Exit criteria: hosted Linux overlay smoke is required in both `CI` and `Release`, release
+  publishing cannot bypass that gate, and the repository docs describe the hosted-runner path
+  truthfully.
+- Dependencies: Iteration roadmap `v2` and remediation `v8`.
+- Notes: implemented locally and locally validated on 2026-03-28; GitHub Actions verification is
+  still required after push.
 
 ## Completed Foundation Work
 
@@ -429,6 +453,20 @@ These items are treated as completed foundation work, not future roadmap items.
   agent config, enabling it only from the hosted Linux overlay diagnostic job, and rewriting the
   Linux no_tun smoke path to assert truthful overlay fallback behavior without claiming impossible
   hosted-runner bridge reachability.
+- 2026-03-28: Closed remediation plan `v8` after GitHub-hosted `CI` run `23688459204` validated
+  the hosted Linux `no_tun` overlay diagnostic path.
+- 2026-03-28: Started iteration roadmap `v3` to normalize GitHub Actions and repository docs after
+  the hosted Linux overlay repair.
+- 2026-03-28: Started remediation plan `v9` to restore hosted Linux overlay smoke as a required
+  gate, align release publish dependencies, and reconcile stale workflow/documentation claims.
+- 2026-03-28: Implemented Iteration 13 locally by restoring hosted Linux overlay smoke as a
+  blocking job in both `CI` and `Release`, keeping the hosted runner on the harness-only
+  `VIBE_TEST_EASYTIER_NO_TUN=1` path, aligning release publish dependencies, and auditing workflow,
+  testing, release-note, and plan docs for superseded non-blocking overlay claims.
+- 2026-03-28: Implemented Remediation v9 R1 locally by renaming and re-gating the hosted Linux
+  overlay jobs, enabling the missing hosted `no_tun` env in `Release`, making GitHub Release
+  publish depend on the separate Linux overlay gate, and adding a durable guardrail that publish
+  jobs must depend on all separate required release-verification gates.
 - 2026-03-26: Completed relay and agent runtime modularization, frontend port-forward MVP wiring, and capability-boundary alignment as foundational architecture work.
 
 ## Verification Log
@@ -536,6 +574,22 @@ These items are treated as completed foundation work, not future roadmap items.
   after Remediation v8 hosted Linux no_tun diagnostic changes.
 - 2026-03-28: `./scripts/dual-process-smoke.sh relay_polling` succeeded after Remediation v8
   shared smoke-path updates.
+- 2026-03-28: `cargo fmt --all --check` succeeded after Iteration 13 workflow and documentation
+  normalization changes.
+- 2026-03-28: `cargo check --locked -p vibe-relay -p vibe-agent -p vibe-app` succeeded after
+  Iteration 13 workflow and documentation normalization changes.
+- 2026-03-28: `cargo test --locked --workspace --all-targets -- --nocapture` succeeded after
+  Iteration 13 workflow and documentation normalization changes.
+- 2026-03-28: `cd apps/vibe-app && npm run build` succeeded after Iteration 13 workflow and
+  documentation normalization changes.
+- 2026-03-28: `bash -n scripts/dual-process-smoke.sh` succeeded after Iteration 13 workflow and
+  documentation normalization changes.
+- 2026-03-28: `./scripts/dual-process-smoke.sh relay_polling` succeeded after Iteration 13
+  workflow and documentation normalization changes.
+- 2026-03-28: `VIBE_TEST_EASYTIER_NO_TUN=1 ./scripts/dual-process-smoke.sh overlay` succeeded
+  after Iteration 13 hosted Linux gate-restoration changes.
+- 2026-03-28: `./scripts/render-release-notes.sh v0.1.6 >/dev/null` succeeded after the Iteration
+  13 release-note updates.
 - 2026-03-28: `cargo fmt --all` succeeded after Remediation v4 runtime, documentation, and
   workflow updates.
 - 2026-03-28: `cargo check --locked -p vibe-relay -p vibe-agent -p vibe-app` succeeded after
@@ -626,3 +680,9 @@ These items are treated as completed foundation work, not future roadmap items.
 - 2026-03-28: Remediation v8 intentionally treats hosted Linux no_tun preview coverage as
   transport-and-lifecycle validation only; preview byte-path verification remains covered by the
   stable relay-polling smoke while the no_tun websocket-reset gap is deferred for a later repair.
+- 2026-03-28: Iteration 13 keeps hosted Linux overlay smoke as a separate required workflow job
+  instead of folding it back into `verify`, so hosted-runner artifacts and failure boundaries stay
+  explicit while the release workflow can still parallelize packaging after `verify`.
+- 2026-03-28: Iteration 13 requires the final release publish job to depend on every separate
+  required verification gate, not only on packaging jobs, so a failed release-critical smoke path
+  cannot be bypassed by workflow structure alone.

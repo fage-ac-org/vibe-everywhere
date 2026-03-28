@@ -27,8 +27,8 @@ Full implementation detail lives in [`v3-details.md`](./v3-details.md).
 
 - Active item: `completed`
 - Required next step:
-  push the verified changes, monitor GitHub Actions and the next release run, and start a new
-  versioned remediation plan if another repair tranche is needed
+  remediation plan `v3` is complete; later workflow/runtime follow-up moved into newer versioned
+  remediation plans instead of extending this file into a different phase
 - Last completed item:
   remediation plan `v3`, covering release-asset hygiene, repository-owned release notes, and
   user-facing onboarding/deployment improvements

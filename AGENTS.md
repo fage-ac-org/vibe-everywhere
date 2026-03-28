@@ -60,6 +60,8 @@ Prefer focused Rust unit or integration-style tests near parsing, request orches
 - If UI semantics, navigation, visibility gating, or relay/runtime configuration behavior changes, the `TESTING.md` manual regression steps must be updated to match the new product model in the same change set.
 - A GitHub push or release cut is not considered fully verified until the corresponding GitHub Actions runs are checked and their final status is reported.
 - Do not keep release-critical verification as `best-effort`, forced-success, or non-blocking once a stable harness is available. If CI stability is the problem, fix the harness or move the check out of the required workflow explicitly.
+- If a required release verification gate lives in a separate workflow job for clarity or parallelism,
+  the final publish job must explicitly depend on it instead of depending only on packaging jobs.
 - If a known unstable diagnostic must remain non-blocking for a period, isolate it in a clearly
   named diagnostic job, keep it out of the required verify path, and record the deferred root-cause
   in the active versioned plan before merging.

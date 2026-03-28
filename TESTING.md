@@ -275,10 +275,10 @@ GitHub-hosted runner note:
 
 - local or self-controlled environments should still treat `./scripts/dual-process-smoke.sh
   overlay` as the meaningful full overlay smoke path
-- GitHub-hosted Linux currently runs `overlay` smoke as a separately named non-blocking diagnostic
-  job in both `CI` and `Release`
-- that non-blocking status is an explicitly recorded known issue, not a silent pass or deleted
-  check
+- GitHub-hosted Linux now runs `overlay` smoke as a blocking `Linux Overlay Smoke` job in both
+  `CI` and `Release`
+- that hosted job uses harness-only `VIBE_TEST_EASYTIER_NO_TUN=1`, so it verifies truthful
+  overlay control-plane and fallback behavior on hosted runners without changing product defaults
 
 Execution commands:
 
@@ -292,8 +292,12 @@ Pass criteria:
 - both modes exit `0`
 - task status reaches `succeeded`
 - `relay_polling` mode keeps task traffic on relay polling
-- `overlay` mode allows task and shell traffic to fall back to relay polling, but the
-  port-forward check must still exercise real overlay transport
+- full `overlay` mode allows task and shell traffic to fall back to relay polling, but the
+  port-forward check must still exercise real overlay transport when TUN-backed overlay is
+  available
+- the hosted Linux no_tun overlay gate allows task and shell traffic to fall back to relay
+  polling, requires preview/port-forward selection to fall back truthfully to relay tunnel, and
+  does not claim hosted preview byte-path coverage that the environment cannot provide
 - shell output contains the smoke marker
 - TCP port-forward reply matches the expected payload
 
@@ -304,7 +308,8 @@ Task-bridge recovery preference remains covered by relay tests, for example
 Recommended frequency:
 
 - run both `relay_polling` and `overlay` on every PR in CI
-- treat `overlay` as blocking release verification, not best-effort signal
+- treat hosted Linux `overlay` as a blocking gate in both `CI` and `Release`, not a best-effort
+  signal
 
 ### Layer 3: Frontend Manual Regression
 
@@ -395,6 +400,7 @@ cargo check -p vibe-relay -p vibe-agent -p vibe-app
 cargo test --workspace --all-targets -- --nocapture
 cd apps/vibe-app && npm run build
 ./scripts/dual-process-smoke.sh relay_polling
+VIBE_TEST_EASYTIER_NO_TUN=1 ./scripts/dual-process-smoke.sh overlay
 ```
 
 For PRs that touch Android packaging or mobile shell code, add:
@@ -475,8 +481,11 @@ These areas should be added next if the goal is a more complete automated test s
   - mock `fetch`, `EventSource`, and `WebSocket` to test reconnect behavior, locale / theme persistence, and workspace / Git loading states
    - add focused coverage for `src/lib/platform.ts`, feature-flag visibility rules, relay placeholder behavior, and current-client detection semantics across Web, Tauri Desktop, and Android
 7. cross-platform runtime validation
-   - Linux remains the most complete smoke-test baseline
-   - Windows now has dedicated compile/package validation in CI and Release, but still lacks runtime smoke coverage
+   - Linux remains the most complete smoke-test baseline, while GitHub-hosted Linux gating uses the
+     harness-only `no_tun` path instead of claiming direct overlay bridge or preview byte-path
+     coverage that the runner does not provide
+   - Windows now has dedicated relay-polling runtime smoke coverage in CI and Release, but still
+     lacks hosted overlay smoke coverage
    - Android now has dedicated APK/AAB packaging validation, but still lacks emulator or device-level automated smoke coverage
    - macOS shell behavior and packaging still need dedicated validation
 

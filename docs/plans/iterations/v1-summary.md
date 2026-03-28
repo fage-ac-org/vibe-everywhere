@@ -28,14 +28,15 @@ Full implementation detail lives in [`v1-details.md`](./v1-details.md).
 ## Current State
 
 - Iteration plan v1 is complete as a baseline roadmap epoch.
-- The next roadmap epoch now lives in [`v2-summary.md`](./v2-summary.md).
+- The current roadmap epoch now lives in [`v3-summary.md`](./v3-summary.md); `v2` remains the
+  first post-baseline verification phase as historical context.
 - New work should not be appended here unless it is baseline-history maintenance.
-- Post-baseline UI and connection-model fixes are tracked in
-  [`../remediation/v1-summary.md`](../remediation/v1-summary.md).
+- Post-baseline UI, workflow, and runtime fixes are tracked in the versioned remediation plans,
+  with the current active tranche in [`../remediation/v9-summary.md`](../remediation/v9-summary.md).
 
 ## Lookup Notes
 
 - Need detailed acceptance or implementation notes:
   read [`v1-details.md`](./v1-details.md).
 - Need the active current repair work:
-  read [`../remediation/v1-summary.md`](../remediation/v1-summary.md).
+  read [`../remediation/v9-summary.md`](../remediation/v9-summary.md).

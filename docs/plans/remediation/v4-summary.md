@@ -26,8 +26,8 @@ Full implementation detail lives in [`v4-details.md`](./v4-details.md).
 - Active item:
   `completed`
 - Required next step:
-  push the verified changes, then monitor the triggered GitHub Actions workflows according to the
-  process rules
+  remediation plan `v4` is complete; later runtime, workflow, and packaging follow-up moved into
+  newer versioned remediation plans instead of extending this file into a different phase
 - Last completed plan:
   remediation plan `v4`, covering overlay runtime resilience, README ownership cleanup, and
   Android workflow cache optimization

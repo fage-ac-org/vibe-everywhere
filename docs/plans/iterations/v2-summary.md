@@ -16,18 +16,16 @@ Full implementation detail lives in [`v2-details.md`](./v2-details.md).
 
 | Iteration | Title | Status |
 | --- | --- | --- |
-| 12 | Delivery Verification Hardening | implemented locally |
+| 12 | Delivery Verification Hardening | completed |
 
 ## Current State
 
-- Iteration 12 adds a Windows-native relay smoke path to CI so Windows is no longer validated only
-  by compile and packaging checks.
-- GitHub-hosted Linux `overlay` smoke remains diagnostically valuable but currently unstable, so it
-  now runs in separately named non-blocking diagnostic jobs instead of the required verify path.
-- The hosted-runner overlay root-cause investigation is explicitly deferred until a separate
-  instruction reopens it.
-- Local validation is complete for Linux and repository-owned workflow/docs changes; GitHub Actions
-  verification is still required after the next push.
+- Iteration 12 remains the historical phase that first added Windows-native smoke coverage and
+  isolated the hosted Linux overlay issue into an explicit diagnostic path.
+- The later hosted Linux `no_tun` repair and blocking-gate restoration now live in the current
+  roadmap epoch under [`v3-summary.md`](./v3-summary.md).
+- Treat the non-blocking overlay state described in this file as superseded history, not the
+  current repository behavior.
 
 ## Lookup Notes
 
@@ -36,4 +34,4 @@ Full implementation detail lives in [`v2-details.md`](./v2-details.md).
 - Need the baseline roadmap history:
   read [`v1-summary.md`](./v1-summary.md).
 - Need the active remediation track:
-  read [`../remediation/v5-summary.md`](../remediation/v5-summary.md).
+  read [`../remediation/v9-summary.md`](../remediation/v9-summary.md).
