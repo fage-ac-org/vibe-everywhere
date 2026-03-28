@@ -188,7 +188,9 @@ try {
   Write-Host "building vibe-agent and vibe-relay binaries"
   Push-Location $RootDir
   try {
+    $env:WINDIVERT_DLL_OUTPUT = (Join-Path $RootDir "target\debug")
     cargo build -p vibe-relay -p vibe-agent | Out-Null
+    & (Join-Path $RootDir "scripts\stage-windows-runtime.ps1") -Profile debug
   } finally {
     Pop-Location
   }

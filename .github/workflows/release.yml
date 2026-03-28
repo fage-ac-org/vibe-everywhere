@@ -197,7 +197,19 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build release binaries
+        if: runner.os != 'Windows'
         run: cargo build --locked --release -p vibe-relay -p vibe-agent
+
+      - name: Build release binaries (Windows)
+        if: runner.os == 'Windows'
+        env:
+          WINDIVERT_DLL_OUTPUT: ${{ github.workspace }}\target\release
+        run: cargo build --locked --release -p vibe-relay -p vibe-agent
+
+      - name: Stage Windows runtime dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/stage-windows-runtime.ps1 -Profile release
 
       - name: Package Linux CLI archive
         if: runner.os == 'Linux'
@@ -247,6 +259,12 @@ jobs:
 
           Copy-Item "target/release/vibe-relay$env:BIN_EXT" $stagingDir
           Copy-Item "target/release/vibe-agent$env:BIN_EXT" $stagingDir
+          foreach ($runtimeFile in @("Packet.dll", "wintun.dll", "WinDivert.dll", "WinDivert64.sys")) {
+            $runtimePath = Join-Path "target/release" $runtimeFile
+            if (Test-Path $runtimePath) {
+              Copy-Item $runtimePath $stagingDir
+            }
+          }
 
           $archivePath = Join-Path $env:GITHUB_WORKSPACE $archiveName
           if (Test-Path $archivePath) {
