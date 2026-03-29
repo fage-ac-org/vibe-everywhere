@@ -166,8 +166,15 @@ Manual review:
   the shipped work
 - confirm `README.md` and `README.en.md` stay user/operator-facing and do not absorb developer or
   governance-only content
+- confirm both top-level README files still include a simple deployment path, a clear auth-token
+  explanation, and a detailed usage flow that matches the shipped product behavior
+- confirm the README deployment sections clearly distinguish relay bind host/port from
+  `VIBE_PUBLIC_RELAY_BASE_URL`, explain when `http` versus `https` is appropriate, and document
+  the overlay-related fixed listener ports that appear only when EasyTier mode is enabled
 - confirm the top-level README files do not present `DEVELOPMENT.md`, `TESTING.md`, `AGENTS.md`,
   `PLAN.md`, or versioned planning docs as primary documentation entry points
+- confirm the README download sections distinguish published artifacts from any source-built-only
+  client surfaces instead of implying unsupported release packaging
 - confirm `DEVELOPMENT.md` contains the current developer entry path when build or contributor
   instructions change
 
