@@ -12,3 +12,4 @@ apps/vibe-app/src-tauri/gen/android/*.iml
 apps/vibe-app/src-tauri/gen/android/app/keystore.properties
 apps/vibe-app/src-tauri/gen/android/app/*.jks
 apps/vibe-app/src-tauri/gen/android/app/*.keystore
+apps/vibe-app/src-tauri/gen/schemas/windows-schema.json
