@@ -1,18 +1,18 @@
 const zhCN = {
   app: {
     name: "Vibe Everywhere",
-    title: "Vibe Everywhere"
+    title: "Vibe Everywhere",
   },
   locale: {
     label: "语言",
     zhCN: "中文",
-    en: "English"
+    en: "English",
   },
   theme: {
     label: "主题",
     system: "跟随系统",
     light: "浅色",
-    dark: "深色"
+    dark: "深色",
   },
   common: {
     connect: "连接",
@@ -39,12 +39,12 @@ const zhCN = {
     optionalAccessToken: "可选访问令牌",
     useAgentWorkingRoot: "使用 agent 工作根目录",
     defaultModel: "默认模型",
-    waiting: "等待中"
+    waiting: "等待中",
   },
   connectionState: {
     disconnected: "未连接",
     connecting: "连接中",
-    connected: "已连接"
+    connected: "已连接",
   },
   taskStatus: {
     pending: "等待中",
@@ -54,7 +54,7 @@ const zhCN = {
     cancel_requested: "已请求取消",
     succeeded: "成功",
     failed: "失败",
-    canceled: "已取消"
+    canceled: "已取消",
   },
   shellStatus: {
     pending: "等待中",
@@ -62,14 +62,14 @@ const zhCN = {
     close_requested: "已请求关闭",
     succeeded: "成功",
     failed: "失败",
-    closed: "已关闭"
+    closed: "已关闭",
   },
   portForwardStatus: {
     pending: "等待中",
     active: "活动中",
     close_requested: "已请求关闭",
     closed: "已关闭",
-    failed: "失败"
+    failed: "失败",
   },
   eventKind: {
     system: "系统",
@@ -78,17 +78,17 @@ const zhCN = {
     provider_stderr: "Provider 错误输出",
     assistant_delta: "助手增量输出",
     tool_call: "工具调用",
-    tool_output: "工具输出"
+    tool_output: "工具输出",
   },
   stream: {
     stdin: "标准输入",
     stdout: "标准输出",
     stderr: "错误输出",
-    system: "系统"
+    system: "系统",
   },
   transport: {
     relay_tunnel: "Relay 隧道",
-    overlay_proxy: "Overlay 代理"
+    overlay_proxy: "Overlay 代理",
   },
   gitFileStatus: {
     modified: "已修改",
@@ -99,35 +99,35 @@ const zhCN = {
     updated_but_unmerged: "有冲突",
     untracked: "未跟踪",
     type_changed: "类型变更",
-    unknown: "未知"
+    unknown: "未知",
   },
   auth: {
     required: "需要认证",
-    optional: "认证可选"
+    optional: "认证可选",
   },
   role: {
     owner: "所有者",
     admin: "管理员",
     member: "成员",
     viewer: "只读",
-    agent: "Agent"
+    agent: "Agent",
   },
   authMode: {
     disabled: "关闭认证",
-    access_token: "访问令牌"
+    access_token: "访问令牌",
   },
   storageKind: {
     file: "文件存储",
     memory: "内存存储",
-    external: "外部存储"
+    external: "外部存储",
   },
   deploymentMode: {
     self_hosted: "自建部署",
-    hosted_compatible: "托管兼容"
+    hosted_compatible: "托管兼容",
   },
   notificationChannel: {
     in_app: "应用内",
-    system: "系统通知"
+    system: "系统通知",
   },
   auditAction: {
     device_registered: "设备注册",
@@ -136,33 +136,34 @@ const zhCN = {
     shell_session_created: "Shell 会话创建",
     shell_session_closed: "Shell 会话关闭",
     preview_created: "Preview 创建",
-    preview_closed: "Preview 关闭"
+    preview_closed: "Preview 关闭",
   },
   auditOutcome: {
     succeeded: "成功",
     rejected: "拒绝",
-    failed: "失败"
+    failed: "失败",
   },
   platform: {
     client: {
       web: "Web",
       tauri_desktop: "桌面端",
-      android: "Android"
-    }
+      android: "Android",
+    },
   },
   error: {
-    targetPortInvalid: "目标端口必须是 1 到 65535 之间的整数。"
+    targetPortInvalid: "目标端口必须是 1 到 65535 之间的整数。",
   },
   dashboard: {
     nav: {
       sessions: "AI Sessions",
       devices: "设备",
-      advanced: "高级"
+      advanced: "高级",
     },
     navDescriptions: {
-      sessions: "在一条主流程里完成连接 Relay、选择设备、启动 AI 工作和审阅结果。",
+      sessions:
+        "在一条主流程里完成连接 Relay、选择设备、启动 AI 工作和审阅结果。",
       devices: "查看设备清单、运行态、部署元信息以及 provider 就绪情况。",
-      advanced: "仅在需要更深层诊断时再进入 Terminal 和 Preview。"
+      advanced: "仅在需要更深层诊断时再进入 Terminal 和 Preview。",
     },
     shell: {
       badge: "控制台",
@@ -170,7 +171,7 @@ const zhCN = {
         "一级分区改为路由承载后，核心工作流彼此独立，且同一套信息架构可以同时适配桌面与移动端。",
       connectionState: "Relay 流状态",
       selectedDevice: "当前设备",
-      noDeviceSelected: "尚未选择设备"
+      noDeviceSelected: "尚未选择设备",
     },
     heroBadge: "Vue + Tauri 2 + Rust Relay",
     heroDescription:
@@ -179,7 +180,8 @@ const zhCN = {
     relayBaseUrl: "Relay 地址",
     mobileLoopbackWarning:
       "移动端不能连接 localhost / 127.0.0.1，请改成 relay 所在机器的局域网 IP 或 HTTPS 公网地址。",
-    mobileRemoteHint: "移动端请填写 relay 所在机器的局域网 IP 或 HTTPS 公网地址。",
+    mobileRemoteHint:
+      "移动端请填写 relay 所在机器的局域网 IP 或 HTTPS 公网地址。",
     activity: {
       title: "活动中心",
       summary: "未读 {unread} 条 / 共 {total} 条",
@@ -191,19 +193,20 @@ const zhCN = {
         taskFailed: "任务失败",
         taskCanceled: "任务取消",
         previewReady: "Preview 就绪",
-        previewFailed: "Preview 失败"
+        previewFailed: "Preview 失败",
       },
       messages: {
         taskSucceeded: "“{title}” 已在设备 {deviceId} 上完成。",
         taskFailed: "“{title}” 已在设备 {deviceId} 上失败。",
         taskCanceled: "“{title}” 已在设备 {deviceId} 上取消。",
         previewReady: "设备 {deviceId} 上的 Preview {host}:{port} 已就绪。",
-        previewFailed: "设备 {deviceId} 上的 Preview {host}:{port} 创建失败。"
-      }
+        previewFailed: "设备 {deviceId} 上的 Preview {host}:{port} 创建失败。",
+      },
     },
     deployment: {
       title: "部署与连接面",
-      summary: "这里用于查看当前部署元信息与连接端点。更详细的自建部署说明放在文档中。",
+      summary:
+        "这里用于查看当前部署元信息与连接端点。更详细的自建部署说明放在文档中。",
       mode: "部署模式",
       authMode: "认证模式",
       storageKind: "存储",
@@ -216,12 +219,13 @@ const zhCN = {
         hostedCompatible:
           "当前 relay 暴露的是托管兼容表面。客户端不要依赖 loopback 或单机网络假设。",
         explicitRemote:
-          "当前客户端应使用显式远程 relay 地址，不要使用 localhost，应优先填写 relay 机器的局域网或公网地址。"
-      }
+          "当前客户端应使用显式远程 relay 地址，不要使用 localhost，应优先填写 relay 机器的局域网或公网地址。",
+      },
     },
     platform: {
       title: "当前客户端",
-      summary: "平台能力按当前运行时识别结果展示。主界面不再列出其它平台，避免形成可切换的误解。",
+      summary:
+        "平台能力按当前运行时识别结果展示。主界面不再列出其它平台，避免形成可切换的误解。",
       currentClientLabel: "当前使用中",
       currentlyUsing: "当前使用",
       mobileOptimized: "移动端优化",
@@ -231,24 +235,25 @@ const zhCN = {
       persistedConfig: "运行时配置持久化",
       sessionOnlyConfig: "仅当前会话配置",
       explicitRelay: "显式远程 Relay",
-      loopbackFriendly: "支持本地 Loopback"
+      loopbackFriendly: "支持本地 Loopback",
     },
     governance: {
       title: "治理与审计",
-      description: "在控制台内直接展示当前 actor、tenant 边界、通知通道与最近审计事件。",
+      description:
+        "在控制台内直接展示当前 actor、tenant 边界、通知通道与最近审计事件。",
       tenant: "租户",
       user: "用户",
       role: "角色",
       notificationChannels: "通知通道",
       auditTitle: "审计事件",
-      auditEmpty: "当前租户暂时还没有审计事件。"
+      auditEmpty: "当前租户暂时还没有审计事件。",
     },
     stats: {
       onlineDevices: "在线设备",
       devices: "设备总数",
       aiSessions: "AI Sessions",
       advancedTools: "高级工具",
-      unreadActivity: "未读活动"
+      unreadActivity: "未读活动",
     },
     devices: {
       title: "设备",
@@ -258,9 +263,11 @@ const zhCN = {
       previews: "Preview {count}",
       availableProviders: "可用 Providers",
       inventoryTitle: "设备清单",
-      inventoryDescription: "先选中一台设备，再检查它的运行态，再决定是否发起 AI 工作或高级工具。",
+      inventoryDescription:
+        "先选中一台设备，再检查它的运行态，再决定是否发起 AI 工作或高级工具。",
       runtimeTitle: "运行态画像",
-      runtimeDescription: "查看当前设备的平台、工作根目录、最近心跳和 overlay 连接信息。",
+      runtimeDescription:
+        "查看当前设备的平台、工作根目录、最近心跳和 overlay 连接信息。",
       platform: "平台",
       workingRoot: "工作根目录",
       lastSeen: "最近在线",
@@ -269,7 +276,8 @@ const zhCN = {
       overlayState: "Overlay 状态",
       overlayRelay: "Overlay Relay",
       capabilitiesTitle: "能力与 Providers",
-      capabilitiesDescription: "直接展示 agent 上报的原始能力标签，避免 UI 和真实运行态语义不一致。",
+      capabilitiesDescription:
+        "直接展示 agent 上报的原始能力标签，避免 UI 和真实运行态语义不一致。",
       capabilitiesLabel: "已上报能力",
       capabilitiesEmpty: "当前设备还没有上报任何能力标签。",
       providersTitle: "Provider 可用性",
@@ -278,9 +286,12 @@ const zhCN = {
       providerVersion: "版本",
       providerVersionPending: "版本待确认",
       workloadTitle: "当前负载",
-      workloadDescription: "查看这台设备当前关联的 AI Sessions、Terminals 和 Previews 数量。",
-      managementDescription: "这个次级视图用于运行态检查、部署元信息查看以及治理上下文查看。",
-      emptySelection: "从左侧设备清单选择一台设备后，这里会展示它的运行态、负载和 provider 可用性。"
+      workloadDescription:
+        "查看这台设备当前关联的 AI Sessions、Terminals 和 Previews 数量。",
+      managementDescription:
+        "这个次级视图用于运行态检查、部署元信息查看以及治理上下文查看。",
+      emptySelection:
+        "从左侧设备清单选择一台设备后，这里会展示它的运行态、负载和 provider 可用性。",
     },
     sessions: {
       title: "AI Sessions",
@@ -291,20 +302,23 @@ const zhCN = {
         connect: "连接 Relay",
         chooseDevice: "选择设备",
         start: "启动会话",
-        review: "审阅结果"
+        review: "审阅结果",
       },
       devicePickerTitle: "选择设备",
       devicePickerDescription:
         "先选出本次要执行 AI Session 的机器，这里同时保留运行态能力和 provider 就绪信息。",
       recentTitle: "最近 Sessions",
       launchTitle: "启动新的 Session",
-      launchDescription: "直接基于当前设备上下文启动下一次 AI 运行，不再离开主流程。",
+      launchDescription:
+        "直接基于当前设备上下文启动下一次 AI 运行，不再离开主流程。",
       launchState: {
         needs_relay: "请先连接 Relay，设备和会话信息才能加载出来。",
         needs_device: "请先选择一台在线设备，才能启用 Session 创建表单。",
         device_offline: "当前设备离线。请选择其他设备，或等待它重新连上。",
-        needs_provider: "当前设备没有可用 Provider。请先恢复 Provider 就绪状态，再启动 Session。",
-        ready: "已准备好在 {device} 上启动新的 Session。填写提示词后即可开始运行。"
+        needs_provider:
+          "当前设备没有可用 Provider。请先恢复 Provider 就绪状态，再启动 Session。",
+        ready:
+          "已准备好在 {device} 上启动新的 Session。填写提示词后即可开始运行。",
       },
       providerIssuesTitle: "Provider 就绪问题",
       visibleSummary: "当前显示 {visible} / 总计 {total}",
@@ -313,30 +327,39 @@ const zhCN = {
       cancelSession: "取消会话",
       newOnDevice: "{name} 上的新 AI Session",
       reviewTitle: "当前 Session 审阅",
-      reviewDescription: "把运行状态、执行位置、提示词和结果摘要放在同一个上下文里查看。",
+      reviewDescription:
+        "把运行状态、执行位置、提示词和结果摘要放在同一个上下文里查看。",
       resultReviewTitle: "审阅变更文件与 Git 上下文",
-      resultReviewDescription: "先判断 AI 到底改了什么，再决定是否进入 Terminal 或继续交接。",
+      resultReviewDescription:
+        "先判断 AI 到底改了什么，再决定是否进入 Terminal 或继续交接。",
       eventStreamTitle: "Session 事件流",
-      eventStreamDescription: "事件流负责讲述执行过程，结果审阅区域则聚焦最终产物。",
+      eventStreamDescription:
+        "事件流负责讲述执行过程，结果审阅区域则聚焦最终产物。",
       readySelected:
         "当前设备已选中。你可以直接在这里启动 Session，并在主流程里继续查看结果、事件流和工作区。",
-      readyEmpty: "先选择一台在线设备，再启动新的 AI Session。"
+      readyEmpty: "先选择一台在线设备，再启动新的 AI Session。",
     },
     chat: {
       liveBadge: "对话优先",
       setupTitle: "只连接一次，然后留在聊天里",
       threadControl: "长期线程控制",
-        setupSummary:
-          "Relay、设备、Provider 和线程目标先集中在一个紧凑面板里，等首个会话准备好后就退到次要位置。",
-        threadSummary:
-          "聊天界面保持为主界面。切换 Relay 和新线程目标保留为紧凑的次级控制。",
-        contextControls: "会话上下文",
-        hideContextControls: "收起上下文",
-        relayHintLabel: "Relay 地址",
-        threadSwitcherTitle: "线程切换",
-        newConversation: "新对话",
-        autoTitleHint: "根据首条提示自动生成标题",
-        cwd: "工作目录",
+      sidebarTitle: "项目与对话",
+      setupSummary:
+        "Relay、设备、Provider 和线程目标先集中在一个紧凑面板里，等首个会话准备好后就退到次要位置。",
+      sidebarSummary:
+        "把连接、设备、项目目录、历史对话和文件浏览放到侧栏，主区域只保留聊天。",
+      threadSummary:
+        "聊天界面保持为主界面。切换 Relay 和新线程目标保留为紧凑的次级控制。",
+      contextControls: "会话上下文",
+      hideContextControls: "收起上下文",
+      relayHintLabel: "Relay 地址",
+      threadSwitcherTitle: "线程切换",
+      newConversation: "新对话",
+      autoTitleHint: "根据首条提示自动生成标题",
+      cwd: "工作目录",
+      projectFolder: "项目目录",
+      projectFolderSummary: "设置后，新建对话默认在这个目录下运行。",
+      devicesEntry: "设备与设置",
       switchRelay: "切换 Relay 或令牌",
       reconnect: "重新连接",
       historyTitle: "对话历史",
@@ -346,15 +369,18 @@ const zhCN = {
       activeThread: "当前线程",
       newThread: "草稿线程",
       composeTitle: "开始一个长期 AI 对话",
-      composeSummary: "当前在线程所在设备 {device} 上继续，由 {provider} 执行。",
+      composeSummary:
+        "当前在线程所在设备 {device} 上继续，由 {provider} 执行。",
       composeEmptySummary:
         "先在这里写下第一条提示。创建后，后续轮次会继续沿用 Provider 原生线程。",
       archive: "归档",
       userTurn: "你",
       waitingInput: "Provider 正在等待你的选择，确认后才能继续执行。",
       generating: "Agent 仍在生成下一段回复。",
-      traceOnlyCompleted: "这一轮没有可展示的常规助手回复，请到运行轨迹里查看执行详情。",
-      traceOnlyFailed: "这一轮在生成常规助手回复前就失败了，请到运行轨迹里查看详情。",
+      traceOnlyCompleted:
+        "这一轮没有可展示的常规助手回复，请到运行轨迹里查看执行详情。",
+      traceOnlyFailed:
+        "这一轮在生成常规助手回复前就失败了，请到运行轨迹里查看详情。",
       traceOnlyCanceled: "这一轮在生成常规助手回复前已被取消。",
       traceEntryTitle: "运行详情已移到轨迹面板",
       emptyBadge: "聊天主界面",
@@ -373,24 +399,27 @@ const zhCN = {
       sendReply: "发送回复",
       startConversation: "启动对话",
       inspectorTitle: "紧凑检查面板",
-        inspectorSummary:
-          "Git、工作区和任务遥测仍可查看，但不会再抢占主对话界面。",
-        latestTurn: "最近一轮",
-        toolEvents: "工具事件",
-        systemEvents: "系统事件",
-        traceSummary: "把工具输出、系统提示和 provider stderr 放到次级面板里查看，避免打断主对话。",
-        traceEmpty: "当前对话还没有可展示的 Trace 事件。",
-        gitSummary: "在聊天旁边快速审阅仓库漂移和变更文件。",
-        gitEmpty: "当前对话还没有可展示的 Git 上下文。",
-        workspaceSummary: "不离开聊天界面，直接浏览当前工作区。",
-        workspaceEmpty: "当前对话还没有可展示的工作区快照。",
-        panels: {
-          status: "状态",
-          git: "Git",
-          files: "文件",
-          trace: "Trace"
-        }
+      inspectorSummary:
+        "Git、工作区和任务遥测仍可查看，但不会再抢占主对话界面。",
+      latestTurn: "最近一轮",
+      toolEvents: "工具事件",
+      systemEvents: "系统事件",
+      traceSummary:
+        "把工具输出、系统提示和 provider stderr 放到次级面板里查看，避免打断主对话。",
+      traceEmpty: "当前对话还没有可展示的 Trace 事件。",
+      gitSummary: "在聊天旁边快速审阅仓库漂移和变更文件。",
+      gitEmpty: "当前对话还没有可展示的 Git 上下文。",
+      workspaceBrowserSummary:
+        "侧边栏直接查看完整项目目录，并支持返回上级或根目录。",
+      workspaceSummary: "不离开聊天界面，直接浏览当前工作区。",
+      workspaceEmpty: "当前对话还没有可展示的工作区快照。",
+      panels: {
+        status: "状态",
+        git: "Git",
+        files: "文件",
+        trace: "Trace",
       },
+    },
     workspace: {
       title: "Session 工作台",
       newTitle: "新的 AI Session",
@@ -404,29 +433,36 @@ const zhCN = {
       workingRoot: "工作根目录",
       deviceCapacity: "设备能力",
       providers: "{count} 个 providers",
-      capacitySummary: "{sessions} 个 sessions · {terminals} 个 terminals · {previews} 个 previews",
-      relativePathHint: "推荐在 Session CWD 中使用相对路径，保持在当前工作区内。",
+      capacitySummary:
+        "{sessions} 个 sessions · {terminals} 个 terminals · {previews} 个 previews",
+      relativePathHint:
+        "推荐在 Session CWD 中使用相对路径，保持在当前工作区内。",
       exitCode: "退出码 {code}",
       eventsSummary: "{count} 条事件 · 设备 {deviceId}",
       supervision: {
         title: "会话监督",
-        description: "将 provider 输出信号与 Git 上下文结合起来，再决定是否进入 Terminal 或 Preview。",
+        description:
+          "将 provider 输出信号与 Git 上下文结合起来，再决定是否进入 Terminal 或 Preview。",
         summary: {
-          running: "AI Session 仍在运行中。当前工作区范围内已检测到 {changed} 个变更文件。",
+          running:
+            "AI Session 仍在运行中。当前工作区范围内已检测到 {changed} 个变更文件。",
           succeededWithChanges:
             "AI Session 已完成，当前分支 {branch} 上留下了 {changed} 个待审查变更文件。",
-          succeededClean: "AI Session 已完成，但在当前工作区范围内没有看到 Git 变更。",
+          succeededClean:
+            "AI Session 已完成，但在当前工作区范围内没有看到 Git 变更。",
           failedWithChanges:
             "AI Session 已失败，但当前工作区范围内仍保留 {changed} 个变更文件。",
-          failedClean: "AI Session 已失败，且当前工作区范围内没有可见 Git 变更。",
-          noGit: "当前工作区暂时无法提供 Git 监督，请结合事件流和工作区预览继续判断结果。"
+          failedClean:
+            "AI Session 已失败，且当前工作区范围内没有可见 Git 变更。",
+          noGit:
+            "当前工作区暂时无法提供 Git 监督，请结合事件流和工作区预览继续判断结果。",
         },
         counts: {
           assistant: "助手消息",
           tool: "工具活动",
           stderr: "Provider 错误",
-          changed: "变更文件"
-        }
+          changed: "变更文件",
+        },
       },
       browser: {
         title: "工作区浏览器",
@@ -440,7 +476,7 @@ const zhCN = {
         entries: "{count} 个条目",
         kind: {
           directory: "目录",
-          file: "文件"
+          file: "文件",
         },
         sizeLabel: "文件大小",
         size: "{size} 字节",
@@ -449,11 +485,12 @@ const zhCN = {
         previewLoading: "正在加载文件预览...",
         previewEmpty: "选择一个文件后，可在这里查看内容。",
         binaryNotice: "该文件是二进制或非文本文件，无法直接内联预览。",
-        truncated: "为保持控制台响应速度，预览内容已截断。"
+        truncated: "为保持控制台响应速度，预览内容已截断。",
       },
       git: {
         title: "Git 检查",
-        description: "直接查看分支状态、变更文件和最近提交，不必先进入 Terminal。",
+        description:
+          "直接查看分支状态、变更文件和最近提交，不必先进入 Terminal。",
         unsupported: "当前设备还没有声明 Git 检查能力。",
         loading: "正在加载 Git 上下文...",
         empty: "选择一台设备后即可查看仓库状态。",
@@ -467,7 +504,7 @@ const zhCN = {
         driftSummary: "ahead {ahead} · behind {behind}",
         state: {
           not_repository: "当前工作区不在 Git 仓库中。",
-          git_unavailable: "当前设备上不可用 Git。"
+          git_unavailable: "当前设备上不可用 Git。",
         },
         clean: "当前工作区范围内没有可见的变更文件。",
         noCommits: "当前仓库还没有任何提交。",
@@ -482,9 +519,9 @@ const zhCN = {
           untrackedFiles: "{count} 个 untracked",
           conflictedFiles: "{count} 个冲突文件",
           stagedLines: "staged +{additions} / -{deletions}",
-          unstagedLines: "unstaged +{additions} / -{deletions}"
-        }
-      }
+          unstagedLines: "unstaged +{additions} / -{deletions}",
+        },
+      },
     },
     fields: {
       accessToken: "访问令牌",
@@ -495,7 +532,7 @@ const zhCN = {
       prompt: "提示词",
       terminalCwd: "Terminal CWD",
       targetHost: "服务主机",
-      targetPort: "服务端口"
+      targetPort: "服务端口",
     },
     placeholders: {
       selectProvider: "选择 provider",
@@ -506,7 +543,7 @@ const zhCN = {
       terminalCwd: "可选工作目录",
       terminalInput: "pwd",
       targetHost: "127.0.0.1",
-      targetPort: "3000"
+      targetPort: "3000",
     },
     composerNote:
       "当前只有 OpenCode 走标准 ACP；Codex 和 Claude Code 当前仍走 CLI。Terminal 和 Preview 保留在下方高级工具区。",
@@ -515,7 +552,8 @@ const zhCN = {
       title: "Terminal 与 Preview",
       description:
         "这些能力保留给环境检查、人工兜底和预览访问，不再作为首页主工作流。",
-      empty: "当前部署没有开启可用的高级能力。对应的 Terminal / Preview 功能启用后会显示在这里。"
+      empty:
+        "当前部署没有开启可用的高级能力。对应的 Terminal / Preview 功能启用后会显示在这里。",
     },
     terminal: {
       title: "Terminal",
@@ -524,14 +562,16 @@ const zhCN = {
       empty: "当前筛选条件下还没有 terminal sessions。",
       waiting: "会话已创建，等待 agent 启动 terminal 并回传输出。",
       select: "选择一个 terminal session，或先为当前设备创建新的 terminal。",
-      noCapability: "当前选中的设备没有声明 shell capability，无法创建 terminal session。",
+      noCapability:
+        "当前选中的设备没有声明 shell capability，无法创建 terminal session。",
       note: "用于环境检查、人工兜底和高级诊断，不作为默认主路径。",
       detailTitle: "Terminal {id}",
-      detailSummary: "{status} · 开始于 {time}"
+      detailSummary: "{status} · 开始于 {time}",
     },
     preview: {
       title: "Preview",
-      description: "把当前设备上的本地 Web 应用或 HTTP 服务暴露出来，而不是先面对原始隧道细节。",
+      description:
+        "把当前设备上的本地 Web 应用或 HTTP 服务暴露出来，而不是先面对原始隧道细节。",
       visibleSummary: "当前显示 {visible} / 总计 {total}",
       open: "创建 Preview",
       launchTitle: "从当前工作台发起 Preview",
@@ -540,25 +580,26 @@ const zhCN = {
       empty:
         "当前还没有匹配的 Preview。选择设备并填写本地服务主机与端口后即可创建。",
       select: "选择一个 Preview 在这里查看，或先创建新的 Preview。",
-      note:
-        "Preview 是面向常见本地 Web 服务的产品路径。原始 relay / target 端点细节仍保留在下方，用于高级排障。",
+      note: "Preview 是面向常见本地 Web 服务的产品路径。原始 relay / target 端点细节仍保留在下方，用于高级排障。",
       serviceHint:
         "优先使用常见场景：当前设备上的本地 HTTP 服务。Host 仍然可以编辑，以支持非 localhost 服务。",
       serviceTarget: "服务 {host}:{port}",
       previewUrl: "预览地址",
       openLink: "浏览器打开",
-      ready: "Preview relay 已激活。可以直接在浏览器中打开，或查看下方高级连接细节。",
+      ready:
+        "Preview relay 已激活。可以直接在浏览器中打开，或查看下方高级连接细节。",
       waiting: "Preview 仍在准备中，请等待其进入激活状态后再打开。",
       mobileWarning:
         "当前 Preview 指向 loopback 地址，移动端无法访问。请改为正确配置 relay 的 forward host。",
       advancedTitle: "高级连接细节",
-      advancedDescription: "原始 relay / target 端点保留在这里，用于自建网络排查和低层诊断。",
+      advancedDescription:
+        "原始 relay / target 端点保留在这里，用于自建网络排查和低层诊断。",
       transportLabel: "传输方式",
       relayEndpoint: "Relay 入口",
       targetEndpoint: "目标地址",
-      detailTitle: "Preview {id}"
-    }
-  }
-} as const
+      detailTitle: "Preview {id}",
+    },
+  },
+} as const;
 
-export default zhCN
+export default zhCN;

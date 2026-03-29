@@ -23,8 +23,9 @@ The standard workflow is:
 2. Start `vibe-agent` on target execution nodes.
 3. Connect a desktop, Android, or self-hosted Web client to the relay.
 4. Select a device and start a long-lived AI conversation.
-5. Continue follow-up turns, answer tool choices, and review workspace state, Git state, previews,
-   and execution results from the same control plane.
+5. Continue follow-up turns from the conversation-first surface, answer tool choices inline, and
+   use the sidebar for thread history, project-folder targeting, and file browsing before dropping
+   into devices or advanced tools.
 
 ## Components
 
@@ -39,6 +40,7 @@ The standard workflow is:
 The current release supports:
 
 - creation, continuation, cancellation, and streaming of long-lived AI conversations
+- conversation-first thread management with sidebar history and default project-folder targeting
 - device registration, presence reporting, and provider availability display
 - workspace browsing and text-file preview
 - Git status, changed-file, and recent-commit inspection

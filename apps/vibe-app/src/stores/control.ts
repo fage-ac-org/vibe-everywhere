@@ -21,17 +21,19 @@ import {
   fetchTasks,
   respondTaskInputRequest,
   sendConversationMessage,
-  sendShellInput
+  sendShellInput,
 } from "../lib/api";
 import {
   buildEventStreamUrl,
+  loadStoredProjectFolder,
   buildWebSocketUrl,
   loadTauriConfig,
   normalizeRelayBaseUrl,
+  persistProjectFolder,
   persistRelayAccessToken,
   persistRelayBaseUrl,
   resolveInitialRelayAccessToken,
-  resolveInitialRelayBaseUrl
+  resolveInitialRelayBaseUrl,
 } from "../lib/runtime";
 import { APP_FEATURE_FLAGS, hasAppFeatureFlag } from "../lib/features";
 import { i18n } from "../lib/i18n";
@@ -40,11 +42,11 @@ import {
   buildTaskActivity,
   publishSystemActivity,
   readNotificationPermission,
-  type ActivityItem
+  type ActivityItem,
 } from "../lib/notifications";
 import {
   resolveCurrentPlatformCapability,
-  supportsSystemNotifications
+  supportsSystemNotifications,
 } from "../lib/platform";
 import type {
   AppConfig,
@@ -70,7 +72,7 @@ import type {
   TaskDetailResponse,
   TaskEvent,
   TaskRecord,
-  TaskStatus
+  TaskStatus,
 } from "../types";
 
 type DraftTask = {
@@ -145,7 +147,10 @@ export const useControlStore = defineStore("control", {
     isShellPolling: false,
     isPortForwardPolling: false,
     isAuditLoading: false,
-    shellSocketState: "disconnected" as "disconnected" | "connecting" | "connected",
+    shellSocketState: "disconnected" as
+      | "disconnected"
+      | "connecting"
+      | "connected",
     notificationPermission: "default" as NotificationPermission,
     errorCode: null as string | null,
     errorMessage: "",
@@ -154,30 +159,34 @@ export const useControlStore = defineStore("control", {
       provider: "",
       cwd: "",
       model: "",
-      prompt: ""
+      prompt: "",
     } as DraftTask,
+    projectFolder: "",
     shellDraft: {
       cwd: "",
-      input: ""
+      input: "",
     } as DraftShell,
     portForwardDraft: {
       targetHost: "127.0.0.1",
-      targetPort: ""
+      targetPort: "",
     } as DraftPortForward,
     pendingConversationInputDraft: {
       optionId: null,
-      text: ""
-    } as PendingConversationInputDraft
+      text: "",
+    } as PendingConversationInputDraft,
   }),
   getters: {
     selectedDevice(state) {
-      return state.devices.find((device) => device.id === state.selectedDeviceId) ?? null;
+      return (
+        state.devices.find((device) => device.id === state.selectedDeviceId) ??
+        null
+      );
     },
     selectedConversation(state) {
       return (
         state.selectedConversationDetail?.conversation ??
         state.conversations.find(
-          (conversation) => conversation.id === state.selectedConversationId
+          (conversation) => conversation.id === state.selectedConversationId,
         ) ??
         null
       );
@@ -192,35 +201,49 @@ export const useControlStore = defineStore("control", {
     selectedShellSession(state) {
       return (
         state.selectedShellSessionDetail?.session ??
-        state.shellSessions.find((session) => session.id === state.selectedShellSessionId) ??
+        state.shellSessions.find(
+          (session) => session.id === state.selectedShellSessionId,
+        ) ??
         null
       );
     },
     selectedPortForward(state) {
-      return state.portForwards.find((forward) => forward.id === state.selectedPortForwardId) ?? null;
+      return (
+        state.portForwards.find(
+          (forward) => forward.id === state.selectedPortForwardId,
+        ) ?? null
+      );
     },
     conversationPendingInput(state) {
       return state.selectedConversationDetail?.pendingInputRequest ?? null;
     },
     conversationCurrentTask(state) {
-      const latestTaskId = state.selectedConversationDetail?.conversation.latestTaskId;
+      const latestTaskId =
+        state.selectedConversationDetail?.conversation.latestTaskId;
       if (!latestTaskId) {
         return null;
       }
 
       return (
-        state.selectedConversationDetail?.tasks.find((detail) => detail.task.id === latestTaskId)
-          ?.task ??
+        state.selectedConversationDetail?.tasks.find(
+          (detail) => detail.task.id === latestTaskId,
+        )?.task ??
         state.tasks.find((task) => task.id === latestTaskId) ??
         null
       );
     },
     visibleTasks(state) {
       return state.tasks.filter((task) => {
-        if (state.taskScope === "selected_device" && task.deviceId !== state.selectedDeviceId) {
+        if (
+          state.taskScope === "selected_device" &&
+          task.deviceId !== state.selectedDeviceId
+        ) {
           return false;
         }
-        if (state.taskStatusFilter !== "all" && task.status !== state.taskStatusFilter) {
+        if (
+          state.taskStatusFilter !== "all" &&
+          task.status !== state.taskStatusFilter
+        ) {
           return false;
         }
         return true;
@@ -261,9 +284,15 @@ export const useControlStore = defineStore("control", {
       });
     },
     visibleConversations(state) {
-      return state.conversations.filter((conversation) => !conversation.archived);
+      return state.conversations.filter(
+        (conversation) => !conversation.archived,
+      );
     },
-    availableProviders(): { kind: ProviderKind; label: string; executionProtocol: ExecutionProtocol }[] {
+    availableProviders(): {
+      kind: ProviderKind;
+      label: string;
+      executionProtocol: ExecutionProtocol;
+    }[] {
       const device = this.selectedDevice;
       if (!device) {
         return [];
@@ -274,7 +303,7 @@ export const useControlStore = defineStore("control", {
         .map((provider) => ({
           kind: provider.kind,
           label: formatProviderLabel(provider.kind, provider.executionProtocol),
-          executionProtocol: provider.executionProtocol
+          executionProtocol: provider.executionProtocol,
         }));
     },
     unreadActivityCount(state) {
@@ -282,12 +311,12 @@ export const useControlStore = defineStore("control", {
     },
     recentActivities(state) {
       return [...state.activities].sort(
-        (left, right) => right.timestampEpochMs - left.timestampEpochMs
+        (left, right) => right.timestampEpochMs - left.timestampEpochMs,
       );
     },
     currentPlatformCapability(state) {
       return resolveCurrentPlatformCapability(state.appConfig);
-    }
+    },
   },
   actions: {
     async initialize() {
@@ -312,6 +341,7 @@ export const useControlStore = defineStore("control", {
           return;
         }
         await this.reloadAll();
+        this.syncProjectFolder();
         this.connectEvents();
         this.startShellPolling();
         this.startPortForwardPolling();
@@ -351,34 +381,42 @@ export const useControlStore = defineStore("control", {
 
         const [appConfig, health] = await Promise.all([
           fetchAppConfig(this.relayBaseUrl),
-          fetchHealth(this.relayBaseUrl)
+          fetchHealth(this.relayBaseUrl),
         ]);
 
         this.appConfig = appConfig;
         this.health = health;
         const shouldLoadAuditEvents = hasAppFeatureFlag(
           appConfig,
-          APP_FEATURE_FLAGS.governanceAuditConsole
+          APP_FEATURE_FLAGS.governanceAuditConsole,
         );
-        const [devices, conversations, tasks, shellSessions, portForwards, auditRecords] =
-          await Promise.all([
-            fetchDevices(this.relayBaseUrl, this.relayAccessToken),
-            fetchConversations(this.relayBaseUrl, this.relayAccessToken, {
-              archived: false
-            }),
-            fetchTasks(this.relayBaseUrl, this.relayAccessToken, { limit: TASK_HISTORY_LIMIT }),
-            fetchShellSessions(this.relayBaseUrl, this.relayAccessToken, {
-              limit: SHELL_HISTORY_LIMIT
-            }),
-            fetchPortForwards(this.relayBaseUrl, this.relayAccessToken, {
-              limit: PORT_FORWARD_HISTORY_LIMIT
-            }),
-            shouldLoadAuditEvents
-              ? fetchAuditEvents(this.relayBaseUrl, this.relayAccessToken, {
-                  limit: AUDIT_HISTORY_LIMIT
-                })
-              : Promise.resolve([])
-          ]);
+        const [
+          devices,
+          conversations,
+          tasks,
+          shellSessions,
+          portForwards,
+          auditRecords,
+        ] = await Promise.all([
+          fetchDevices(this.relayBaseUrl, this.relayAccessToken),
+          fetchConversations(this.relayBaseUrl, this.relayAccessToken, {
+            archived: false,
+          }),
+          fetchTasks(this.relayBaseUrl, this.relayAccessToken, {
+            limit: TASK_HISTORY_LIMIT,
+          }),
+          fetchShellSessions(this.relayBaseUrl, this.relayAccessToken, {
+            limit: SHELL_HISTORY_LIMIT,
+          }),
+          fetchPortForwards(this.relayBaseUrl, this.relayAccessToken, {
+            limit: PORT_FORWARD_HISTORY_LIMIT,
+          }),
+          shouldLoadAuditEvents
+            ? fetchAuditEvents(this.relayBaseUrl, this.relayAccessToken, {
+                limit: AUDIT_HISTORY_LIMIT,
+              })
+            : Promise.resolve([]),
+        ]);
         this.devices = devices;
         this.conversations = conversations;
         this.tasks = tasks;
@@ -398,22 +436,28 @@ export const useControlStore = defineStore("control", {
               : Promise.resolve(),
           this.selectedShellSessionId
             ? this.loadShellSessionDetail(this.selectedShellSessionId)
-            : Promise.resolve()
+            : Promise.resolve(),
         ]);
         this.connectShellSocket();
       });
     },
     ensureSelections() {
-      if (!this.conversations.some((conversation) => conversation.id === this.selectedConversationId)) {
+      if (
+        !this.conversations.some(
+          (conversation) => conversation.id === this.selectedConversationId,
+        )
+      ) {
         this.selectedConversationId = this.conversations[0]?.id ?? null;
       }
 
       const selectedConversation = this.conversations.find(
-        (conversation) => conversation.id === this.selectedConversationId
+        (conversation) => conversation.id === this.selectedConversationId,
       );
       if (!this.devices.some((device) => device.id === this.selectedDeviceId)) {
         this.selectedDeviceId =
-          this.devices.find((device) => device.id === selectedConversation?.deviceId)?.id ??
+          this.devices.find(
+            (device) => device.id === selectedConversation?.deviceId,
+          )?.id ??
           this.devices[0]?.id ??
           null;
       }
@@ -424,23 +468,39 @@ export const useControlStore = defineStore("control", {
 
       if (!this.tasks.some((task) => task.id === this.selectedTaskId)) {
         this.selectedTaskId =
-          this.tasks.find((task) => task.id === selectedConversation?.latestTaskId)?.id ??
+          this.tasks.find(
+            (task) => task.id === selectedConversation?.latestTaskId,
+          )?.id ??
           this.tasks[0]?.id ??
           null;
       }
 
-      if (!this.shellSessions.some((session) => session.id === this.selectedShellSessionId)) {
+      if (
+        !this.shellSessions.some(
+          (session) => session.id === this.selectedShellSessionId,
+        )
+      ) {
         this.selectedShellSessionId = this.shellSessions[0]?.id ?? null;
       }
 
-      if (!this.portForwards.some((forward) => forward.id === this.selectedPortForwardId)) {
+      if (
+        !this.portForwards.some(
+          (forward) => forward.id === this.selectedPortForwardId,
+        )
+      ) {
         this.selectedPortForwardId = this.portForwards[0]?.id ?? null;
       }
 
       const availableProviders = this.availableProviders;
-      if (!availableProviders.some((provider) => provider.kind === this.draft.provider)) {
+      if (
+        !availableProviders.some(
+          (provider) => provider.kind === this.draft.provider,
+        )
+      ) {
         this.draft.provider = availableProviders[0]?.kind ?? "";
       }
+
+      this.syncProjectFolder();
     },
     async selectDevice(deviceId: string) {
       await runStoreAction(this, async () => {
@@ -457,10 +517,12 @@ export const useControlStore = defineStore("control", {
         }
         if (
           this.selectedShellSessionId &&
-          this.selectedShellSessionDetail?.session.id !== this.selectedShellSessionId
+          this.selectedShellSessionDetail?.session.id !==
+            this.selectedShellSessionId
         ) {
           await this.loadShellSessionDetail(this.selectedShellSessionId);
         }
+        this.syncProjectFolder();
         this.connectShellSocket();
       });
     },
@@ -476,6 +538,7 @@ export const useControlStore = defineStore("control", {
         this.syncTaskSelectionToDevice();
         this.syncShellSelectionToDevice();
         this.syncPortForwardSelectionToDevice();
+        this.syncProjectFolder();
       });
     },
     startNewConversationDraft() {
@@ -485,14 +548,19 @@ export const useControlStore = defineStore("control", {
       this.selectedTaskDetail = null;
       this.pendingConversationInputDraft = {
         optionId: null,
-        text: ""
+        text: "",
       };
       this.draft.title = "";
       this.draft.prompt = "";
       const availableProviders = this.availableProviders;
-      if (!availableProviders.some((provider) => provider.kind === this.draft.provider)) {
+      if (
+        !availableProviders.some(
+          (provider) => provider.kind === this.draft.provider,
+        )
+      ) {
         this.draft.provider = availableProviders[0]?.kind ?? "";
       }
+      this.syncProjectFolder();
     },
     async selectTask(taskId: string) {
       await runStoreAction(this, async () => {
@@ -545,14 +613,14 @@ export const useControlStore = defineStore("control", {
     markAllActivitiesRead() {
       this.activities = this.activities.map((activity) => ({
         ...activity,
-        unread: false
+        unread: false,
       }));
     },
     async loadConversationDetail(conversationId: string) {
       const detail = await fetchConversationDetail(
         this.relayBaseUrl,
         conversationId,
-        this.relayAccessToken
+        this.relayAccessToken,
       );
       this.selectedConversationDetail = detail;
       this.upsertConversation(detail.conversation);
@@ -560,27 +628,35 @@ export const useControlStore = defineStore("control", {
         this.upsertTask(taskDetail.task);
       }
       const latestTaskId =
-        detail.conversation.latestTaskId ?? detail.tasks[detail.tasks.length - 1]?.task.id ?? null;
+        detail.conversation.latestTaskId ??
+        detail.tasks[detail.tasks.length - 1]?.task.id ??
+        null;
       this.selectedTaskId = latestTaskId;
       this.selectedTaskDetail =
-        detail.tasks.find((taskDetail) => taskDetail.task.id === latestTaskId) ?? null;
+        detail.tasks.find(
+          (taskDetail) => taskDetail.task.id === latestTaskId,
+        ) ?? null;
       this.selectedDeviceId = detail.conversation.deviceId;
       this.draft.provider = detail.conversation.provider;
-      this.draft.cwd = detail.conversation.cwd ?? "";
       this.draft.model = detail.conversation.model ?? "";
       this.draft.title = detail.conversation.title;
+      this.syncProjectFolder();
       this.resetPendingConversationInputDraft(detail.pendingInputRequest);
     },
     async loadTaskDetail(taskId: string) {
       this.selectedTaskDetail = await fetchTaskDetail(
         this.relayBaseUrl,
         taskId,
-        this.relayAccessToken
+        this.relayAccessToken,
       );
     },
     async startConversation() {
       await runStoreAction(this, async () => {
-        if (!this.selectedDeviceId || !this.draft.provider || !this.draft.prompt.trim()) {
+        if (
+          !this.selectedDeviceId ||
+          !this.draft.provider ||
+          !this.draft.prompt.trim()
+        ) {
           return;
         }
 
@@ -589,14 +665,14 @@ export const useControlStore = defineStore("control", {
           provider: this.draft.provider,
           prompt: this.draft.prompt.trim(),
           title: this.draft.title.trim() || undefined,
-          cwd: this.draft.cwd.trim() || undefined,
-          model: this.draft.model.trim() || undefined
+          cwd: this.projectFolder.trim() || undefined,
+          model: this.draft.model.trim() || undefined,
         };
 
         const response = await createConversation(
           this.relayBaseUrl,
           payload,
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.upsertConversation(response.conversation);
         this.upsertTask(response.task);
@@ -625,9 +701,9 @@ export const useControlStore = defineStore("control", {
           {
             prompt,
             title: this.draft.title.trim() || undefined,
-            model: this.draft.model.trim() || undefined
+            model: this.draft.model.trim() || undefined,
           },
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.upsertConversation(response.conversation);
         this.upsertTask(response.task);
@@ -644,10 +720,10 @@ export const useControlStore = defineStore("control", {
         const archivedConversation = await archiveConversation(
           this.relayBaseUrl,
           this.selectedConversationId,
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.conversations = this.conversations.filter(
-          (conversation) => conversation.id !== archivedConversation.id
+          (conversation) => conversation.id !== archivedConversation.id,
         );
         this.selectedConversationId = this.conversations[0]?.id ?? null;
         if (this.selectedConversationId) {
@@ -671,31 +747,37 @@ export const useControlStore = defineStore("control", {
           request.taskId,
           request.id,
           payload,
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         await this.loadConversationDetail(request.conversationId);
         this.pendingConversationInputDraft = {
           optionId: null,
-          text: ""
+          text: "",
         };
       });
     },
-    resetPendingConversationInputDraft(request: ConversationInputRequest | null) {
+    resetPendingConversationInputDraft(
+      request: ConversationInputRequest | null,
+    ) {
       this.pendingConversationInputDraft = {
         optionId: request?.selectedOptionId ?? null,
-        text: request?.responseText ?? ""
+        text: request?.responseText ?? "",
       };
     },
     async loadShellSessionDetail(sessionId: string) {
       this.selectedShellSessionDetail = await fetchShellSessionDetail(
         this.relayBaseUrl,
         sessionId,
-        this.relayAccessToken
+        this.relayAccessToken,
       );
     },
     async submitTask() {
       await runStoreAction(this, async () => {
-        if (!this.selectedDeviceId || !this.draft.provider || !this.draft.prompt.trim()) {
+        if (
+          !this.selectedDeviceId ||
+          !this.draft.provider ||
+          !this.draft.prompt.trim()
+        ) {
           return;
         }
 
@@ -704,15 +786,19 @@ export const useControlStore = defineStore("control", {
           provider: this.draft.provider,
           prompt: this.draft.prompt.trim(),
           title: this.draft.title.trim() || undefined,
-          cwd: this.draft.cwd.trim() || undefined,
-          model: this.draft.model.trim() || undefined
+          cwd: this.projectFolder.trim() || undefined,
+          model: this.draft.model.trim() || undefined,
         };
 
-        const task = await createTask(this.relayBaseUrl, payload, this.relayAccessToken);
-        this.tasks = [task, ...this.tasks.filter((item) => item.id !== task.id)].slice(
-          0,
-          TASK_HISTORY_LIMIT
+        const task = await createTask(
+          this.relayBaseUrl,
+          payload,
+          this.relayAccessToken,
         );
+        this.tasks = [
+          task,
+          ...this.tasks.filter((item) => item.id !== task.id),
+        ].slice(0, TASK_HISTORY_LIMIT);
         this.selectedTaskId = task.id;
         await this.loadTaskDetail(task.id);
         this.draft.prompt = "";
@@ -728,9 +814,9 @@ export const useControlStore = defineStore("control", {
           this.relayBaseUrl,
           {
             deviceId: this.selectedDeviceId,
-            cwd: this.shellDraft.cwd.trim() || undefined
+            cwd: this.shellDraft.cwd.trim() || undefined,
           },
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.upsertShellSession(session);
         this.selectedShellSessionId = session.id;
@@ -739,9 +825,27 @@ export const useControlStore = defineStore("control", {
         this.shellDraft.input = "";
       });
     },
+    setProjectFolder(folder: string) {
+      this.projectFolder = folder;
+
+      if (this.selectedDeviceId) {
+        persistProjectFolder(this.selectedDeviceId, folder);
+      }
+    },
+    syncProjectFolder() {
+      if (!this.selectedDeviceId) {
+        this.projectFolder = "";
+        return;
+      }
+
+      this.projectFolder = loadStoredProjectFolder(this.selectedDeviceId);
+    },
     async createPortForward() {
       await runStoreAction(this, async () => {
-        if (!this.selectedDeviceId || !this.portForwardDraft.targetHost.trim()) {
+        if (
+          !this.selectedDeviceId ||
+          !this.portForwardDraft.targetHost.trim()
+        ) {
           return;
         }
 
@@ -756,13 +860,13 @@ export const useControlStore = defineStore("control", {
           deviceId: this.selectedDeviceId,
           protocol: "tcp",
           targetHost: this.portForwardDraft.targetHost.trim(),
-          targetPort
+          targetPort,
         };
 
         const forward = await createPortForward(
           this.relayBaseUrl,
           payload,
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.upsertPortForward(forward);
         this.selectedPortForwardId = forward.id;
@@ -778,7 +882,7 @@ export const useControlStore = defineStore("control", {
           this.relayBaseUrl,
           this.selectedShellSessionId,
           this.normalizeShellInput(this.shellDraft.input),
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.selectedShellSessionDetail = detail;
         this.upsertShellSession(detail.session);
@@ -794,7 +898,7 @@ export const useControlStore = defineStore("control", {
         const detail = await closeShellSession(
           this.relayBaseUrl,
           this.selectedShellSessionId,
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.selectedShellSessionDetail = detail;
         this.upsertShellSession(detail.session);
@@ -809,7 +913,7 @@ export const useControlStore = defineStore("control", {
         const detail = await closePortForward(
           this.relayBaseUrl,
           this.selectedPortForwardId,
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.upsertPortForward(detail.forward);
       });
@@ -823,7 +927,7 @@ export const useControlStore = defineStore("control", {
         const detail = await cancelTask(
           this.relayBaseUrl,
           this.selectedTaskId,
-          this.relayAccessToken
+          this.relayAccessToken,
         );
         this.selectedTaskDetail = detail;
         this.upsertTask(detail.task);
@@ -860,19 +964,22 @@ export const useControlStore = defineStore("control", {
       this.selectedShellSessionDetail = null;
       this.pendingConversationInputDraft = {
         optionId: null,
-        text: ""
+        text: "",
       };
     },
     connectEvents() {
       this.disconnectEvents();
 
-      if (!this.relayBaseUrl || (this.appConfig?.requiresAuth && !this.relayAccessToken)) {
+      if (
+        !this.relayBaseUrl ||
+        (this.appConfig?.requiresAuth && !this.relayAccessToken)
+      ) {
         return;
       }
 
       this.eventState = "connecting";
       activeEventSource = new EventSource(
-        buildEventStreamUrl(this.relayBaseUrl, this.relayAccessToken)
+        buildEventStreamUrl(this.relayBaseUrl, this.relayAccessToken),
       );
 
       activeEventSource.addEventListener("open", () => {
@@ -895,7 +1002,10 @@ export const useControlStore = defineStore("control", {
     },
     startShellPolling() {
       this.stopShellPolling();
-      if (!this.relayBaseUrl || (this.appConfig?.requiresAuth && !this.relayAccessToken)) {
+      if (
+        !this.relayBaseUrl ||
+        (this.appConfig?.requiresAuth && !this.relayAccessToken)
+      ) {
         return;
       }
 
@@ -912,7 +1022,10 @@ export const useControlStore = defineStore("control", {
     },
     startPortForwardPolling() {
       this.stopPortForwardPolling();
-      if (!this.relayBaseUrl || (this.appConfig?.requiresAuth && !this.relayAccessToken)) {
+      if (
+        !this.relayBaseUrl ||
+        (this.appConfig?.requiresAuth && !this.relayAccessToken)
+      ) {
         return;
       }
 
@@ -953,8 +1066,8 @@ export const useControlStore = defineStore("control", {
         buildWebSocketUrl(
           this.relayBaseUrl,
           `/api/shell/sessions/${sessionId}/ws`,
-          this.relayAccessToken
-        )
+          this.relayAccessToken,
+        ),
       );
       activeShellSocket = socket;
       activeShellSocketSessionId = sessionId;
@@ -972,7 +1085,9 @@ export const useControlStore = defineStore("control", {
         }
 
         try {
-          const detail = JSON.parse(event.data as string) as ShellSessionDetailResponse;
+          const detail = JSON.parse(
+            event.data as string,
+          ) as ShellSessionDetailResponse;
           this.selectedShellSessionDetail = detail;
           this.upsertShellSession(detail.session);
         } catch (error) {
@@ -1016,23 +1131,33 @@ export const useControlStore = defineStore("control", {
       if (this.isShellPolling) {
         return;
       }
-      if (!this.relayBaseUrl || (this.appConfig?.requiresAuth && !this.relayAccessToken)) {
+      if (
+        !this.relayBaseUrl ||
+        (this.appConfig?.requiresAuth && !this.relayAccessToken)
+      ) {
         return;
       }
 
       this.isShellPolling = true;
       try {
-        const sessions = await fetchShellSessions(this.relayBaseUrl, this.relayAccessToken, {
-          limit: SHELL_HISTORY_LIMIT
-        });
+        const sessions = await fetchShellSessions(
+          this.relayBaseUrl,
+          this.relayAccessToken,
+          {
+            limit: SHELL_HISTORY_LIMIT,
+          },
+        );
         this.shellSessions = sessions;
         this.ensureSelections();
         this.syncShellSelectionToDevice();
-        if (this.selectedShellSessionId && this.shellSocketState !== "connected") {
+        if (
+          this.selectedShellSessionId &&
+          this.shellSocketState !== "connected"
+        ) {
           this.selectedShellSessionDetail = await fetchShellSessionDetail(
             this.relayBaseUrl,
             this.selectedShellSessionId,
-            this.relayAccessToken
+            this.relayAccessToken,
           );
           this.upsertShellSession(this.selectedShellSessionDetail.session);
         }
@@ -1047,15 +1172,22 @@ export const useControlStore = defineStore("control", {
       if (this.isPortForwardPolling) {
         return;
       }
-      if (!this.relayBaseUrl || (this.appConfig?.requiresAuth && !this.relayAccessToken)) {
+      if (
+        !this.relayBaseUrl ||
+        (this.appConfig?.requiresAuth && !this.relayAccessToken)
+      ) {
         return;
       }
 
       this.isPortForwardPolling = true;
       try {
-        const portForwards = await fetchPortForwards(this.relayBaseUrl, this.relayAccessToken, {
-          limit: PORT_FORWARD_HISTORY_LIMIT
-        });
+        const portForwards = await fetchPortForwards(
+          this.relayBaseUrl,
+          this.relayAccessToken,
+          {
+            limit: PORT_FORWARD_HISTORY_LIMIT,
+          },
+        );
         this.reconcilePortForwards(portForwards);
         this.ensureSelections();
         this.syncPortForwardSelectionToDevice();
@@ -1078,7 +1210,7 @@ export const useControlStore = defineStore("control", {
           envelope.task.conversationId &&
           this.selectedConversationId === envelope.task.conversationId &&
           (!this.selectedConversationDetail?.tasks.some(
-            (detail) => detail.task.id === envelope.task?.id
+            (detail) => detail.task.id === envelope.task?.id,
           ) ||
             this.selectedConversationDetail?.pendingInputRequest?.id !==
               envelope.task.pendingInputRequestId)
@@ -1096,26 +1228,37 @@ export const useControlStore = defineStore("control", {
       this.syncPortForwardSelectionToDevice();
     },
     upsertConversation(conversation: ConversationRecord) {
-      const existingIndex = this.conversations.findIndex((item) => item.id === conversation.id);
+      const existingIndex = this.conversations.findIndex(
+        (item) => item.id === conversation.id,
+      );
       if (existingIndex >= 0) {
         this.conversations.splice(existingIndex, 1, conversation);
       } else {
         this.conversations.unshift(conversation);
       }
-      this.conversations.sort((left, right) => right.updatedAtEpochMs - left.updatedAtEpochMs);
+      this.conversations.sort(
+        (left, right) => right.updatedAtEpochMs - left.updatedAtEpochMs,
+      );
       if (this.conversations.length > CONVERSATION_HISTORY_LIMIT) {
-        this.conversations = this.conversations.slice(0, CONVERSATION_HISTORY_LIMIT);
+        this.conversations = this.conversations.slice(
+          0,
+          CONVERSATION_HISTORY_LIMIT,
+        );
       }
 
-      if (this.selectedConversationDetail?.conversation.id === conversation.id) {
+      if (
+        this.selectedConversationDetail?.conversation.id === conversation.id
+      ) {
         this.selectedConversationDetail = {
           ...this.selectedConversationDetail,
-          conversation
+          conversation,
         };
       }
     },
     upsertDevice(device: DeviceRecord) {
-      const existingIndex = this.devices.findIndex((item) => item.id === device.id);
+      const existingIndex = this.devices.findIndex(
+        (item) => item.id === device.id,
+      );
       if (existingIndex >= 0) {
         this.devices.splice(existingIndex, 1, device);
       } else {
@@ -1136,7 +1279,9 @@ export const useControlStore = defineStore("control", {
       } else {
         this.tasks.unshift(task);
       }
-      this.tasks.sort((left, right) => right.createdAtEpochMs - left.createdAtEpochMs);
+      this.tasks.sort(
+        (left, right) => right.createdAtEpochMs - left.createdAtEpochMs,
+      );
       if (this.tasks.length > TASK_HISTORY_LIMIT) {
         this.tasks = this.tasks.slice(0, TASK_HISTORY_LIMIT);
       }
@@ -1148,13 +1293,13 @@ export const useControlStore = defineStore("control", {
           pendingInputRequest:
             this.selectedTaskDetail.pendingInputRequest ??
             this.selectedConversationDetail?.pendingInputRequest ??
-            null
+            null,
         };
       }
 
       if (task.conversationId) {
         const existingConversation = this.conversations.find(
-          (conversation) => conversation.id === task.conversationId
+          (conversation) => conversation.id === task.conversationId,
         );
         if (existingConversation) {
           this.upsertConversation({
@@ -1164,37 +1309,47 @@ export const useControlStore = defineStore("control", {
             executionProtocol: task.executionProtocol,
             cwd: task.cwd,
             model: task.model,
-            providerSessionId: task.providerSessionId ?? existingConversation.providerSessionId,
+            providerSessionId:
+              task.providerSessionId ?? existingConversation.providerSessionId,
             latestTaskId:
               task.createdAtEpochMs >= existingConversation.updatedAtEpochMs
                 ? task.id
                 : existingConversation.latestTaskId,
             pendingInputRequestId:
-              task.pendingInputRequestId ?? existingConversation.pendingInputRequestId,
+              task.pendingInputRequestId ??
+              existingConversation.pendingInputRequestId,
             updatedAtEpochMs: Math.max(
               existingConversation.updatedAtEpochMs,
               task.createdAtEpochMs,
               task.startedAtEpochMs ?? 0,
-              task.finishedAtEpochMs ?? 0
-            )
+              task.finishedAtEpochMs ?? 0,
+            ),
           });
         }
 
-        if (this.selectedConversationDetail?.conversation.id === task.conversationId) {
+        if (
+          this.selectedConversationDetail?.conversation.id ===
+          task.conversationId
+        ) {
           const taskDetails = [...this.selectedConversationDetail.tasks];
-          const taskIndex = taskDetails.findIndex((detail) => detail.task.id === task.id);
+          const taskIndex = taskDetails.findIndex(
+            (detail) => detail.task.id === task.id,
+          );
           if (taskIndex >= 0) {
             taskDetails.splice(taskIndex, 1, {
               ...taskDetails[taskIndex],
-              task
+              task,
             });
           } else {
             taskDetails.push({
               task,
               events: [],
-              pendingInputRequest: null
+              pendingInputRequest: null,
             });
-            taskDetails.sort((left, right) => left.task.createdAtEpochMs - right.task.createdAtEpochMs);
+            taskDetails.sort(
+              (left, right) =>
+                left.task.createdAtEpochMs - right.task.createdAtEpochMs,
+            );
           }
 
           this.selectedConversationDetail = {
@@ -1202,9 +1357,11 @@ export const useControlStore = defineStore("control", {
             conversation: {
               ...this.selectedConversationDetail.conversation,
               providerSessionId:
-                task.providerSessionId ?? this.selectedConversationDetail.conversation.providerSessionId,
+                task.providerSessionId ??
+                this.selectedConversationDetail.conversation.providerSessionId,
               latestTaskId:
-                task.createdAtEpochMs >= this.selectedConversationDetail.conversation.updatedAtEpochMs
+                task.createdAtEpochMs >=
+                this.selectedConversationDetail.conversation.updatedAtEpochMs
                   ? task.id
                   : this.selectedConversationDetail.conversation.latestTaskId,
               pendingInputRequestId: task.pendingInputRequestId,
@@ -1212,14 +1369,14 @@ export const useControlStore = defineStore("control", {
                 this.selectedConversationDetail.conversation.updatedAtEpochMs,
                 task.createdAtEpochMs,
                 task.startedAtEpochMs ?? 0,
-                task.finishedAtEpochMs ?? 0
-              )
+                task.finishedAtEpochMs ?? 0,
+              ),
             },
             tasks: taskDetails,
             pendingInputRequest:
               task.pendingInputRequestId === null
                 ? null
-                : this.selectedConversationDetail.pendingInputRequest
+                : this.selectedConversationDetail.pendingInputRequest,
           };
         }
       }
@@ -1230,13 +1387,17 @@ export const useControlStore = defineStore("control", {
       }
     },
     upsertShellSession(session: ShellSessionRecord) {
-      const existingIndex = this.shellSessions.findIndex((item) => item.id === session.id);
+      const existingIndex = this.shellSessions.findIndex(
+        (item) => item.id === session.id,
+      );
       if (existingIndex >= 0) {
         this.shellSessions.splice(existingIndex, 1, session);
       } else {
         this.shellSessions.unshift(session);
       }
-      this.shellSessions.sort((left, right) => right.createdAtEpochMs - left.createdAtEpochMs);
+      this.shellSessions.sort(
+        (left, right) => right.createdAtEpochMs - left.createdAtEpochMs,
+      );
       if (this.shellSessions.length > SHELL_HISTORY_LIMIT) {
         this.shellSessions = this.shellSessions.slice(0, SHELL_HISTORY_LIMIT);
       }
@@ -1245,21 +1406,29 @@ export const useControlStore = defineStore("control", {
         this.selectedShellSessionDetail = {
           session,
           inputs: this.selectedShellSessionDetail.inputs,
-          outputs: this.selectedShellSessionDetail.outputs
+          outputs: this.selectedShellSessionDetail.outputs,
         };
       }
     },
     upsertPortForward(forward: PortForwardRecord) {
-      const existingIndex = this.portForwards.findIndex((item) => item.id === forward.id);
-      const previous = existingIndex >= 0 ? this.portForwards[existingIndex] : null;
+      const existingIndex = this.portForwards.findIndex(
+        (item) => item.id === forward.id,
+      );
+      const previous =
+        existingIndex >= 0 ? this.portForwards[existingIndex] : null;
       if (existingIndex >= 0) {
         this.portForwards.splice(existingIndex, 1, forward);
       } else {
         this.portForwards.unshift(forward);
       }
-      this.portForwards.sort((left, right) => right.createdAtEpochMs - left.createdAtEpochMs);
+      this.portForwards.sort(
+        (left, right) => right.createdAtEpochMs - left.createdAtEpochMs,
+      );
       if (this.portForwards.length > PORT_FORWARD_HISTORY_LIMIT) {
-        this.portForwards = this.portForwards.slice(0, PORT_FORWARD_HISTORY_LIMIT);
+        this.portForwards = this.portForwards.slice(
+          0,
+          PORT_FORWARD_HISTORY_LIMIT,
+        );
       }
 
       const activity = buildPreviewActivity(previous, forward, i18n.global.t);
@@ -1272,23 +1441,23 @@ export const useControlStore = defineStore("control", {
         this.selectedTaskDetail = {
           task: this.selectedTaskDetail.task,
           events: [...this.selectedTaskDetail.events, taskEvent],
-          pendingInputRequest: this.selectedTaskDetail.pendingInputRequest
+          pendingInputRequest: this.selectedTaskDetail.pendingInputRequest,
         };
       }
       if (this.selectedConversationDetail) {
         const taskIndex = this.selectedConversationDetail.tasks.findIndex(
-          (detail) => detail.task.id === taskEvent.taskId
+          (detail) => detail.task.id === taskEvent.taskId,
         );
         if (taskIndex >= 0) {
           const tasks = [...this.selectedConversationDetail.tasks];
           const detail = tasks[taskIndex];
           tasks.splice(taskIndex, 1, {
             ...detail,
-            events: [...detail.events, taskEvent]
+            events: [...detail.events, taskEvent],
           });
           this.selectedConversationDetail = {
             ...this.selectedConversationDetail,
-            tasks
+            tasks,
           };
         }
       }
@@ -1304,14 +1473,16 @@ export const useControlStore = defineStore("control", {
     },
     pushActivity(activity: ActivityItem) {
       const existingIndex = this.activities.findIndex(
-        (item) => item.fingerprint === activity.fingerprint
+        (item) => item.fingerprint === activity.fingerprint,
       );
       if (existingIndex >= 0) {
         this.activities.splice(existingIndex, 1, activity);
       } else {
         this.activities.unshift(activity);
       }
-      this.activities.sort((left, right) => right.timestampEpochMs - left.timestampEpochMs);
+      this.activities.sort(
+        (left, right) => right.timestampEpochMs - left.timestampEpochMs,
+      );
       if (this.activities.length > ACTIVITY_HISTORY_LIMIT) {
         this.activities = this.activities.slice(0, ACTIVITY_HISTORY_LIMIT);
       }
@@ -1322,7 +1493,10 @@ export const useControlStore = defineStore("control", {
       const enabled =
         supportsSystemNotifications(this.appConfig) &&
         (this.appConfig?.notificationChannels ?? []).includes("system");
-      this.notificationPermission = await publishSystemActivity(activity, enabled);
+      this.notificationPermission = await publishSystemActivity(
+        activity,
+        enabled,
+      );
     },
     normalizeShellInput(value: string) {
       return value.endsWith("\n") ? value : `${value}\n`;
@@ -1332,12 +1506,16 @@ export const useControlStore = defineStore("control", {
         return;
       }
 
-      const current = this.tasks.find((task) => task.id === this.selectedTaskId);
+      const current = this.tasks.find(
+        (task) => task.id === this.selectedTaskId,
+      );
       if (current?.deviceId === this.selectedDeviceId) {
         return;
       }
 
-      const fallback = this.tasks.find((task) => task.deviceId === this.selectedDeviceId);
+      const fallback = this.tasks.find(
+        (task) => task.deviceId === this.selectedDeviceId,
+      );
       this.selectedTaskId = fallback?.id ?? null;
       if (!fallback) {
         this.selectedTaskDetail = null;
@@ -1349,14 +1527,14 @@ export const useControlStore = defineStore("control", {
       }
 
       const current = this.shellSessions.find(
-        (session) => session.id === this.selectedShellSessionId
+        (session) => session.id === this.selectedShellSessionId,
       );
       if (current?.deviceId === this.selectedDeviceId) {
         return;
       }
 
       const fallback = this.shellSessions.find(
-        (session) => session.deviceId === this.selectedDeviceId
+        (session) => session.deviceId === this.selectedDeviceId,
       );
       this.selectedShellSessionId = fallback?.id ?? null;
       if (!fallback) {
@@ -1365,23 +1543,26 @@ export const useControlStore = defineStore("control", {
       }
     },
     syncPortForwardSelectionToDevice() {
-      if (this.portForwardScope !== "selected_device" || !this.selectedDeviceId) {
+      if (
+        this.portForwardScope !== "selected_device" ||
+        !this.selectedDeviceId
+      ) {
         return;
       }
 
       const current = this.portForwards.find(
-        (forward) => forward.id === this.selectedPortForwardId
+        (forward) => forward.id === this.selectedPortForwardId,
       );
       if (current?.deviceId === this.selectedDeviceId) {
         return;
       }
 
       const fallback = this.portForwards.find(
-        (forward) => forward.deviceId === this.selectedDeviceId
+        (forward) => forward.deviceId === this.selectedDeviceId,
       );
       this.selectedPortForwardId = fallback?.id ?? null;
-    }
-  }
+    },
+  },
 });
 
 function formatError(error: unknown) {
@@ -1390,7 +1571,7 @@ function formatError(error: unknown) {
 
 async function runStoreAction(
   store: { errorCode: string | null; errorMessage: string },
-  operation: () => Promise<void>
+  operation: () => Promise<void>,
 ) {
   try {
     store.errorCode = null;

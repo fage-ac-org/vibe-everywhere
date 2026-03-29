@@ -2,6 +2,7 @@ import type { AppConfig } from "../types";
 
 const RELAY_STORAGE_KEY = "vibe.everywhere.relay.baseUrl";
 const RELAY_ACCESS_TOKEN_STORAGE_KEY = "vibe.everywhere.relay.accessToken";
+const PROJECT_FOLDER_STORAGE_KEY_PREFIX = "vibe.everywhere.projectFolder";
 const LEGACY_RELAY_STORAGE_KEY = "vibe.remote.relay.baseUrl";
 const LEGACY_RELAY_ACCESS_TOKEN_STORAGE_KEY = "vibe.remote.relay.accessToken";
 const MOBILE_USER_AGENT_PATTERN = /Android|iPhone|iPad|iPod/i;
@@ -36,11 +37,15 @@ export function isLoopbackRelayBaseUrl(value: string) {
     const url = new URL(normalized);
     return LOOPBACK_HOSTS.has(url.hostname.toLowerCase());
   } catch {
-    return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(normalized);
+    return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(
+      normalized,
+    );
   }
 }
 
-export function getRelayBaseUrlPlaceholder(prefersExplicitRemoteRelayUrl = isMobileControlClient()) {
+export function getRelayBaseUrlPlaceholder(
+  prefersExplicitRemoteRelayUrl = isMobileControlClient(),
+) {
   if (prefersExplicitRemoteRelayUrl || !allowsLocalRelayDevFallback()) {
     return EXPLICIT_RELAY_PLACEHOLDER;
   }
@@ -51,7 +56,7 @@ export function getRelayBaseUrlPlaceholder(prefersExplicitRemoteRelayUrl = isMob
 export function resolveInitialRelayAccessToken(): string {
   const saved = loadStoredValue(
     RELAY_ACCESS_TOKEN_STORAGE_KEY,
-    LEGACY_RELAY_ACCESS_TOKEN_STORAGE_KEY
+    LEGACY_RELAY_ACCESS_TOKEN_STORAGE_KEY,
   );
   if (saved) {
     return saved;
@@ -70,15 +75,35 @@ export async function loadTauriConfig(): Promise<AppConfig | null> {
 }
 
 export function persistRelayBaseUrl(baseUrl: string) {
-  persistStoredValue(RELAY_STORAGE_KEY, LEGACY_RELAY_STORAGE_KEY, normalizeRelayBaseUrl(baseUrl));
+  persistStoredValue(
+    RELAY_STORAGE_KEY,
+    LEGACY_RELAY_STORAGE_KEY,
+    normalizeRelayBaseUrl(baseUrl),
+  );
 }
 
 export function persistRelayAccessToken(accessToken: string) {
   persistStoredValue(
     RELAY_ACCESS_TOKEN_STORAGE_KEY,
     LEGACY_RELAY_ACCESS_TOKEN_STORAGE_KEY,
-    accessToken.trim()
+    accessToken.trim(),
   );
+}
+
+export function loadStoredProjectFolder(deviceId: string) {
+  return window.localStorage.getItem(projectFolderStorageKey(deviceId)) ?? "";
+}
+
+export function persistProjectFolder(deviceId: string, folder: string) {
+  const normalized = folder.trim();
+  const key = projectFolderStorageKey(deviceId);
+
+  if (normalized) {
+    window.localStorage.setItem(key, normalized);
+    return;
+  }
+
+  window.localStorage.removeItem(key);
 }
 
 export function buildApiUrl(baseUrl: string, path: string): string {
@@ -92,7 +117,10 @@ export function buildApiUrl(baseUrl: string, path: string): string {
   return new URL(normalizedPath, `${normalizedBaseUrl}/`).toString();
 }
 
-export function buildEventStreamUrl(baseUrl: string, accessToken: string): string {
+export function buildEventStreamUrl(
+  baseUrl: string,
+  accessToken: string,
+): string {
   const url = buildApiUrl(baseUrl, "/api/events/stream");
   if (!accessToken.trim()) {
     return url;
@@ -105,7 +133,7 @@ export function buildEventStreamUrl(baseUrl: string, accessToken: string): strin
 export function buildWebSocketUrl(
   baseUrl: string,
   path: string,
-  accessToken: string
+  accessToken: string,
 ): string {
   const rawUrl = buildApiUrl(baseUrl, path);
   const url = new URL(rawUrl, window.location.origin);
@@ -137,7 +165,11 @@ function loadStoredValue(primaryKey: string, legacyKey: string) {
   return legacyValue ?? "";
 }
 
-function persistStoredValue(primaryKey: string, legacyKey: string, value: string) {
+function persistStoredValue(
+  primaryKey: string,
+  legacyKey: string,
+  value: string,
+) {
   if (value) {
     window.localStorage.setItem(primaryKey, value);
   } else {
@@ -148,4 +180,8 @@ function persistStoredValue(primaryKey: string, legacyKey: string, value: string
 
 function allowsLocalRelayDevFallback() {
   return import.meta.env.DEV;
+}
+
+function projectFolderStorageKey(deviceId: string) {
+  return `${PROJECT_FOLDER_STORAGE_KEY_PREFIX}.${deviceId}`;
 }

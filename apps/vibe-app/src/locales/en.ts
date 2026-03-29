@@ -1,18 +1,18 @@
 const en = {
   app: {
     name: "Vibe Everywhere",
-    title: "Vibe Everywhere"
+    title: "Vibe Everywhere",
   },
   locale: {
     label: "Language",
     zhCN: "中文",
-    en: "English"
+    en: "English",
   },
   theme: {
     label: "Theme",
     system: "System",
     light: "Light",
-    dark: "Dark"
+    dark: "Dark",
   },
   common: {
     connect: "Connect",
@@ -39,12 +39,12 @@ const en = {
     optionalAccessToken: "optional access token",
     useAgentWorkingRoot: "Use agent working root",
     defaultModel: "Default model",
-    waiting: "Waiting"
+    waiting: "Waiting",
   },
   connectionState: {
     disconnected: "disconnected",
     connecting: "connecting",
-    connected: "connected"
+    connected: "connected",
   },
   taskStatus: {
     pending: "Pending",
@@ -54,7 +54,7 @@ const en = {
     cancel_requested: "Cancel requested",
     succeeded: "Succeeded",
     failed: "Failed",
-    canceled: "Canceled"
+    canceled: "Canceled",
   },
   shellStatus: {
     pending: "Pending",
@@ -62,14 +62,14 @@ const en = {
     close_requested: "Close requested",
     succeeded: "Succeeded",
     failed: "Failed",
-    closed: "Closed"
+    closed: "Closed",
   },
   portForwardStatus: {
     pending: "Pending",
     active: "Active",
     close_requested: "Close requested",
     closed: "Closed",
-    failed: "Failed"
+    failed: "Failed",
   },
   eventKind: {
     system: "System",
@@ -78,17 +78,17 @@ const en = {
     provider_stderr: "Provider stderr",
     assistant_delta: "Assistant delta",
     tool_call: "Tool call",
-    tool_output: "Tool output"
+    tool_output: "Tool output",
   },
   stream: {
     stdin: "stdin",
     stdout: "stdout",
     stderr: "stderr",
-    system: "system"
+    system: "system",
   },
   transport: {
     relay_tunnel: "relay tunnel",
-    overlay_proxy: "overlay proxy"
+    overlay_proxy: "overlay proxy",
   },
   gitFileStatus: {
     modified: "Modified",
@@ -99,35 +99,35 @@ const en = {
     updated_but_unmerged: "Conflicted",
     untracked: "Untracked",
     type_changed: "Type changed",
-    unknown: "Unknown"
+    unknown: "Unknown",
   },
   auth: {
     required: "auth required",
-    optional: "auth optional"
+    optional: "auth optional",
   },
   role: {
     owner: "Owner",
     admin: "Admin",
     member: "Member",
     viewer: "Viewer",
-    agent: "Agent"
+    agent: "Agent",
   },
   authMode: {
     disabled: "Disabled",
-    access_token: "Access Token"
+    access_token: "Access Token",
   },
   storageKind: {
     file: "File",
     memory: "Memory",
-    external: "External"
+    external: "External",
   },
   deploymentMode: {
     self_hosted: "Self-Hosted",
-    hosted_compatible: "Hosted-Compatible"
+    hosted_compatible: "Hosted-Compatible",
   },
   notificationChannel: {
     in_app: "In-App",
-    system: "System"
+    system: "System",
   },
   auditAction: {
     device_registered: "Device Registered",
@@ -136,33 +136,36 @@ const en = {
     shell_session_created: "Shell Session Created",
     shell_session_closed: "Shell Session Closed",
     preview_created: "Preview Created",
-    preview_closed: "Preview Closed"
+    preview_closed: "Preview Closed",
   },
   auditOutcome: {
     succeeded: "Succeeded",
     rejected: "Rejected",
-    failed: "Failed"
+    failed: "Failed",
   },
   platform: {
     client: {
       web: "Web",
       tauri_desktop: "Desktop",
-      android: "Android"
-    }
+      android: "Android",
+    },
   },
   error: {
-    targetPortInvalid: "Target port must be an integer between 1 and 65535."
+    targetPortInvalid: "Target port must be an integer between 1 and 65535.",
   },
   dashboard: {
     nav: {
       sessions: "AI Sessions",
       devices: "Devices",
-      advanced: "Advanced"
+      advanced: "Advanced",
     },
     navDescriptions: {
-      sessions: "Connect once, pick a device, start AI work, and review the outcome in one flow.",
-      devices: "Inspect device inventory, runtime state, deployment metadata, and provider readiness.",
-      advanced: "Use terminal and preview tools only when deeper diagnosis is required."
+      sessions:
+        "Connect once, pick a device, start AI work, and review the outcome in one flow.",
+      devices:
+        "Inspect device inventory, runtime state, deployment metadata, and provider readiness.",
+      advanced:
+        "Use terminal and preview tools only when deeper diagnosis is required.",
     },
     shell: {
       badge: "Operator Console",
@@ -170,7 +173,7 @@ const en = {
         "Route-backed sections keep the core workflows separated, while the same information architecture adapts to desktop and mobile.",
       connectionState: "Relay Stream",
       selectedDevice: "Selected Device",
-      noDeviceSelected: "No device selected"
+      noDeviceSelected: "No device selected",
     },
     heroBadge: "Vue + Tauri 2 + Rust Relay",
     heroDescription:
@@ -192,15 +195,15 @@ const en = {
         taskFailed: "Task Failed",
         taskCanceled: "Task Canceled",
         previewReady: "Preview Ready",
-        previewFailed: "Preview Failed"
+        previewFailed: "Preview Failed",
       },
       messages: {
-        taskSucceeded: "\"{title}\" finished on device {deviceId}.",
-        taskFailed: "\"{title}\" failed on device {deviceId}.",
-        taskCanceled: "\"{title}\" was canceled on device {deviceId}.",
+        taskSucceeded: '"{title}" finished on device {deviceId}.',
+        taskFailed: '"{title}" failed on device {deviceId}.',
+        taskCanceled: '"{title}" was canceled on device {deviceId}.',
         previewReady: "Preview {host}:{port} is ready on device {deviceId}.",
-        previewFailed: "Preview {host}:{port} failed on device {deviceId}."
-      }
+        previewFailed: "Preview {host}:{port} failed on device {deviceId}.",
+      },
     },
     deployment: {
       title: "Deployment Surface",
@@ -218,8 +221,8 @@ const en = {
         hostedCompatible:
           "This relay is exposing a hosted-compatible surface. Avoid depending on loopback or single-machine assumptions in clients.",
         explicitRemote:
-          "This client should use an explicit remote relay URL. Avoid localhost and prefer the relay machine's LAN or public origin."
-      }
+          "This client should use an explicit remote relay URL. Avoid localhost and prefer the relay machine's LAN or public origin.",
+      },
     },
     platform: {
       title: "Current Client",
@@ -234,7 +237,7 @@ const en = {
       persistedConfig: "Persisted Runtime Config",
       sessionOnlyConfig: "Session-Only Config",
       explicitRelay: "Explicit Remote Relay",
-      loopbackFriendly: "Loopback Friendly"
+      loopbackFriendly: "Loopback Friendly",
     },
     governance: {
       title: "Governance And Audit",
@@ -245,14 +248,14 @@ const en = {
       role: "Role",
       notificationChannels: "Notification Channels",
       auditTitle: "Audit Events",
-      auditEmpty: "No audit events are available yet for the current tenant."
+      auditEmpty: "No audit events are available yet for the current tenant.",
     },
     stats: {
       onlineDevices: "Online Devices",
       devices: "Devices",
       aiSessions: "AI Sessions",
       advancedTools: "Advanced Tools",
-      unreadActivity: "Unread Activity"
+      unreadActivity: "Unread Activity",
     },
     devices: {
       title: "Devices",
@@ -278,7 +281,8 @@ const en = {
       capabilitiesDescription:
         "Keep raw capability labels visible so the current runtime behavior stays aligned with what the agent actually reports.",
       capabilitiesLabel: "Reported Capabilities",
-      capabilitiesEmpty: "This device has not reported any capability tags yet.",
+      capabilitiesEmpty:
+        "This device has not reported any capability tags yet.",
       providersTitle: "Provider Availability",
       providerAvailable: "Available",
       providerUnavailable: "Unavailable",
@@ -290,7 +294,7 @@ const en = {
       managementDescription:
         "Use this secondary view for runtime inspection, deployment metadata, and governance context.",
       emptySelection:
-        "Select a device from the inventory to inspect its runtime details, workload, and provider availability."
+        "Select a device from the inventory to inspect its runtime details, workload, and provider availability.",
     },
     sessions: {
       title: "AI Sessions",
@@ -301,7 +305,7 @@ const en = {
         connect: "Connect Relay",
         chooseDevice: "Choose Device",
         start: "Start Session",
-        review: "Review Result"
+        review: "Review Result",
       },
       devicePickerTitle: "Choose A Device",
       devicePickerDescription:
@@ -311,12 +315,15 @@ const en = {
       launchDescription:
         "Use the selected device context to launch the next AI run without leaving the primary workflow.",
       launchState: {
-        needs_relay: "Connect to a relay first so devices and sessions can load.",
+        needs_relay:
+          "Connect to a relay first so devices and sessions can load.",
         needs_device: "Pick an online device to unlock the session composer.",
-        device_offline: "The selected device is offline. Choose another device or wait for it to reconnect.",
+        device_offline:
+          "The selected device is offline. Choose another device or wait for it to reconnect.",
         needs_provider:
           "This device has no available providers right now. Resolve provider readiness before starting a session.",
-        ready: "Ready to launch a session on {device}. Fill in the prompt and start the run."
+        ready:
+          "Ready to launch a session on {device}. Fill in the prompt and start the run.",
       },
       providerIssuesTitle: "Provider Readiness Issues",
       visibleSummary: "{visible} visible of {total} total",
@@ -336,23 +343,30 @@ const en = {
         "Use the event stream as the execution narrative while the result review stays focused on outcome.",
       readySelected:
         "The device is selected. Launch a session here, then review the result, event stream, and workspace without leaving the main workflow.",
-      readyEmpty: "Pick an online device first, then start a new AI session."
+      readyEmpty: "Pick an online device first, then start a new AI session.",
     },
     chat: {
       liveBadge: "Conversation First",
       setupTitle: "Connect Once, Then Stay In Chat",
       threadControl: "Long-Lived Thread Control",
-        setupSummary:
-          "Relay, device, provider, and thread target stay in one compact panel until the first session is ready.",
-        threadSummary:
-          "The chat stays primary. Relay switching and new-thread targeting are compact secondary controls.",
-        contextControls: "Thread Context",
-        hideContextControls: "Hide Context",
-        relayHintLabel: "Relay",
-        threadSwitcherTitle: "Thread Switcher",
-        newConversation: "New Conversation",
-        autoTitleHint: "Auto-generate from first prompt",
-        cwd: "Working Directory",
+      sidebarTitle: "Project And Threads",
+      setupSummary:
+        "Relay, device, provider, and thread target stay in one compact panel until the first session is ready.",
+      sidebarSummary:
+        "Keep relay setup, device choice, project folder, thread history, and file browsing in the sidebar so the main pane stays focused on chat.",
+      threadSummary:
+        "The chat stays primary. Relay switching and new-thread targeting are compact secondary controls.",
+      contextControls: "Thread Context",
+      hideContextControls: "Hide Context",
+      relayHintLabel: "Relay",
+      threadSwitcherTitle: "Thread Switcher",
+      newConversation: "New Conversation",
+      autoTitleHint: "Auto-generate from first prompt",
+      cwd: "Working Directory",
+      projectFolder: "Project Folder",
+      projectFolderSummary:
+        "New conversations use this folder by default after it is set.",
+      devicesEntry: "Devices & Settings",
       switchRelay: "Switch relay or token",
       reconnect: "Reconnect",
       historyTitle: "Conversation History",
@@ -368,11 +382,15 @@ const en = {
         "Write the first prompt here. After creation, later turns continue on the provider's native thread.",
       archive: "Archive",
       userTurn: "You",
-      waitingInput: "The provider is waiting for your decision before it can continue.",
+      waitingInput:
+        "The provider is waiting for your decision before it can continue.",
       generating: "The agent is still generating the next response.",
-      traceOnlyCompleted: "This turn completed without a normal assistant message. Open Trace for runtime details.",
-      traceOnlyFailed: "This turn failed before a normal assistant reply was produced. Open Trace for details.",
-      traceOnlyCanceled: "This turn was canceled before a normal assistant reply was produced.",
+      traceOnlyCompleted:
+        "This turn completed without a normal assistant message. Open Trace for runtime details.",
+      traceOnlyFailed:
+        "This turn failed before a normal assistant reply was produced. Open Trace for details.",
+      traceOnlyCanceled:
+        "This turn was canceled before a normal assistant reply was produced.",
       traceEntryTitle: "Runtime details moved to Trace",
       emptyBadge: "Chat Surface",
       emptyTitle: "Keep the main page focused on dialogue",
@@ -383,32 +401,38 @@ const en = {
         "Some provider tools pause for an explicit human choice. Choose an option or provide custom input inline.",
       customOption: "Other",
       customOptionSummary: "Use custom text instead of the preset options.",
-      customInputPlaceholder: "Describe the choice, value, or path the agent should use.",
+      customInputPlaceholder:
+        "Describe the choice, value, or path the agent should use.",
       submitChoice: "Submit Choice",
       replyPlaceholder: "Send the next instruction, correction, or follow-up…",
-      startPlaceholder: "Describe what the remote AI should build, change, or inspect…",
+      startPlaceholder:
+        "Describe what the remote AI should build, change, or inspect…",
       sendReply: "Send Reply",
       startConversation: "Start Conversation",
       inspectorTitle: "Compact Inspector",
-        inspectorSummary:
-          "Git, workspace, and task telemetry remain available without taking over the main surface.",
-        latestTurn: "Latest Turn",
-        toolEvents: "Tool Events",
-        systemEvents: "System Events",
-        traceSummary:
-          "Review tool output, system notices, and provider stderr without crowding the transcript.",
-        traceEmpty: "No trace events are available for this conversation yet.",
-        gitSummary: "Review repository drift and changed files next to the chat.",
-        gitEmpty: "No Git context is available for the current conversation yet.",
-        workspaceSummary: "Browse the active workspace without leaving the conversation.",
-        workspaceEmpty: "No workspace snapshot is available for the current conversation yet.",
-        panels: {
-          status: "Status",
-          git: "Git",
-          files: "Files",
-          trace: "Trace"
-        }
+      inspectorSummary:
+        "Git, workspace, and task telemetry remain available without taking over the main surface.",
+      latestTurn: "Latest Turn",
+      toolEvents: "Tool Events",
+      systemEvents: "System Events",
+      traceSummary:
+        "Review tool output, system notices, and provider stderr without crowding the transcript.",
+      traceEmpty: "No trace events are available for this conversation yet.",
+      gitSummary: "Review repository drift and changed files next to the chat.",
+      gitEmpty: "No Git context is available for the current conversation yet.",
+      workspaceBrowserSummary:
+        "Browse the full project tree in the sidebar, including parent and root navigation.",
+      workspaceSummary:
+        "Browse the active workspace without leaving the conversation.",
+      workspaceEmpty:
+        "No workspace snapshot is available for the current conversation yet.",
+      panels: {
+        status: "Status",
+        git: "Git",
+        files: "Files",
+        trace: "Trace",
       },
+    },
     workspace: {
       title: "Session Workspace",
       newTitle: "New AI Session",
@@ -416,15 +440,18 @@ const en = {
         "Describe the goal, working directory, and optional model override for the selected device.",
       currentTitle: "Current Session",
       promptTitle: "Prompt",
-      waitingEvents: "The session was created and is waiting for provider events.",
+      waitingEvents:
+        "The session was created and is waiting for provider events.",
       workingDirectory: "Working Directory",
       sessionMetrics: "Session Metrics",
       device: "Device",
       workingRoot: "Working Root",
       deviceCapacity: "Device Capacity",
       providers: "{count} providers",
-      capacitySummary: "{sessions} sessions · {terminals} terminals · {previews} previews",
-      relativePathHint: "Use a relative path in session CWD to stay inside this workspace.",
+      capacitySummary:
+        "{sessions} sessions · {terminals} terminals · {previews} previews",
+      relativePathHint:
+        "Use a relative path in session CWD to stay inside this workspace.",
       exitCode: "Exit {code}",
       eventsSummary: "{count} events · Device {deviceId}",
       supervision: {
@@ -443,14 +470,14 @@ const en = {
           failedClean:
             "The AI session failed and no Git changes are visible in the current workspace scope.",
           noGit:
-            "Git supervision is not available for this workspace yet, so rely on the event stream and workspace preview."
+            "Git supervision is not available for this workspace yet, so rely on the event stream and workspace preview.",
         },
         counts: {
           assistant: "Assistant Messages",
           tool: "Tool Activity",
           stderr: "Provider Errors",
-          changed: "Changed Files"
-        }
+          changed: "Changed Files",
+        },
       },
       browser: {
         title: "Workspace Browser",
@@ -466,7 +493,7 @@ const en = {
         entries: "{count} entries",
         kind: {
           directory: "Directory",
-          file: "File"
+          file: "File",
         },
         sizeLabel: "File Size",
         size: "{size} bytes",
@@ -474,14 +501,16 @@ const en = {
         previewTitle: "File Preview",
         previewLoading: "Loading file preview...",
         previewEmpty: "Select a file to preview it here.",
-        binaryNotice: "This file is binary or non-text and cannot be previewed inline.",
-        truncated: "Preview truncated to keep the control plane responsive."
+        binaryNotice:
+          "This file is binary or non-text and cannot be previewed inline.",
+        truncated: "Preview truncated to keep the control plane responsive.",
       },
       git: {
         title: "Git Inspect",
         description:
           "Inspect branch state, changed files, and recent commits without dropping into terminal.",
-        unsupported: "The selected device does not advertise Git inspect capability yet.",
+        unsupported:
+          "The selected device does not advertise Git inspect capability yet.",
         loading: "Loading Git context...",
         empty: "Select a device to inspect repository state.",
         workspaceRoot: "Workspace Scope",
@@ -493,8 +522,9 @@ const en = {
         noUpstream: "No upstream",
         driftSummary: "ahead {ahead} · behind {behind}",
         state: {
-          not_repository: "The current workspace is not inside a Git repository.",
-          git_unavailable: "Git is not available on the selected device."
+          not_repository:
+            "The current workspace is not inside a Git repository.",
+          git_unavailable: "Git is not available on the selected device.",
         },
         clean: "No changed files are visible in the current workspace scope.",
         noCommits: "This repository does not have any commits yet.",
@@ -509,9 +539,9 @@ const en = {
           untrackedFiles: "{count} untracked",
           conflictedFiles: "{count} conflicted",
           stagedLines: "+{additions} / -{deletions} staged",
-          unstagedLines: "+{additions} / -{deletions} unstaged"
-        }
-      }
+          unstagedLines: "+{additions} / -{deletions} unstaged",
+        },
+      },
     },
     fields: {
       accessToken: "Access Token",
@@ -522,7 +552,7 @@ const en = {
       prompt: "Prompt",
       terminalCwd: "Terminal CWD",
       targetHost: "Service Host",
-      targetPort: "Service Port"
+      targetPort: "Service Port",
     },
     placeholders: {
       selectProvider: "Select provider",
@@ -534,7 +564,7 @@ const en = {
       terminalCwd: "optional working dir",
       terminalInput: "pwd",
       targetHost: "127.0.0.1",
-      targetPort: "3000"
+      targetPort: "3000",
     },
     composerNote:
       "OpenCode currently runs through standard ACP. Codex and Claude Code currently run through CLI. Terminal and Preview remain below as advanced tools.",
@@ -544,21 +574,22 @@ const en = {
       description:
         "These capabilities stay available for environment checks, manual fallback, and preview access, but they are no longer the homepage's primary workflow.",
       empty:
-        "No advanced capabilities are enabled for the current deployment. Terminal and preview surfaces will appear here when the corresponding feature flags are available."
+        "No advanced capabilities are enabled for the current deployment. Terminal and preview surfaces will appear here when the corresponding feature flags are available.",
     },
     terminal: {
       title: "Terminal",
       visibleSummary: "{visible} visible of {total} total · WS {state}",
       open: "Open Terminal",
       empty: "No terminal sessions match the current filters.",
-      waiting: "The session was created and is waiting for the agent to start the terminal.",
-      select: "Pick a terminal session or create a new one for the selected device.",
+      waiting:
+        "The session was created and is waiting for the agent to start the terminal.",
+      select:
+        "Pick a terminal session or create a new one for the selected device.",
       noCapability:
         "The selected device does not advertise shell capability, so a terminal session cannot be created.",
-      note:
-        "Use this for environment checks, manual fallback, and advanced diagnosis. It is not the default product path.",
+      note: "Use this for environment checks, manual fallback, and advanced diagnosis. It is not the default product path.",
       detailTitle: "Terminal {id}",
-      detailSummary: "{status} · started {time}"
+      detailSummary: "{status} · started {time}",
     },
     preview: {
       title: "Preview",
@@ -572,8 +603,7 @@ const en = {
       empty:
         "There are no matching previews yet. Select a device and enter the local service host and port to create one.",
       select: "Pick a preview to inspect it here, or create a new one first.",
-      note:
-        "Preview is the product-facing path for common local web services. Raw relay and target endpoint details remain below for advanced debugging.",
+      note: "Preview is the product-facing path for common local web services. Raw relay and target endpoint details remain below for advanced debugging.",
       serviceHint:
         "Start with the common case: a local HTTP service on the selected device. Keep the host editable for non-localhost services.",
       serviceTarget: "Service {host}:{port}",
@@ -591,9 +621,9 @@ const en = {
       transportLabel: "Transport",
       relayEndpoint: "Relay Endpoint",
       targetEndpoint: "Target Endpoint",
-      detailTitle: "Preview {id}"
-    }
-  }
-} as const
+      detailTitle: "Preview {id}",
+    },
+  },
+} as const;
 
-export default en
+export default en;
