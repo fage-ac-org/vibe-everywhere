@@ -124,9 +124,34 @@ export function createDashboardController() {
 
     return errorMessage.value
   })
+  const selectedDeviceAvailableProviders = computed(
+    () => selectedDevice.value?.providers.filter((provider) => provider.available) ?? []
+  )
+  const selectedDeviceUnavailableProviders = computed(
+    () => selectedDevice.value?.providers.filter((provider) => !provider.available) ?? []
+  )
+  const sessionLaunchState = computed(() => {
+    if (!relayBaseUrl.value) {
+      return "needs_relay"
+    }
+
+    if (!selectedDevice.value) {
+      return "needs_device"
+    }
+
+    if (!selectedDevice.value.online) {
+      return "device_offline"
+    }
+
+    if (!selectedDeviceAvailableProviders.value.length) {
+      return "needs_provider"
+    }
+
+    return "ready"
+  })
   const canSubmit = computed(
     () =>
-      Boolean(selectedDevice.value) &&
+      sessionLaunchState.value === "ready" &&
       Boolean(draft.value.provider) &&
       Boolean(draft.value.prompt.trim())
   )
@@ -706,12 +731,14 @@ export function createDashboardController() {
     relayInput,
     relayPlaceholder,
     selectedDevice,
+    selectedDeviceAvailableProviders,
     selectedDeviceAvailableProviderCount,
     selectedDevicePreviewCount,
     selectedDeviceSessionCount,
     selectedDeviceShellCount,
     selectedDeviceSupportsGitInspect,
     selectedDeviceSupportsShell,
+    selectedDeviceUnavailableProviders,
     selectedDeviceSupportsWorkspace,
     selectedDeviceWorkingRoot,
     selectedPortForward,
@@ -802,6 +829,7 @@ export function createDashboardController() {
     statusBadgeClass,
     switchLocale,
     switchTheme,
+    sessionLaunchState,
     taskStatusClass,
     terminalStreamClass,
     workspaceSessionCwd

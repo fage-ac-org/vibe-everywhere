@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import { useI18n } from "vue-i18n"
-import { Activity, FolderCode, RefreshCw, Server, Sparkles } from "lucide-vue-next"
+import { Activity, FolderCode, Laptop2, RefreshCw, Server, ShieldCheck, Sparkles } from "lucide-vue-next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,20 +12,38 @@ import {
   CardTitle
 } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
 import { useDashboardController } from "@/views/dashboard/controller"
 
 const { t } = useI18n()
 const dashboard = useDashboardController()
 
 const {
+  activePlatformCapability,
+  appConfig,
+  auditRecords,
+  auditTrail,
+  auditOutcomeClass,
+  currentActor,
+  currentClientKind,
+  deploymentDocsUrl,
   devicePreviewCount,
   deviceSessionCount,
   deviceShellCount,
   devices,
+  formatAuditAction,
+  formatAuditOutcome,
+  formatAuthMode,
+  formatControlClient,
   formatDevicePresence,
+  formatDeploymentMode,
+  formatNotificationChannel,
   formatProviderSummary,
+  formatStorageKind,
   formatTimestamp,
+  formatUserRole,
   health,
+  platformCapabilityStateClass,
   providerBadgeClass,
   selectedDevice,
   selectedDeviceAvailableProviderCount,
@@ -34,6 +52,7 @@ const {
   selectedDeviceShellCount,
   selectedDeviceWorkingRoot,
   selectedStateClass,
+  showGovernanceSurface,
   statusBadgeClass,
   store
 } = dashboard
@@ -352,6 +371,261 @@ function formatRuntimeValue(value?: string | null) {
           <p class="max-w-md text-center text-sm leading-6 text-muted-foreground">
             {{ t("dashboard.devices.emptySelection") }}
           </p>
+        </CardContent>
+      </Card>
+    </section>
+
+    <section class="grid gap-4 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <Card class="border-border/70 bg-card/80 shadow-xl backdrop-blur-xl">
+        <CardHeader class="space-y-1">
+          <CardTitle class="flex items-center gap-2 text-foreground">
+            <Server class="size-4 text-emerald-300" />
+            {{ t("dashboard.deployment.title") }}
+          </CardTitle>
+          <CardDescription>{{ t("dashboard.devices.managementDescription") }}</CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-4 pt-0">
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {{ t("dashboard.deployment.mode") }}
+              </p>
+              <p class="mt-2 text-sm font-medium text-foreground">
+                {{ formatDeploymentMode(appConfig?.deployment.mode) }}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {{ t("dashboard.deployment.authMode") }}
+              </p>
+              <p class="mt-2 text-sm font-medium text-foreground">
+                {{ formatAuthMode(appConfig?.authMode) }}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {{ t("dashboard.deployment.storageKind") }}
+              </p>
+              <p class="mt-2 text-sm font-medium text-foreground">
+                {{ formatStorageKind(appConfig?.storageKind) }}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {{ t("dashboard.deployment.currentClient") }}
+              </p>
+              <p class="mt-2 text-sm font-medium text-foreground">
+                {{ formatControlClient(currentClientKind) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div class="space-y-1">
+                <p class="text-sm font-medium text-foreground">
+                  {{ t("dashboard.deployment.relayOrigin") }}
+                </p>
+                <p class="font-mono text-xs text-muted-foreground">
+                  {{ appConfig?.deployment.relayPublicOrigin || t("common.pending") }}
+                </p>
+              </div>
+              <a
+                v-if="deploymentDocsUrl"
+                :href="deploymentDocsUrl"
+                target="_blank"
+                rel="noreferrer"
+                class="text-sm text-sky-700 underline decoration-sky-500/50 underline-offset-4 dark:text-sky-100"
+              >
+                {{ t("dashboard.deployment.documentation") }}
+              </a>
+            </div>
+          </div>
+
+          <Separator class="bg-border/70" />
+
+          <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <Laptop2 class="size-4 text-amber-300" />
+                <p class="text-sm font-medium text-foreground">
+                  {{ t("dashboard.platform.title") }}
+                </p>
+              </div>
+              <p class="text-xs leading-6 text-muted-foreground">
+                {{ t("dashboard.platform.summary") }}
+              </p>
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-border/70 bg-background/70 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    {{ t("dashboard.platform.currentClientLabel") }}
+                  </p>
+                  <p class="mt-2 text-sm font-medium text-foreground">
+                    {{ formatControlClient(currentClientKind) }}
+                  </p>
+                </div>
+                <Badge
+                  variant="outline"
+                  class="border-sky-500/30 bg-sky-500/12 text-sky-700 dark:text-sky-100"
+                >
+                  {{ t("dashboard.platform.currentlyUsing") }}
+                </Badge>
+              </div>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <Badge
+                  variant="outline"
+                  :class="platformCapabilityStateClass(activePlatformCapability?.mobileOptimized ?? false)"
+                >
+                  {{
+                    activePlatformCapability?.mobileOptimized
+                      ? t("dashboard.platform.mobileOptimized")
+                      : t("dashboard.platform.desktopOptimized")
+                  }}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  :class="platformCapabilityStateClass(activePlatformCapability?.supportsSystemNotifications ?? false)"
+                >
+                  {{
+                    activePlatformCapability?.supportsSystemNotifications
+                      ? t("dashboard.platform.systemNotifications")
+                      : t("dashboard.platform.inAppOnly")
+                  }}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  :class="platformCapabilityStateClass(activePlatformCapability?.supportsPersistedRuntimeConfig ?? false)"
+                >
+                  {{
+                    activePlatformCapability?.supportsPersistedRuntimeConfig
+                      ? t("dashboard.platform.persistedConfig")
+                      : t("dashboard.platform.sessionOnlyConfig")
+                  }}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  :class="platformCapabilityStateClass(activePlatformCapability?.prefersExplicitRemoteRelayUrl ?? false)"
+                >
+                  {{
+                    activePlatformCapability?.prefersExplicitRemoteRelayUrl
+                      ? t("dashboard.platform.explicitRelay")
+                      : t("dashboard.platform.loopbackFriendly")
+                  }}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card
+        v-if="showGovernanceSurface"
+        class="border-border/70 bg-card/80 shadow-xl backdrop-blur-xl"
+      >
+        <CardHeader class="space-y-1">
+          <CardTitle class="flex items-center gap-2 text-foreground">
+            <ShieldCheck class="size-4 text-violet-300" />
+            {{ t("dashboard.governance.title") }}
+          </CardTitle>
+          <CardDescription>{{ t("dashboard.governance.description") }}</CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-4 pt-0">
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {{ t("dashboard.governance.tenant") }}
+              </p>
+              <p class="mt-2 font-mono text-xs text-foreground">
+                {{ currentActor?.tenantId ?? t("common.pending") }}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {{ t("dashboard.governance.user") }}
+              </p>
+              <p class="mt-2 font-mono text-xs text-foreground">
+                {{ currentActor?.userId ?? t("common.pending") }}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {{ t("dashboard.governance.role") }}
+              </p>
+              <p class="mt-2 text-sm font-medium text-foreground">
+                {{ currentActor ? formatUserRole(currentActor.role) : t("common.pending") }}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {{ t("dashboard.governance.notificationChannels") }}
+              </p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <Badge
+                  v-for="channel in appConfig?.notificationChannels ?? []"
+                  :key="channel"
+                  variant="outline"
+                  class="border-border/70 bg-background/70 text-foreground"
+                >
+                  {{ formatNotificationChannel(channel) }}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-border/70 bg-background/55 p-4">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <p class="text-sm font-medium text-foreground">
+                {{ t("dashboard.governance.auditTitle") }}
+              </p>
+              <Badge variant="outline" class="border-border/70 bg-background/70 text-foreground">
+                {{ auditRecords.length }}
+              </Badge>
+            </div>
+
+            <div
+              v-if="!auditTrail.length"
+              class="rounded-2xl border border-dashed border-border/70 bg-background/70 p-4 text-sm text-muted-foreground"
+            >
+              {{ t("dashboard.governance.auditEmpty") }}
+            </div>
+            <ScrollArea v-else class="h-[18rem] pr-3">
+              <div class="space-y-3">
+                <div
+                  v-for="record in auditTrail"
+                  :key="record.id"
+                  class="rounded-2xl border border-border/70 bg-background/70 p-4"
+                >
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="space-y-2">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" class="border-border/70 bg-background/55 text-foreground">
+                          {{ formatAuditAction(record.action) }}
+                        </Badge>
+                        <Badge variant="outline" :class="auditOutcomeClass(record.outcome)">
+                          {{ formatAuditOutcome(record.outcome) }}
+                        </Badge>
+                      </div>
+                      <p class="text-sm text-foreground">
+                        {{ record.resourceKind }} · {{ record.resourceId }}
+                      </p>
+                      <p class="font-mono text-xs text-muted-foreground">
+                        {{ record.userId }} · {{ formatUserRole(record.actorRole) }}
+                      </p>
+                      <p v-if="record.message" class="text-xs text-muted-foreground">
+                        {{ record.message }}
+                      </p>
+                    </div>
+                    <span class="text-xs text-muted-foreground">
+                      {{ formatTimestamp(record.timestampEpochMs) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          </div>
         </CardContent>
       </Card>
     </section>

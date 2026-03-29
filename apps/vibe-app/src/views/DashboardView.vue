@@ -32,6 +32,9 @@ const activeSection = computed(
   () =>
     dashboardSections.find((item) => item.routeName === route.name) ?? dashboardSections[0]
 )
+const mobileNavStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${dashboardSections.length}, minmax(0, 1fr))`
+}))
 const selectedDeviceLabel = computed(
   () => selectedDevice.value?.name ?? t("dashboard.shell.noDeviceSelected")
 )
@@ -243,7 +246,7 @@ function isRouteActive(routeName: DashboardRouteName) {
     <nav
       class="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/92 backdrop-blur-xl lg:hidden"
     >
-      <div class="mx-auto grid max-w-[680px] grid-cols-4 px-2 py-2">
+      <div class="mx-auto grid max-w-[680px] px-2 py-2" :style="mobileNavStyle">
         <RouterLink
           v-for="item in dashboardSections"
           :key="item.routeName"

@@ -13,6 +13,8 @@ advanced connection tools when needed.
 
 It is not a traditional remote desktop product. The focus is organizing remote AI development
 workflows with one control surface across devices.
+The control clients now default to one primary flow: connect to the relay, choose a device,
+launch an AI session, and review workspace plus Git results before reaching for secondary tools.
 
 ## Who It Is For
 
@@ -24,6 +26,7 @@ workflows with one control surface across devices.
 ## What It Can Do Today
 
 - create, stream, and cancel AI sessions
+- keep the primary workflow on one surface: relay connection, device choice, session launch, and result review
 - register devices, track presence, and show provider availability
 - browse workspaces, preview text files, and inspect Git state
 - expose preview flows plus terminal and advanced connection tools when needed
@@ -89,7 +92,7 @@ Recommended flow:
 
 1. deploy the relay
 2. start at least one agent
-3. validate from Web or desktop first
+3. enter the session-first flow from Web or desktop and confirm relay, device, and provider readiness
 4. add Android when mobile access is needed
 
 ## Downloads

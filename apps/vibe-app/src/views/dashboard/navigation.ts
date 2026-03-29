@@ -1,10 +1,9 @@
 import { markRaw } from "vue"
-import { Cable, Server, Sparkles, TerminalSquare } from "lucide-vue-next"
+import { Server, Sparkles, TerminalSquare } from "lucide-vue-next"
 
 export type DashboardRouteName =
   | "dashboard-sessions"
   | "dashboard-devices"
-  | "dashboard-connections"
   | "dashboard-advanced"
 
 export const dashboardSections = [
@@ -21,13 +20,6 @@ export const dashboardSections = [
     titleKey: "dashboard.nav.devices",
     descriptionKey: "dashboard.navDescriptions.devices",
     icon: markRaw(Server)
-  },
-  {
-    routeName: "dashboard-connections" as const,
-    path: "connections",
-    titleKey: "dashboard.nav.connections",
-    descriptionKey: "dashboard.navDescriptions.connections",
-    icon: markRaw(Cable)
   },
   {
     routeName: "dashboard-advanced" as const,

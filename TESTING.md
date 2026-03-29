@@ -321,16 +321,16 @@ Manual checklist:
 
 1. Launch relay and agent locally.
 2. Launch `apps/vibe-app` with `npm run dev`.
-3. Verify desktop uses sidebar navigation and mobile-width uses bottom navigation for `Sessions`, `Devices`, `Connections`, and `Advanced`.
-4. Verify relay URL and optional token can be applied from the `Connections` section.
+3. Verify desktop uses sidebar navigation and mobile-width uses bottom navigation for `Sessions`, `Devices`, and `Advanced`, and that the legacy `#/connections` deep link redirects into `Sessions`.
+4. Verify relay URL and optional token can be applied from the top of the `Sessions` primary workflow.
 5. Verify language switching between English and Simplified Chinese updates visible section copy.
 6. Verify light, dark, and system theme switching updates all primary sections without layout regressions.
-7. Verify `Connections` shows deployment metadata plus the current client only, and does not render a selectable multi-platform matrix.
+7. Verify `Sessions` keeps the everyday workflow on one page: relay connection, device selection, session creation, and result review.
 8. Verify governance / audit UI stays hidden by default; if the relevant feature flag is enabled, verify it appears intentionally rather than by default leakage.
-9. Create a task in `Sessions`, observe live event updates, and verify detail rendering.
-10. Verify the workspace browser loads, path navigation works, and file preview renders text content.
-11. Verify the Git inspection panel loads repo metadata, changed files, and diff counters.
-12. Verify `Devices` shows inventory, runtime metadata, provider availability, and selected-device workload counts.
+9. Create a task in `Sessions`, observe live event updates, and verify the current-session review card renders prompt, status, and summary data.
+10. Verify the result-review panel loads Git metadata, changed files, recent commits, and diff counters before terminal usage is required.
+11. Verify the workspace browser loads, path navigation works, and file preview renders text content from the same `Sessions` workflow.
+12. Verify `Devices` shows inventory, runtime metadata, deployment metadata, current-client-only platform information, provider availability, and selected-device workload counts.
 13. Create a shell session in `Advanced`, send input, verify timeline ordering, and close the session.
 14. Create a preview / port forward in `Advanced`, verify status updates, relay endpoint display, and close flow.
 15. Toggle task, shell, and port-forward filters to verify selected-device scoping.
@@ -361,7 +361,8 @@ Manual checks:
 - app shell boots with default relay config
 - `VIBE_PUBLIC_RELAY_BASE_URL` and `VIBE_RELAY_ACCESS_TOKEN` are picked up correctly
 - desktop shell can connect to a live relay and render the route-backed primary sections
-- desktop shell `Connections` view shows the current client as `Desktop` without listing other platforms as in-page choices
+- desktop shell `Sessions` view keeps relay config, device selection, session launch, and result review on the same primary surface
+- desktop shell `Devices` view shows the current client as `Desktop` without listing other platforms as in-page choices
 
 Recommended frequency:
 
@@ -379,9 +380,9 @@ Manual checks:
 1. Install the debug APK on a physical Android device.
 2. Configure the relay URL with `http://<server-lan-ip>:8787` or a public HTTPS URL, not `http://127.0.0.1:8787`.
 3. Verify the app does not prefill a loopback relay URL by default.
-4. Verify the `Connections` section identifies the current client as `Android` and does not show other platforms as switchable choices.
+4. Verify the `Sessions` primary workflow identifies the current client as `Android` and lets the user configure relay access without exposing other platforms as switchable choices.
 5. Verify bottom navigation remains usable in portrait orientation.
-6. Verify task creation, live updates, shell session output, and preview / port-forward flows from the phone.
+6. Verify task creation, live updates, result review, shell session output, and preview / port-forward flows from the phone.
 
 Recommended frequency:
 

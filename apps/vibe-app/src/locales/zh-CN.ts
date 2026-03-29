@@ -156,13 +156,11 @@ const zhCN = {
     nav: {
       sessions: "AI Sessions",
       devices: "设备",
-      connections: "连接",
       advanced: "高级"
     },
     navDescriptions: {
-      sessions: "发起 AI 工作、查看输出，并结合工作区上下文继续处理。",
-      devices: "查看设备清单、运行态信息以及 provider 就绪情况。",
-      connections: "配置 relay 接入、运行时偏好与部署元信息。",
+      sessions: "在一条主流程里完成连接 Relay、选择设备、启动 AI 工作和审阅结果。",
+      devices: "查看设备清单、运行态、部署元信息以及 provider 就绪情况。",
       advanced: "仅在需要更深层诊断时再进入 Terminal 和 Preview。"
     },
     shell: {
@@ -248,7 +246,8 @@ const zhCN = {
       onlineDevices: "在线设备",
       devices: "设备总数",
       aiSessions: "AI Sessions",
-      advancedTools: "高级工具"
+      advancedTools: "高级工具",
+      unreadActivity: "未读活动"
     },
     devices: {
       title: "设备",
@@ -279,17 +278,47 @@ const zhCN = {
       providerVersionPending: "版本待确认",
       workloadTitle: "当前负载",
       workloadDescription: "查看这台设备当前关联的 AI Sessions、Terminals 和 Previews 数量。",
+      managementDescription: "这个次级视图用于运行态检查、部署元信息查看以及治理上下文查看。",
       emptySelection: "从左侧设备清单选择一台设备后，这里会展示它的运行态、负载和 provider 可用性。"
     },
     sessions: {
       title: "AI Sessions",
+      primaryBadge: "主流程",
+      primaryDescription:
+        "把日常使用压成一页：连接 Relay、选择设备、启动 AI Session，然后直接审阅工作区和 Git 结果，再决定是否进入高级工具。",
+      steps: {
+        connect: "连接 Relay",
+        chooseDevice: "选择设备",
+        start: "启动会话",
+        review: "审阅结果"
+      },
+      devicePickerTitle: "选择设备",
+      devicePickerDescription:
+        "先选出本次要执行 AI Session 的机器，这里同时保留运行态能力和 provider 就绪信息。",
+      recentTitle: "最近 Sessions",
+      launchTitle: "启动新的 Session",
+      launchDescription: "直接基于当前设备上下文启动下一次 AI 运行，不再离开主流程。",
+      launchState: {
+        needs_relay: "请先连接 Relay，设备和会话信息才能加载出来。",
+        needs_device: "请先选择一台在线设备，才能启用 Session 创建表单。",
+        device_offline: "当前设备离线。请选择其他设备，或等待它重新连上。",
+        needs_provider: "当前设备没有可用 Provider。请先恢复 Provider 就绪状态，再启动 Session。",
+        ready: "已准备好在 {device} 上启动新的 Session。填写提示词后即可开始运行。"
+      },
+      providerIssuesTitle: "Provider 就绪问题",
       visibleSummary: "当前显示 {visible} / 总计 {total}",
       empty: "当前筛选条件下还没有 AI Session。先选择设备并发起一个新的会话。",
       start: "启动 AI Session",
       cancelSession: "取消会话",
       newOnDevice: "{name} 上的新 AI Session",
+      reviewTitle: "当前 Session 审阅",
+      reviewDescription: "把运行状态、执行位置、提示词和结果摘要放在同一个上下文里查看。",
+      resultReviewTitle: "审阅变更文件与 Git 上下文",
+      resultReviewDescription: "先判断 AI 到底改了什么，再决定是否进入 Terminal 或继续交接。",
+      eventStreamTitle: "Session 事件流",
+      eventStreamDescription: "事件流负责讲述执行过程，结果审阅区域则聚焦最终产物。",
       readySelected:
-        "当前设备已选中。填写 prompt 后即可创建 AI Session，并在这里监督事件流、工作目录和后续工具链。",
+        "当前设备已选中。你可以直接在这里启动 Session，并在主流程里继续查看结果、事件流和工作区。",
       readyEmpty: "先选择一台在线设备，再启动新的 AI Session。"
     },
     workspace: {

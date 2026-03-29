@@ -156,13 +156,11 @@ const en = {
     nav: {
       sessions: "AI Sessions",
       devices: "Devices",
-      connections: "Connections",
       advanced: "Advanced"
     },
     navDescriptions: {
-      sessions: "Launch AI work, review outputs, and inspect workspace context.",
-      devices: "Inspect device inventory, runtime state, and provider readiness.",
-      connections: "Configure relay access, runtime preferences, and deployment metadata.",
+      sessions: "Connect once, pick a device, start AI work, and review the outcome in one flow.",
+      devices: "Inspect device inventory, runtime state, deployment metadata, and provider readiness.",
       advanced: "Use terminal and preview tools only when deeper diagnosis is required."
     },
     shell: {
@@ -252,7 +250,8 @@ const en = {
       onlineDevices: "Online Devices",
       devices: "Devices",
       aiSessions: "AI Sessions",
-      advancedTools: "Advanced Tools"
+      advancedTools: "Advanced Tools",
+      unreadActivity: "Unread Activity"
     },
     devices: {
       title: "Devices",
@@ -287,19 +286,55 @@ const en = {
       workloadTitle: "Live Workload",
       workloadDescription:
         "Track how many AI sessions, terminals, and previews are currently associated with the selected device.",
+      managementDescription:
+        "Use this secondary view for runtime inspection, deployment metadata, and governance context.",
       emptySelection:
         "Select a device from the inventory to inspect its runtime details, workload, and provider availability."
     },
     sessions: {
       title: "AI Sessions",
+      primaryBadge: "Primary Workflow",
+      primaryDescription:
+        "Keep the everyday path on one surface: connect to the relay, choose a device, launch an AI session, then review the resulting workspace and Git changes before dropping into advanced tools.",
+      steps: {
+        connect: "Connect Relay",
+        chooseDevice: "Choose Device",
+        start: "Start Session",
+        review: "Review Result"
+      },
+      devicePickerTitle: "Choose A Device",
+      devicePickerDescription:
+        "Pick the machine that should run the next AI session. Runtime capability and provider readiness stay visible here.",
+      recentTitle: "Recent Sessions",
+      launchTitle: "Start A New Session",
+      launchDescription:
+        "Use the selected device context to launch the next AI run without leaving the primary workflow.",
+      launchState: {
+        needs_relay: "Connect to a relay first so devices and sessions can load.",
+        needs_device: "Pick an online device to unlock the session composer.",
+        device_offline: "The selected device is offline. Choose another device or wait for it to reconnect.",
+        needs_provider:
+          "This device has no available providers right now. Resolve provider readiness before starting a session.",
+        ready: "Ready to launch a session on {device}. Fill in the prompt and start the run."
+      },
+      providerIssuesTitle: "Provider Readiness Issues",
       visibleSummary: "{visible} visible of {total} total",
       empty:
         "No AI sessions match the current filters. Pick a device and start a new session first.",
       start: "Start AI Session",
       cancelSession: "Cancel Session",
       newOnDevice: "New AI Session on {name}",
+      reviewTitle: "Current Session Review",
+      reviewDescription:
+        "Track the live run, confirm where it executed, and keep the prompt and outcome summary together.",
+      resultReviewTitle: "Review Changed Files And Git Context",
+      resultReviewDescription:
+        "Judge what the AI changed before opening a terminal or handing the work off.",
+      eventStreamTitle: "Session Event Stream",
+      eventStreamDescription:
+        "Use the event stream as the execution narrative while the result review stays focused on outcome.",
       readySelected:
-        "The device is selected. Fill in the prompt to create an AI session and supervise the event stream, workspace, and follow-up tools here.",
+        "The device is selected. Launch a session here, then review the result, event stream, and workspace without leaving the main workflow.",
       readyEmpty: "Pick an online device first, then start a new AI session."
     },
     workspace: {

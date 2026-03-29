@@ -1,6 +1,6 @@
 # Vibe Everywhere Product Evolution Plan
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 ## Purpose
 
@@ -20,8 +20,8 @@ The active plan set is:
 
 - planning index: [`docs/plans/README.md`](./docs/plans/README.md)
 - process governance: [`docs/plans/process.md`](./docs/plans/process.md)
-- active iteration summary: [`docs/plans/iterations/v3-summary.md`](./docs/plans/iterations/v3-summary.md)
-- active iteration details: [`docs/plans/iterations/v3-details.md`](./docs/plans/iterations/v3-details.md)
+- active iteration summary: [`docs/plans/iterations/v4-summary.md`](./docs/plans/iterations/v4-summary.md)
+- active iteration details: [`docs/plans/iterations/v4-details.md`](./docs/plans/iterations/v4-details.md)
 - active remediation summary: [`docs/plans/remediation/v9-summary.md`](./docs/plans/remediation/v9-summary.md)
 - active remediation details: [`docs/plans/remediation/v9-details.md`](./docs/plans/remediation/v9-details.md)
 
@@ -129,7 +129,7 @@ When an iteration is completed and verified:
 - update the iteration status in this file
 - append a completion log entry in this file
 - append a verification log entry in this file
-- update the matching iteration section in `docs/iteration-specs.md`
+- update the active versioned iteration summary and details files
 - record any deviation, regression, or follow-up before moving to the next iteration
 
 ## Iteration Overview
@@ -150,19 +150,23 @@ When an iteration is completed and verified:
 | 11 | Enterprise Foundations | completed |
 | 12 | Delivery Verification Hardening | completed |
 | 13 | Workflow And Release Verification Normalization | completed |
+| 14 | Session-First Primary Workflow Productization | completed |
 
 ## Current Iteration
 
 Current planned implementation target:
 
 - Iteration 0 through Iteration 11 are completed for the current roadmap baseline.
-- Iteration roadmap `v3` is active for workflow and release verification normalization after the
-  hosted Linux overlay repair.
+- Iteration roadmap `v4` is active for session-first primary workflow productization after the
+  workflow and release verification normalization epoch.
 - Iteration 12 completed the first delivery-verification hardening phase, including Windows smoke
   coverage and the initial hosted Linux overlay diagnostic split.
 - Iteration 13 restores GitHub-hosted Linux `overlay` smoke as a blocking gate in both `CI` and
   `Release`, keeps the hosted runner on the harness-only `no_tun` path, aligns release publish
   dependencies with that gate, and audits workflow/testing/release/plan docs for stale claims.
+- Iteration 14 consolidates relay connection, device selection, session launch, Git/result review,
+  and workspace browsing into the `Sessions` route, redirects the legacy `Connections` route into
+  that primary workflow, and moves deployment/current-client/governance context into `Devices`.
 - The active remediation track remains the problem-driven remediation plan in
   `docs/plans/remediation/v9-summary.md`.
 - Remediation plan `v1` is complete.
@@ -187,6 +191,9 @@ Current planned implementation target:
 
 Most recent completed tranche:
 
+- Iteration 14: session-first primary workflow productization across navigation, result review,
+  and documentation
+- Iteration 13: workflow and release verification normalization
 - Iteration 8: activity center, notification deduplication, and return-to-context workflow
 - Iteration 9: platform capability runtime helpers and narrow-width dashboard harmonization
 - Iteration 10: deployment metadata surfacing and self-hosted operator documentation
@@ -335,6 +342,21 @@ Most recent completed tranche:
 - Dependencies: Iteration roadmap `v2` and remediation `v8`.
 - Notes: completed on 2026-03-28 after GitHub-hosted `CI` run `23689144327` succeeded.
 
+### Iteration 14: Session-First Primary Workflow Productization
+
+- Objective: make the control app feel like one coherent session-first product flow again.
+- Scope summary: move relay connection into the `Sessions` route, keep device selection and
+  session launch on that same route, move deployment/current-client/governance context into
+  `Devices`, and keep `Advanced` as the explicit terminal/preview fallback area.
+- Key deliverables: primary-workflow `Sessions` page, legacy `Connections` redirect, stronger
+  result-review emphasis for Git/workspace context, and documentation/testing/plan updates that no
+  longer describe a separate top-level `Connections` page.
+- Exit criteria: users can connect the relay, choose a device, start an AI session, and review the
+  result from the same route; `Devices` still exposes runtime and deployment context; top-level
+  docs reflect the new primary workflow.
+- Dependencies: Iteration roadmap `v3`.
+- Notes: completed on 2026-03-29 after local compile and frontend build validation succeeded.
+
 ## Completed Foundation Work
 
 The repository already completed substantial groundwork before this product plan replaced the old
@@ -468,6 +490,15 @@ These items are treated as completed foundation work, not future roadmap items.
   jobs must depend on all separate required release-verification gates.
 - 2026-03-28: Closed Iteration 13 and remediation `v9` after GitHub-hosted `CI` run `23689144327`
   succeeded with `Verify`, `Linux Overlay Smoke`, `Windows Compatibility`, and `Android Mobile`.
+- 2026-03-29: Started iteration roadmap `v4` to productize the session-first primary workflow
+  after the workflow-normalization epoch completed.
+- 2026-03-29: Implemented Iteration 14 locally by consolidating relay connection, device
+  selection, session launch, event review, workspace browsing, and Git review into the `Sessions`
+  route, redirecting the legacy `Connections` route into that flow, and moving deployment/current-
+  client/governance context into `Devices`.
+- 2026-03-29: Updated `README.md`, `README.en.md`, `TESTING.md`, `docs/releases/unreleased.md`,
+  the active versioned iteration plan, and `AGENTS.md` so the repository now describes the
+  session-first primary workflow model consistently.
 - 2026-03-26: Completed relay and agent runtime modularization, frontend port-forward MVP wiring, and capability-boundary alignment as foundational architecture work.
 
 ## Verification Log
@@ -594,6 +625,18 @@ These items are treated as completed foundation work, not future roadmap items.
 - 2026-03-28: GitHub-hosted `CI` run `23689144327` completed successfully after Iteration 13 and
   remediation `v9`; jobs `69013607968` (`Verify`), `69013725596` (`Linux Overlay Smoke`),
   `69013725588` (`Windows Compatibility`), and `69013725582` (`Android Mobile`) all succeeded.
+- 2026-03-29: `cargo check -p vibe-relay -p vibe-agent -p vibe-app` succeeded after Iteration 14
+  session-first primary workflow productization changes.
+- 2026-03-29: `cargo test --workspace --all-targets -- --nocapture` succeeded after Iteration 14
+  session-first primary workflow productization changes.
+- 2026-03-29: `cd apps/vibe-app && npm run build` succeeded after Iteration 14 session-first
+  primary workflow productization changes.
+- 2026-03-29: `./scripts/dual-process-smoke.sh relay_polling` succeeded after Iteration 14
+  session-first primary workflow productization changes.
+- 2026-03-29: `./scripts/dual-process-smoke.sh overlay` succeeded after Iteration 14
+  session-first primary workflow productization changes.
+- 2026-03-29: `./scripts/render-release-notes.sh v0.0.0 >/dev/null` succeeded after the Iteration
+  14 release-note updates.
 - 2026-03-28: `cargo fmt --all` succeeded after Remediation v4 runtime, documentation, and
   workflow updates.
 - 2026-03-28: `cargo check --locked -p vibe-relay -p vibe-agent -p vibe-app` succeeded after
@@ -690,3 +733,12 @@ These items are treated as completed foundation work, not future roadmap items.
 - 2026-03-28: Iteration 13 requires the final release publish job to depend on every separate
   required verification gate, not only on packaging jobs, so a failed release-critical smoke path
   cannot be bypassed by workflow structure alone.
+- 2026-03-29: Iteration 14 keeps the backend task/workspace/Git APIs largely unchanged; the main
+  change is product information architecture and route responsibility rather than a transport or
+  protocol rewrite.
+- 2026-03-29: Iteration 14 redirects the legacy `Connections` route into `Sessions` instead of
+  preserving a duplicate top-level page, so the product model has one primary workflow rather than
+  two competing entry points.
+- 2026-03-29: Interactive Web, Tauri Desktop, and Android manual regression was not run in this
+  local turn; compile/build validation passed, but multi-client visual/runtime QA is still required
+  before release.

@@ -1,6 +1,6 @@
 # Vibe Everywhere Planning Index
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 ## Purpose
 
@@ -17,7 +17,7 @@ The planning system is intentionally split into:
 
 | Plan Type | Active Version | Summary | Details | Status |
 | --- | --- | --- | --- | --- |
-| Iteration roadmap | v3 | [`iterations/v3-summary.md`](./iterations/v3-summary.md) | [`iterations/v3-details.md`](./iterations/v3-details.md) | active |
+| Iteration roadmap | v4 | [`iterations/v4-summary.md`](./iterations/v4-summary.md) | [`iterations/v4-details.md`](./iterations/v4-details.md) | active |
 | Problem remediation | v9 | [`remediation/v9-summary.md`](./remediation/v9-summary.md) | [`remediation/v9-details.md`](./remediation/v9-details.md) | active |
 | Process governance | shared | [`process.md`](./process.md) | n/a | mandatory |
 
