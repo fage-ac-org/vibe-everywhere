@@ -5,7 +5,6 @@ const en = {
   nav: {
     home: "Home",
     projects: "Projects",
-    notifications: "Notifications",
     settings: "My"
   },
   common: {
@@ -19,8 +18,8 @@ const en = {
     projectsCount: "{count} projects",
     refreshedAt: "Refreshed {value}"
   },
-  shell: {
-    badge: "AI Worktree",
+  dashboard: {
+    badge: "AI Workspace",
     title: "Remote AI development across hosts and projects",
     serverError: "Server error",
     hostsOnline: "{count} hosts online",
@@ -44,7 +43,6 @@ const en = {
     },
     discovery: {
       working_root: "Host inventory",
-      git_worktree: "Git worktree",
       known_project: "Known project"
     },
     topics: "Topics",
@@ -67,42 +65,13 @@ const en = {
   },
   projects: {
     title: "Browse by host and project",
-    summary: "Move from host status to a concrete worktree-like project context without losing the current path.",
+    summary: "Move from host status to a concrete project context without losing the current path.",
     searchPlaceholder: "Search host, project, or path",
     recentFilter: "Recent",
     hostEmptyOffline: "This host is offline, so its project inventory is not available right now.",
     hostEmptyNoWorkspace: "This host has no workspace root configured yet, so project discovery cannot start.",
     hostEmptyNoProjects: "No Git project was discovered on this host yet. Check the workspace root and repository layout.",
     empty: "No project matches the current filter."
-  },
-  notifications: {
-    badge: "Notifications",
-    title: "Return to work that needs a decision",
-    summary: "Failed runs, provider questions, and completed tasks surface here so mobile users can re-enter the right project quickly.",
-    unreadCount: "{count} unread",
-    visibleCount: "{count} visible",
-    preferencesTitle: "Project notification preferences",
-    preferencesSummary: "Choose whether each project sends all completions or only failures and waiting-input events.",
-    defaultPreferenceTitle: "Default preference",
-    defaultPreferenceSummary: "Projects without an override inherit this notification policy.",
-    preferenceInherited: "Inherited default: {value}",
-    preferenceOverride: "Project override: {value}",
-    preferenceReset: "Use default",
-    preferencesEmpty: "Open some projects first, then their notification preferences will appear here.",
-    preferenceImportant: "Failed + waiting",
-    preferenceAll: "All activity",
-    unread: "Unread",
-    unreadSummary: "Open these first to return to work that still needs your decision.",
-    recent: "Recent",
-    recentSummary: "Already seen items stay here for quick re-entry.",
-    newBadge: "New",
-    actions: {
-      conversation: "Open conversation",
-      changes: "Open changes",
-      logs: "Open logs"
-    },
-    empty: "Nothing new yet. Running, failed, and waiting-for-input work will appear here.",
-    completed: "Completed"
   },
   settings: {
     badge: "My",
@@ -117,42 +86,7 @@ const en = {
     currentServer: "Current server: {value}",
     notConfigured: "Not configured",
     language: "Language",
-    theme: "Theme",
-    policy: {
-      badge: "Policy",
-      title: "Execution policy center",
-      summary: "Review which providers are currently visible and what each execution mode now enforces before you send work.",
-      providerAvailability: "{online}/{available} online",
-      empty: "No provider capability has been detected from the current hosts yet.",
-      manageBadge: "Defaults",
-      manageTitle: "Policy defaults",
-      manageSummary: "These defaults are applied by the current client before per-project or per-task overrides take over.",
-      defaultExecutionMode: "Default execution mode",
-      defaultNotifications: "Default notification preference",
-      sensitiveConfirm: "High-risk confirmation",
-      confirmEnabled: "Enabled",
-      confirmDisabled: "Disabled"
-    },
-    audit: {
-      badge: "Audit",
-      title: "Audit coverage",
-      summary: "Current policy and audit coverage is visible here as a read-only summary before a fuller management surface exists.",
-      coverageTitle: "Current coverage",
-      manageBadge: "Records",
-      manageTitle: "Global audit trail",
-      manageSummary: "Review recent task, shell, and preview audit events from one global secondary surface.",
-      empty: "No audit record matches the current filter.",
-      filters: {
-        task: "Task",
-        shellPreview: "Shell + preview"
-      },
-      facts: {
-        projectLogs: "Project logs show audit records ahead of raw runtime output for the active conversation.",
-        taskLifecycle: "Task creation and cancellation actions are already recorded in the audit trail.",
-        shellPreview: "Shell and preview lifecycle actions are recorded when those secondary tools are used.",
-        secondarySurface: "This is a visibility center only for now; policy editing still lives in runtime defaults and secondary views."
-      }
-    }
+    theme: "Theme"
   },
   workspace: {
     badge: "Project",
@@ -165,44 +99,11 @@ const en = {
       files: "Files",
       logs: "Logs"
     },
-    desktop: {
-      projects: "Host projects",
-      hostTree: "Hosts and projects",
-      hostEmpty: "No project is currently visible on this host.",
-      worktreeTitle: "New worktree",
-      worktreeSummary: "Create a sibling worktree and branch without leaving the current project.",
-      worktreeBranch: "Branch name",
-      worktreeBranchPlaceholder: "feature/mobile-review",
-      worktreeDirectory: "Directory name",
-      worktreeDestinationHint: "This creates ../{value} beside the current repository.",
-      worktreeSubmit: "Create worktree",
-      worktreeCreating: "Creating worktree...",
-      worktreeCreated: "Worktree ../{value} is ready.",
-      worktreeRemove: "Remove",
-      worktreeRemoving: "Removing...",
-      worktreeRemoved: "Worktree {value} was removed.",
-      worktreeRemoveConfirm: "Remove worktree {value}? This deletes that sibling worktree directory.",
-      worktreeBranchRequired: "Enter a branch name before creating a worktree.",
-      worktreeDirectoryRequired: "Enter the destination directory name.",
-      worktreeList: "Worktrees",
-      worktreeCurrent: "Current",
-      worktreeDetached: "Detached",
-      worktreeStates: {
-        current: "Current",
-        detached: "Detached",
-        inventory_missing: "Inventory missing",
-        offline: "Host offline",
-        unreachable: "Needs recheck",
-        available: "Available",
-        remove_failed: "Remove failed"
-      }
-    },
     metrics: {
       topics: "Topics {count}",
       running: "Running {count}",
       waiting: "Waiting {count}",
       branch: "Branch {value}",
-      worktrees: "Worktrees {count}",
       changedFiles: "Changed files {count}",
       updated: "Updated {value}"
     },
@@ -232,29 +133,6 @@ const en = {
       read_only: "read only",
       workspace_write: "workspace write",
       workspace_write_and_test: "write + test"
-    },
-    policyTitle: "Effective enforcement",
-    policySummary: {
-      acp: {
-        readOnly: "ACP runtime blocks file writes and terminal sessions.",
-        workspaceWrite: "ACP runtime allows workspace edits but blocks terminal test commands.",
-        workspaceWriteAndTest: "ACP runtime allows workspace edits and focused terminal verification."
-      },
-      codex: {
-        readOnly: "Codex runs with a native read-only sandbox and no approval prompts.",
-        workspaceWrite: "Codex runs with a workspace-write sandbox and approval on untrusted actions.",
-        workspaceWriteAndTest: "Codex runs with a workspace-write sandbox and auto-approves focused verification."
-      },
-      claude: {
-        readOnly: "Claude runs in native plan mode and blocks edit/shell tools by default.",
-        workspaceWrite: "Claude can edit the workspace, but common test commands are blocked by default.",
-        workspaceWriteAndTest: "Claude can edit the workspace and test-command blocking is lifted for this task."
-      },
-      generic: {
-        readOnly: "This mode is requested as read-only, but enforcement depends on the active provider.",
-        workspaceWrite: "This mode allows workspace edits, while stronger enforcement depends on the active provider.",
-        workspaceWriteAndTest: "This mode allows workspace edits and verification, while stronger enforcement depends on the active provider."
-      }
     },
     statusLabel: {
       pending: "Pending",
@@ -354,24 +232,6 @@ const en = {
     errorSummaryBody: "Recent failed or stderr-heavy runs are grouped here first.",
     errorFallback: "This task failed without a structured error message.",
     noFilteredEvents: "No log events match the current filter for this task.",
-    audit: {
-      title: "Audit trail",
-      summary: "User-visible control actions for this conversation and its tasks appear here first.",
-      outcomes: {
-        succeeded: "Succeeded",
-        rejected: "Rejected",
-        failed: "Failed"
-      },
-      actions: {
-        device_registered: "Device registered",
-        task_created: "Task created",
-        task_canceled: "Task canceled",
-        shell_session_created: "Shell session created",
-        shell_session_closed: "Shell session closed",
-        preview_created: "Preview created",
-        preview_closed: "Preview closed"
-      }
-    },
     filters: {
       all: "All",
       errors: "Errors",

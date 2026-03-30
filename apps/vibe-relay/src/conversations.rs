@@ -1,4 +1,5 @@
 use super::*;
+use serde::Deserialize;
 
 use crate::store::{ConversationEntry, TaskEntry};
 use crate::tasks::{

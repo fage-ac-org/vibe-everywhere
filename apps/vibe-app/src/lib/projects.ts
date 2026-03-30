@@ -1,6 +1,6 @@
 import type { ConversationRecord, DeviceRecord, ProviderKind, TaskRecord } from "@/types";
 
-export type ProjectDiscoverySource = "working_root" | "git_worktree" | "known_project";
+export type ProjectDiscoverySource = "working_root" | "known_project";
 export type ProjectAvailabilityState =
   | "available"
   | "offline"
@@ -268,46 +268,8 @@ export function inferProjectTitle(cwd: string | null) {
 export function buildProjectTree(projects: ProjectSummary[], workspaceRoot?: string | null) {
   const root: ProjectTreeNode[] = [];
   const groupIndex = new Map<string, ProjectTreeNode>();
-  const worktreeFamilyCounts = new Map<string, number>();
 
   for (const project of projects) {
-    if (!project.repoCommonDir) {
-      continue;
-    }
-    worktreeFamilyCounts.set(
-      project.repoCommonDir,
-      (worktreeFamilyCounts.get(project.repoCommonDir) ?? 0) + 1
-    );
-  }
-
-  for (const project of projects) {
-    const familyCount = project.repoCommonDir
-      ? worktreeFamilyCounts.get(project.repoCommonDir) ?? 0
-      : 0;
-    if (project.repoCommonDir && familyCount > 1) {
-      const familyId = `repo:${project.repoCommonDir}`;
-      let familyGroup = groupIndex.get(familyId);
-      if (!familyGroup) {
-        familyGroup = {
-          id: familyId,
-          label: inferProjectTitle(project.repoRoot ?? project.title),
-          kind: "group",
-          children: []
-        };
-        root.push(familyGroup);
-        groupIndex.set(familyId, familyGroup);
-      }
-
-      familyGroup.children.push({
-        id: `project:${project.key}`,
-        label: inferProjectTitle(project.cwd),
-        kind: "project",
-        project,
-        children: []
-      });
-      continue;
-    }
-
     const segments = projectPathSegments(project, workspaceRoot);
     if (!segments.length) {
       root.push({

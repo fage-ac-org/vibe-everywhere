@@ -2,7 +2,6 @@ import { createRouter, createWebHashHistory } from "vue-router"
 import type { RouteRecordRaw } from "vue-router"
 import AppShellView from "./views/AppShellView.vue"
 import HomeView from "./views/HomeView.vue"
-import NotificationsView from "./views/NotificationsView.vue"
 import ProjectWorkspaceView from "./views/ProjectWorkspaceView.vue"
 import ProjectsView from "./views/ProjectsView.vue"
 import SettingsView from "./views/SettingsView.vue"
@@ -41,14 +40,6 @@ const routes: RouteRecordRaw[] = [
         path: "projects/:deviceId/:projectPath(.*)",
         name: "project-workspace",
         component: ProjectWorkspaceView,
-        meta: {
-          titleKey: "app.title"
-        }
-      },
-      {
-        path: "notifications",
-        name: "notifications",
-        component: NotificationsView,
         meta: {
           titleKey: "app.title"
         }

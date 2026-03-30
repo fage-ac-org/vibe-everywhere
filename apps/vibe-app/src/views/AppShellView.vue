@@ -13,7 +13,6 @@ const { t } = useI18n();
 const navItems = [
   { name: "home", key: "nav.home" },
   { name: "projects", key: "nav.projects" },
-  { name: "notifications", key: "nav.notifications" },
   { name: "settings", key: "nav.settings" }
 ];
 
@@ -36,23 +35,23 @@ onUnmounted(() => {
       >
         <div class="space-y-2">
           <div class="flex flex-wrap items-center gap-2">
-            <StatusBadge>{{ t("shell.badge") }}</StatusBadge>
+            <StatusBadge>{{ t("dashboard.badge") }}</StatusBadge>
             <StatusBadge :tone="store.errorMessage ? 'danger' : store.onlineHostCount ? 'success' : 'warning'">
               {{
                 store.errorMessage
-                  ? t("shell.serverError")
+                  ? t("dashboard.serverError")
                   : store.onlineHostCount
-                    ? t("shell.hostsOnline", { count: store.onlineHostCount })
-                    : t("shell.noHostOnline")
+                    ? t("dashboard.hostsOnline", { count: store.onlineHostCount })
+                    : t("dashboard.noHostOnline")
               }}
             </StatusBadge>
           </div>
-          <h1 class="text-xl font-semibold">{{ t("shell.title") }}</h1>
+          <h1 class="text-xl font-semibold">{{ t("dashboard.title") }}</h1>
           <p class="text-sm text-muted-foreground">
             {{
               store.relayBaseUrl
                 ? `${store.activeServerLabel} · ${store.relayBaseUrl}`
-                : t("shell.emptyServer")
+                : t("dashboard.emptyServer")
             }}
           </p>
         </div>
@@ -74,8 +73,8 @@ onUnmounted(() => {
         </nav>
 
         <div class="mt-auto grid gap-2 rounded-2xl bg-background/75 p-4 text-xs text-muted-foreground">
-          <span>{{ t("shell.runningTasks", { count: store.runningTaskCount }) }}</span>
-          <span>{{ t("shell.attention", { count: store.attentionCount }) }}</span>
+          <span>{{ t("dashboard.runningTasks", { count: store.runningTaskCount }) }}</span>
+          <span>{{ t("dashboard.attention", { count: store.attentionCount }) }}</span>
           <span>{{ t("common.refreshedAt", { value: formatRelativeTime(store.lastRefreshEpochMs) }) }}</span>
         </div>
       </aside>
@@ -87,29 +86,29 @@ onUnmounted(() => {
           <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div class="space-y-2">
               <div class="flex flex-wrap items-center gap-2 xl:hidden">
-                <StatusBadge>{{ t("shell.badge") }}</StatusBadge>
+                <StatusBadge>{{ t("dashboard.badge") }}</StatusBadge>
                 <StatusBadge :tone="store.errorMessage ? 'danger' : store.onlineHostCount ? 'success' : 'warning'">
                   {{
                     store.errorMessage
-                      ? t("shell.serverError")
+                      ? t("dashboard.serverError")
                       : store.onlineHostCount
-                        ? t("shell.hostsOnline", { count: store.onlineHostCount })
-                        : t("shell.noHostOnline")
+                        ? t("dashboard.hostsOnline", { count: store.onlineHostCount })
+                        : t("dashboard.noHostOnline")
                   }}
                 </StatusBadge>
               </div>
-              <h1 class="text-2xl font-semibold">{{ t("shell.title") }}</h1>
+              <h1 class="text-2xl font-semibold">{{ t("dashboard.title") }}</h1>
               <p class="max-w-3xl text-sm text-muted-foreground">
                 {{
                   store.relayBaseUrl
                     ? `${store.activeServerLabel} · ${store.relayBaseUrl}`
-                    : t("shell.emptyServer")
+                    : t("dashboard.emptyServer")
                 }}
               </p>
             </div>
             <div class="grid gap-2 text-right text-xs text-muted-foreground xl:hidden">
-              <span>{{ t("shell.runningTasks", { count: store.runningTaskCount }) }}</span>
-              <span>{{ t("shell.attention", { count: store.attentionCount }) }}</span>
+              <span>{{ t("dashboard.runningTasks", { count: store.runningTaskCount }) }}</span>
+              <span>{{ t("dashboard.attention", { count: store.attentionCount }) }}</span>
               <span>{{ t("common.refreshedAt", { value: formatRelativeTime(store.lastRefreshEpochMs) }) }}</span>
             </div>
           </div>

@@ -3,11 +3,9 @@ import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import { formatDateTime } from "@/lib/format";
-import { resolvePolicyRuntimeContext } from "@/lib/policy";
 import { useAppStore } from "@/stores/app";
 import type {
   ConversationDetailResponse,
-  ExecutionProtocol,
   ProviderKind,
   TaskDetailResponse,
   TaskEvent,
@@ -37,7 +35,6 @@ const prompt = ref("");
 const model = ref("");
 const executionMode = ref<TaskExecutionMode>(store.defaultExecutionMode);
 const customReply = ref("");
-const pendingConfirmation = ref(false);
 
 watch(
   () => store.defaultExecutionMode,
@@ -67,17 +64,6 @@ const executionModeOptions: { value: TaskExecutionMode; labelKey: string; summar
 const selectedExecutionMode = computed(
   () => executionModeOptions.find((option) => option.value === executionMode.value) ?? executionModeOptions[1]
 );
-const composerPolicyContext = computed(() =>
-  resolvePolicyRuntimeContext(props.detail, props.projectProviders)
-);
-
-const composerPolicySummary = computed(() =>
-  buildPolicySummary(
-    composerPolicyContext.value.provider,
-    composerPolicyContext.value.executionProtocol,
-    executionMode.value
-  )
-);
 
 const turnCards = computed(() =>
   (props.detail?.tasks ?? []).map((taskDetail) => {
@@ -93,11 +79,6 @@ const turnCards = computed(() =>
       task: taskDetail.task,
       prompt: taskDetail.task.prompt,
       summary: buildTurnSummary(taskDetail, assistantText),
-      policySummary: buildPolicySummary(
-        taskDetail.task.provider,
-        taskDetail.task.executionProtocol,
-        taskDetail.task.executionMode
-      ),
       eventSummary: buildEventSummary(nonAssistantEvents),
       eventLines: nonAssistantEvents.slice(-6),
       rawLines: taskDetail.events
@@ -110,11 +91,6 @@ function submitPrompt() {
     return;
   }
 
-  if (requiresSensitiveConfirmation(prompt.value, executionMode.value) && !pendingConfirmation.value) {
-    pendingConfirmation.value = true;
-    return;
-  }
-
   emit(
     "sendPrompt",
     prompt.value.trim(),
@@ -123,7 +99,6 @@ function submitPrompt() {
   );
   prompt.value = "";
   model.value = "";
-  pendingConfirmation.value = false;
 }
 
 function submitCustomReply() {
@@ -133,19 +108,6 @@ function submitCustomReply() {
 
   emit("respondInput", undefined, customReply.value.trim());
   customReply.value = "";
-}
-
-function requiresSensitiveConfirmation(promptText: string, mode: TaskExecutionMode) {
-  if (!store.sensitiveConfirmationEnabled) {
-    return false;
-  }
-  if (mode === "read_only") {
-    return false;
-  }
-
-  return /(rm\s+-rf|git\s+reset\s+--hard|drop\s+table|truncate\s+table|force\s+push|delete\s+.*file|remove\s+.*directory)/i.test(
-    promptText
-  );
 }
 
 function buildTurnSummary(taskDetail: TaskDetailResponse, assistantText: string) {
@@ -172,50 +134,6 @@ function buildEventSummary(events: TaskEvent[]) {
   ].filter((value): value is string => Boolean(value));
 
   return parts.length ? parts.join(" · ") : t("conversation.eventSummary.idle");
-}
-
-function buildPolicySummary(
-  provider: ProviderKind,
-  executionProtocol: ExecutionProtocol,
-  mode: TaskExecutionMode
-) {
-  if (executionProtocol === "acp") {
-    if (mode === "read_only") {
-      return t("conversation.policySummary.acp.readOnly");
-    }
-    if (mode === "workspace_write") {
-      return t("conversation.policySummary.acp.workspaceWrite");
-    }
-    return t("conversation.policySummary.acp.workspaceWriteAndTest");
-  }
-
-  if (provider === "codex") {
-    if (mode === "read_only") {
-      return t("conversation.policySummary.codex.readOnly");
-    }
-    if (mode === "workspace_write") {
-      return t("conversation.policySummary.codex.workspaceWrite");
-    }
-    return t("conversation.policySummary.codex.workspaceWriteAndTest");
-  }
-
-  if (provider === "claude_code") {
-    if (mode === "read_only") {
-      return t("conversation.policySummary.claude.readOnly");
-    }
-    if (mode === "workspace_write") {
-      return t("conversation.policySummary.claude.workspaceWrite");
-    }
-    return t("conversation.policySummary.claude.workspaceWriteAndTest");
-  }
-
-  if (mode === "read_only") {
-    return t("conversation.policySummary.generic.readOnly");
-  }
-  if (mode === "workspace_write") {
-    return t("conversation.policySummary.generic.workspaceWrite");
-  }
-  return t("conversation.policySummary.generic.workspaceWriteAndTest");
 }
 
 function taskTone(status: TaskStatus) {
@@ -385,15 +303,6 @@ function buildExplainPrompt(turn: (typeof turnCards.value)[number]) {
                 {{ turn.eventSummary }}
               </p>
 
-              <div class="mt-3 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {{ t("conversation.policyTitle") }}
-                </p>
-                <p class="mt-1 text-xs text-muted-foreground">
-                  {{ turn.policySummary }}
-                </p>
-              </div>
-
               <div v-if="turn.eventLines.length" class="mt-4 space-y-2">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   {{ t("conversation.eventStreamTitle") }}
@@ -487,12 +396,6 @@ function buildExplainPrompt(turn: (typeof turnCards.value)[number]) {
               </option>
             </select>
             <p class="text-xs text-muted-foreground">{{ t(selectedExecutionMode.summaryKey) }}</p>
-            <div class="rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {{ t("conversation.policyTitle") }}
-              </p>
-              <p class="mt-1 text-xs text-muted-foreground">{{ composerPolicySummary }}</p>
-            </div>
           </div>
           <input
             v-model="model"
@@ -507,32 +410,8 @@ function buildExplainPrompt(turn: (typeof turnCards.value)[number]) {
             :placeholder="t('conversation.promptPlaceholder')"
           />
           <button class="rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground" @click="submitPrompt">
-            {{ pendingConfirmation ? t("conversation.confirmSend") : t("conversation.send") }}
+            {{ t("conversation.send") }}
           </button>
-        </div>
-        <div
-          v-if="pendingConfirmation"
-          class="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4 text-sm"
-        >
-          <div class="flex items-center gap-2">
-            <StatusBadge tone="warning">{{ t("conversation.sensitiveConfirmTitle") }}</StatusBadge>
-            <p class="font-medium text-foreground">{{ t("conversation.sensitiveConfirmSummary") }}</p>
-          </div>
-          <p class="mt-3 text-muted-foreground">{{ t("conversation.sensitiveConfirmDetail") }}</p>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <button
-              class="rounded-full bg-primary px-4 py-2 font-medium text-primary-foreground"
-              @click="submitPrompt"
-            >
-              {{ t("conversation.confirmSend") }}
-            </button>
-            <button
-              class="rounded-full border border-border px-4 py-2"
-              @click="pendingConfirmation = false"
-            >
-              {{ t("conversation.cancelConfirm") }}
-            </button>
-          </div>
         </div>
       </div>
     </section>

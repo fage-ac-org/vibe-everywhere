@@ -8,17 +8,17 @@ import {
 
 describe("project inventory suppression", () => {
   it("suppresses a project key only once", () => {
-    expect(suppressProjectKey([], "device::/repo/worktree")).toEqual(["device::/repo/worktree"]);
-    expect(suppressProjectKey(["device::/repo/worktree"], "device::/repo/worktree")).toEqual([
-      "device::/repo/worktree"
+    expect(suppressProjectKey([], "device::/repo/current")).toEqual(["device::/repo/current"]);
+    expect(suppressProjectKey(["device::/repo/current"], "device::/repo/current")).toEqual([
+      "device::/repo/current"
     ]);
   });
 
   it("removes rediscovered keys from suppression", () => {
     expect(
       clearRediscoveredHiddenProjectKeys(
-        ["device::/repo/worktree", "device::/repo/old"],
-        ["device::/repo/worktree"]
+        ["device::/repo/current", "device::/repo/old"],
+        ["device::/repo/current"]
       )
     ).toEqual(["device::/repo/old"]);
   });
@@ -28,9 +28,9 @@ describe("project inventory suppression", () => {
       filterVisibleProjectKeys(
         [
           { key: "device::/repo/current", label: "current" },
-          { key: "device::/repo/worktree", label: "worktree" }
+          { key: "device::/repo/archive", label: "archive" }
         ],
-        ["device::/repo/worktree"]
+        ["device::/repo/archive"]
       )
     ).toEqual([{ key: "device::/repo/current", label: "current" }]);
   });

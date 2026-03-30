@@ -50,26 +50,8 @@ import type {
   TaskRecord
 } from "@/types";
 
-type NotificationItem = {
-  id: string;
-  kind: "waiting_input" | "failed" | "completed";
-  targetTab: "conversation" | "changes" | "logs";
-  title: string;
-  summary: string;
-  deviceId: string;
-  conversationId: string | null;
-  taskId: string;
-  cwd: string | null;
-  timestampEpochMs: number;
-  seen: boolean;
-};
-
 const RECENT_PROJECTS_STORAGE_KEY = "vibe.everywhere.recentProjects";
-const NOTIFICATION_PREFS_STORAGE_KEY = "vibe.everywhere.notificationPrefs";
-const NOTIFICATION_DEFAULT_PREF_STORAGE_KEY = "vibe.everywhere.notificationDefaultPref";
-const NOTIFICATION_SEEN_STORAGE_KEY = "vibe.everywhere.notificationSeen";
 const DEFAULT_EXECUTION_MODE_STORAGE_KEY = "vibe.everywhere.defaultExecutionMode";
-const SENSITIVE_CONFIRM_STORAGE_KEY = "vibe.everywhere.sensitiveConfirmEnabled";
 const HIDDEN_PROJECT_KEYS_STORAGE_KEY = "vibe.everywhere.hiddenProjectKeys";
 const AUTO_REFRESH_MS = 10_000;
 const PROJECT_DISCOVERY_TTL_MS = 120_000;
@@ -143,10 +125,6 @@ export const useAppStore = defineStore("app", {
     recentProjectKeys: [] as string[],
     hiddenProjectKeys: [] as string[],
     defaultExecutionMode: "workspace_write" as TaskExecutionMode,
-    sensitiveConfirmationEnabled: true,
-    defaultNotificationPreference: "important" as "all" | "important",
-    notificationPreferenceByProjectKey: {} as Record<string, "all" | "important">,
-    seenNotificationIds: [] as string[],
     refreshTimer: null as number | null
   }),
   getters: {
@@ -229,70 +207,6 @@ export const useAppStore = defineStore("app", {
         ),
         state.hiddenProjectKeys
       ).filter((project) => project.failedTaskCount > 0 || project.waitingInputCount > 0);
-    },
-    notificationItems(state): NotificationItem[] {
-      return [...state.tasks]
-        .filter(
-          (task) => {
-            const preference =
-              state.notificationPreferenceByProjectKey[
-                buildProjectKey(task.deviceId, task.cwd)
-              ] ?? state.defaultNotificationPreference;
-            if (task.status === "waiting_input" || task.status === "failed") {
-              return true;
-            }
-            return preference === "all" && task.status === "succeeded";
-          }
-        )
-        .sort((left, right) => {
-          const leftTime = left.finishedAtEpochMs ?? left.startedAtEpochMs ?? left.createdAtEpochMs;
-          const rightTime =
-            right.finishedAtEpochMs ?? right.startedAtEpochMs ?? right.createdAtEpochMs;
-          return rightTime - leftTime;
-        })
-        .slice(0, 20)
-        .map((task) => ({
-          id: task.id,
-          kind:
-            task.status === "waiting_input"
-              ? "waiting_input"
-              : task.status === "failed"
-                ? "failed"
-                : "completed",
-          targetTab:
-            task.status === "waiting_input"
-              ? "conversation"
-              : task.status === "failed"
-                ? "logs"
-                : "changes",
-          title: task.title || task.prompt.slice(0, 40),
-          summary:
-            task.status === "waiting_input"
-              ? "Provider needs your reply."
-              : task.status === "failed"
-                ? task.error || "Task failed."
-                : "Task completed and is ready for review.",
-          deviceId: task.deviceId,
-          conversationId: task.conversationId,
-          taskId: task.id,
-          cwd: task.cwd,
-          seen: state.seenNotificationIds.includes(task.id),
-          timestampEpochMs:
-            task.finishedAtEpochMs ?? task.startedAtEpochMs ?? task.createdAtEpochMs
-        }));
-    },
-    unreadNotificationCount(state): number {
-      return state.tasks.filter((task) => {
-        const preference =
-          state.notificationPreferenceByProjectKey[
-            buildProjectKey(task.deviceId, task.cwd)
-          ] ?? state.defaultNotificationPreference;
-        const visible =
-          task.status === "waiting_input" ||
-          task.status === "failed" ||
-          (preference === "all" && task.status === "succeeded");
-        return visible && !state.seenNotificationIds.includes(task.id);
-      }).length;
     }
   },
   actions: {
@@ -300,10 +214,6 @@ export const useAppStore = defineStore("app", {
       this.isBootstrapping = true;
       this.recentProjectKeys = loadRecentProjectKeys();
       this.defaultExecutionMode = loadDefaultExecutionMode();
-      this.sensitiveConfirmationEnabled = loadSensitiveConfirmationEnabled();
-      this.defaultNotificationPreference = loadDefaultNotificationPreference();
-      this.notificationPreferenceByProjectKey = loadNotificationPreferences();
-      this.seenNotificationIds = loadSeenNotificationIds();
       this.hiddenProjectKeys = loadHiddenProjectKeys();
       this.relayBaseUrl = await resolveInitialRelayBaseUrl();
       this.relayBaseUrlInput = this.relayBaseUrl;
@@ -412,54 +322,12 @@ export const useAppStore = defineStore("app", {
       persistRecentProjectKeys(this.recentProjectKeys);
       persistHiddenProjectKeys(this.hiddenProjectKeys);
     },
-    notificationPreferenceOverrideForProject(deviceId: string, cwd: string | null) {
-      return this.notificationPreferenceByProjectKey[buildProjectKey(deviceId, cwd)] ?? null;
-    },
     getPreferredProjectPath(deviceId: string) {
       return loadStoredProjectFolder(deviceId) || null;
     },
     setDefaultExecutionMode(executionMode: TaskExecutionMode) {
       this.defaultExecutionMode = executionMode;
       persistDefaultExecutionMode(executionMode);
-    },
-    setSensitiveConfirmationEnabled(enabled: boolean) {
-      this.sensitiveConfirmationEnabled = enabled;
-      persistSensitiveConfirmationEnabled(enabled);
-    },
-    notificationPreferenceForProject(deviceId: string, cwd: string | null) {
-      return (
-        this.notificationPreferenceByProjectKey[buildProjectKey(deviceId, cwd)] ??
-        this.defaultNotificationPreference
-      );
-    },
-    setDefaultNotificationPreference(preference: "all" | "important") {
-      this.defaultNotificationPreference = preference;
-      persistDefaultNotificationPreference(preference);
-    },
-    setNotificationPreference(
-      deviceId: string,
-      cwd: string | null,
-      preference: "all" | "important"
-    ) {
-      this.notificationPreferenceByProjectKey = {
-        ...this.notificationPreferenceByProjectKey,
-        [buildProjectKey(deviceId, cwd)]: preference
-      };
-      persistNotificationPreferences(this.notificationPreferenceByProjectKey);
-    },
-    clearNotificationPreference(deviceId: string, cwd: string | null) {
-      const key = buildProjectKey(deviceId, cwd);
-      const nextPreferences = { ...this.notificationPreferenceByProjectKey };
-      delete nextPreferences[key];
-      this.notificationPreferenceByProjectKey = nextPreferences;
-      persistNotificationPreferences(nextPreferences);
-    },
-    markNotificationSeen(taskId: string) {
-      if (this.seenNotificationIds.includes(taskId)) {
-        return;
-      }
-      this.seenNotificationIds = [taskId, ...this.seenNotificationIds].slice(0, 200);
-      persistSeenNotificationIds(this.seenNotificationIds);
     },
     async refreshProjectInventory(force = false) {
       const inventory = new Map<string, DiscoveredProjectRecord>();
@@ -577,25 +445,6 @@ export const useAppStore = defineStore("app", {
               buildDiscoveredProjectRecord(device, providers, git, candidate.source)
             );
           }
-
-          for (const worktree of git.worktrees) {
-            if (!worktree.path.trim() || inspectedPaths.has(worktree.path)) {
-              continue;
-            }
-            if (!candidates.has(worktree.path)) {
-              candidates.set(worktree.path, {
-                sessionCwd: worktree.path,
-                source: "git_worktree"
-              });
-              pendingCandidates.push([
-                worktree.path,
-                {
-                  sessionCwd: worktree.path,
-                  source: "git_worktree"
-                }
-              ]);
-            }
-          }
         } catch {
           // Skip directories that fail git inspection.
         }
@@ -697,25 +546,6 @@ function persistRecentProjectKeys(keys: string[]) {
   window.localStorage.setItem(RECENT_PROJECTS_STORAGE_KEY, JSON.stringify(keys));
 }
 
-function loadNotificationPreferences() {
-  const raw = window.localStorage.getItem(NOTIFICATION_PREFS_STORAGE_KEY);
-  if (!raw) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, "all" | "important">;
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function loadDefaultNotificationPreference(): "all" | "important" {
-  const raw = window.localStorage.getItem(NOTIFICATION_DEFAULT_PREF_STORAGE_KEY);
-  return raw === "all" ? "all" : "important";
-}
-
 function loadDefaultExecutionMode(): TaskExecutionMode {
   const raw = window.localStorage.getItem(DEFAULT_EXECUTION_MODE_STORAGE_KEY);
   if (
@@ -728,43 +558,8 @@ function loadDefaultExecutionMode(): TaskExecutionMode {
   return "workspace_write";
 }
 
-function loadSensitiveConfirmationEnabled() {
-  const raw = window.localStorage.getItem(SENSITIVE_CONFIRM_STORAGE_KEY);
-  return raw === null ? true : raw !== "false";
-}
-
-function persistNotificationPreferences(preferences: Record<string, "all" | "important">) {
-  window.localStorage.setItem(NOTIFICATION_PREFS_STORAGE_KEY, JSON.stringify(preferences));
-}
-
-function persistDefaultNotificationPreference(preference: "all" | "important") {
-  window.localStorage.setItem(NOTIFICATION_DEFAULT_PREF_STORAGE_KEY, preference);
-}
-
 function persistDefaultExecutionMode(executionMode: TaskExecutionMode) {
   window.localStorage.setItem(DEFAULT_EXECUTION_MODE_STORAGE_KEY, executionMode);
-}
-
-function persistSensitiveConfirmationEnabled(enabled: boolean) {
-  window.localStorage.setItem(SENSITIVE_CONFIRM_STORAGE_KEY, String(enabled));
-}
-
-function loadSeenNotificationIds() {
-  const raw = window.localStorage.getItem(NOTIFICATION_SEEN_STORAGE_KEY);
-  if (!raw) {
-    return [] as string[];
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as string[];
-    return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistSeenNotificationIds(notificationIds: string[]) {
-  window.localStorage.setItem(NOTIFICATION_SEEN_STORAGE_KEY, JSON.stringify(notificationIds));
 }
 
 function loadHiddenProjectKeys() {

@@ -5,7 +5,6 @@ const zhCN = {
   nav: {
     home: "首页",
     projects: "项目",
-    notifications: "通知",
     settings: "我的"
   },
   common: {
@@ -19,8 +18,8 @@ const zhCN = {
     projectsCount: "{count} 个项目",
     refreshedAt: "更新于 {value}"
   },
-  shell: {
-    badge: "AI Worktree",
+  dashboard: {
+    badge: "AI 工作台",
     title: "跨主机与项目的远程 AI 开发工作台",
     serverError: "服务器错误",
     hostsOnline: "{count} 台主机在线",
@@ -44,7 +43,6 @@ const zhCN = {
     },
     discovery: {
       working_root: "主机库存",
-      git_worktree: "Git 工作树",
       known_project: "已知项目"
     },
     topics: "话题",
@@ -75,35 +73,6 @@ const zhCN = {
     hostEmptyNoProjects: "这台主机下暂时没有发现 Git 项目，请检查工作目录根路径和仓库布局。",
     empty: "当前筛选条件下没有匹配项目。"
   },
-  notifications: {
-    badge: "通知",
-    title: "快速回到需要决策的工作",
-    summary: "失败任务、Provider 提问和已完成任务都会在这里出现，方便手机端快速回到正确项目。",
-    unreadCount: "未读 {count}",
-    visibleCount: "当前显示 {count}",
-    preferencesTitle: "项目通知偏好",
-    preferencesSummary: "为每个项目选择接收全部完成通知，还是仅接收失败与等待输入事件。",
-    defaultPreferenceTitle: "默认偏好",
-    defaultPreferenceSummary: "没有单独覆盖的项目会继承这里的通知策略。",
-    preferenceInherited: "当前继承默认值：{value}",
-    preferenceOverride: "当前项目覆盖值：{value}",
-    preferenceReset: "恢复默认",
-    preferencesEmpty: "先打开一些项目，这里才会显示它们的通知偏好。",
-    preferenceImportant: "仅失败与等待",
-    preferenceAll: "全部活动",
-    unread: "未读",
-    unreadSummary: "优先处理这些仍然需要你决策的工作。",
-    recent: "最近",
-    recentSummary: "已经看过的事项仍保留在这里，方便快速重新进入。",
-    newBadge: "新",
-    actions: {
-      conversation: "打开会话",
-      changes: "打开变更",
-      logs: "打开日志"
-    },
-    empty: "暂时没有新通知。运行中、失败或等待输入的工作会显示在这里。",
-    completed: "已完成"
-  },
   settings: {
     badge: "我的",
     title: "服务器、外观与客户端偏好",
@@ -117,42 +86,7 @@ const zhCN = {
     currentServer: "当前服务器：{value}",
     notConfigured: "未配置",
     language: "语言",
-    theme: "主题",
-    policy: {
-      badge: "策略",
-      title: "执行策略中心",
-      summary: "在发起任务前，先统一查看当前有哪些 Provider 可用，以及每种执行模式已经真实生效了哪些限制。",
-      providerAvailability: "{online}/{available} 在线",
-      empty: "当前主机上还没有检测到可汇总的 Provider 能力。",
-      manageBadge: "默认值",
-      manageTitle: "策略默认值",
-      manageSummary: "这些默认值由当前客户端先应用，之后才会被项目级或任务级覆盖。",
-      defaultExecutionMode: "默认执行模式",
-      defaultNotifications: "默认通知偏好",
-      sensitiveConfirm: "高风险确认",
-      confirmEnabled: "开启",
-      confirmDisabled: "关闭"
-    },
-    audit: {
-      badge: "审计",
-      title: "审计覆盖",
-      summary: "在更完整的管理面完成前，这里先提供当前策略与审计覆盖范围的只读汇总。",
-      coverageTitle: "当前覆盖范围",
-      manageBadge: "记录",
-      manageTitle: "全局审计轨迹",
-      manageSummary: "在一个全局次级入口里查看最近的任务、Shell 和预览审计记录。",
-      empty: "当前筛选条件下没有匹配的审计记录。",
-      filters: {
-        task: "任务",
-        shellPreview: "Shell 与预览"
-      },
-      facts: {
-        projectLogs: "项目日志会先展示当前会话相关的审计记录，再展示原始运行输出。",
-        taskLifecycle: "任务创建和取消动作已经进入审计轨迹。",
-        shellPreview: "使用 Shell 和预览等次级工具时，其生命周期动作也会进入审计轨迹。",
-        secondarySurface: "这里目前只提供可见性汇总；真正的策略编辑仍主要依赖运行时默认值和次级视图。"
-      }
-    }
+    theme: "主题"
   },
   workspace: {
     badge: "项目",
@@ -165,44 +99,11 @@ const zhCN = {
       files: "文件",
       logs: "日志"
     },
-    desktop: {
-      projects: "主机项目",
-      hostTree: "主机与项目树",
-      hostEmpty: "这台主机当前没有可见项目。",
-      worktreeTitle: "新建工作树",
-      worktreeSummary: "在当前项目旁边创建一个新的工作树和分支，不打断现有会话。",
-      worktreeBranch: "分支名",
-      worktreeBranchPlaceholder: "feature/mobile-review",
-      worktreeDirectory: "目录名",
-      worktreeDestinationHint: "会在当前仓库旁边创建 ../{value}。",
-      worktreeSubmit: "创建工作树",
-      worktreeCreating: "正在创建工作树...",
-      worktreeCreated: "工作树 ../{value} 已创建。",
-      worktreeRemove: "移除",
-      worktreeRemoving: "正在移除...",
-      worktreeRemoved: "工作树 {value} 已移除。",
-      worktreeRemoveConfirm: "确定移除工作树 {value} 吗？这会删除对应的 sibling 工作树目录。",
-      worktreeBranchRequired: "创建工作树前请先填写分支名。",
-      worktreeDirectoryRequired: "请填写目标目录名。",
-      worktreeList: "工作树列表",
-      worktreeCurrent: "当前",
-      worktreeDetached: "游离",
-      worktreeStates: {
-        current: "当前",
-        detached: "游离",
-        inventory_missing: "未进入项目库存",
-        offline: "主机离线",
-        unreachable: "待重新确认",
-        available: "可用",
-        remove_failed: "移除失败"
-      }
-    },
     metrics: {
       topics: "话题 {count}",
       running: "运行中 {count}",
       waiting: "等待中 {count}",
       branch: "分支 {value}",
-      worktrees: "工作树 {count}",
       changedFiles: "变更文件 {count}",
       updated: "更新于 {value}"
     },
@@ -232,29 +133,6 @@ const zhCN = {
       read_only: "只读",
       workspace_write: "可改文件",
       workspace_write_and_test: "可改并测试"
-    },
-    policyTitle: "有效约束",
-    policySummary: {
-      acp: {
-        readOnly: "ACP 运行时会直接拦截写文件和终端会话。",
-        workspaceWrite: "ACP 运行时允许修改工作区文件，但会拦截终端测试命令。",
-        workspaceWriteAndTest: "ACP 运行时允许修改工作区文件，并允许聚焦的终端验证。"
-      },
-      codex: {
-        readOnly: "Codex 会使用原生只读沙箱运行，并且不再请求额外审批。",
-        workspaceWrite: "Codex 会使用 workspace-write 沙箱运行，遇到不受信动作时仍会要求审批。",
-        workspaceWriteAndTest: "Codex 会使用 workspace-write 沙箱运行，并默认放开聚焦验证。"
-      },
-      claude: {
-        readOnly: "Claude 会使用原生 plan 模式运行，并默认禁用写入和终端工具。",
-        workspaceWrite: "Claude 可以修改工作区，但默认会拦截常见测试命令。",
-        workspaceWriteAndTest: "Claude 可以修改工作区，并放开当前任务的测试命令限制。"
-      },
-      generic: {
-        readOnly: "当前模式要求只读，但最终约束强度仍取决于实际 Provider。",
-        workspaceWrite: "当前模式允许修改工作区，是否存在更强限制取决于实际 Provider。",
-        workspaceWriteAndTest: "当前模式允许修改和验证，是否存在更强限制取决于实际 Provider。"
-      }
     },
     statusLabel: {
       pending: "排队中",
@@ -354,24 +232,6 @@ const zhCN = {
     errorSummaryBody: "最近失败或 stderr 较多的运行会优先汇总在这里。",
     errorFallback: "这个任务失败了，但没有结构化错误消息。",
     noFilteredEvents: "当前筛选条件下，这个任务没有匹配的日志事件。",
-    audit: {
-      title: "审计轨迹",
-      summary: "当前会话及其任务相关的控制动作会优先展示在这里。",
-      outcomes: {
-        succeeded: "成功",
-        rejected: "已拒绝",
-        failed: "失败"
-      },
-      actions: {
-        device_registered: "设备注册",
-        task_created: "创建任务",
-        task_canceled: "取消任务",
-        shell_session_created: "创建 Shell 会话",
-        shell_session_closed: "关闭 Shell 会话",
-        preview_created: "创建预览",
-        preview_closed: "关闭预览"
-      }
-    },
     filters: {
       all: "全部",
       errors: "错误",

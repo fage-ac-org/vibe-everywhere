@@ -4,15 +4,12 @@ use axum::{
     Json, Router,
     extract::{
         Path, Query, State,
-        ws::{Message, WebSocket, WebSocketUpgrade},
     },
     http::{HeaderMap, StatusCode, Uri},
     response::sse::{Event, KeepAlive, Sse},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use futures_util::StreamExt;
-use serde::Deserialize;
 use std::{
     collections::HashMap,
     convert::Infallible,
@@ -20,31 +17,23 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt},
     net::{TcpListener, TcpStream},
-    sync::{RwLock, broadcast, mpsc},
-    task::JoinHandle,
+    sync::{RwLock, broadcast},
 };
 use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 use vibe_core::{
-    ActorIdentity, AppConfig, AppendShellOutputRequest, AppendTaskEventsRequest, AuditAction,
-    AuditOutcome, AuditRecord, ClaimPortForwardResponse, ClaimShellSessionResponse,
+    ActorIdentity, AppConfig, AppendTaskEventsRequest, AuditAction, AuditOutcome, AuditRecord,
     ClaimTaskResponse, ConversationDetailResponse, ConversationInputRequest, ConversationRecord,
     CreateConversationInputRequest, CreateConversationRequest, CreateConversationResponse,
-    CreatePortForwardRequest, CreatePortForwardResponse, CreateShellInputRequest,
-    CreateShellSessionRequest, CreateShellSessionResponse, CreateTaskRequest, CreateTaskResponse,
-    DEFAULT_TENANT_ID, DEFAULT_USER_ID, DEVICE_OFFLINE_AFTER_MS, DeviceCapability, DeviceRecord,
-    HeartbeatRequest, HeartbeatResponse, MembershipRecord, OverlayState, PortForwardBridgeEvent,
-    PortForwardBridgeRequest, PortForwardDetailResponse, PortForwardRecord, PortForwardStatus,
-    PortForwardTransportKind, PortForwardTunnelControl, ProviderKind, RegisterDeviceRequest,
-    RegisterDeviceResponse, RelayEventEnvelope, RelayEventType, ReportPortForwardStateRequest,
-    RespondConversationInputRequest, SendConversationMessageRequest,
-    SendConversationMessageResponse, ServiceHealth, ShellBridgeEvent, ShellBridgeRequest,
-    ShellInputRecord, ShellOutputChunk, ShellPendingInputResponse, ShellSessionDetailResponse,
-    ShellSessionRecord, ShellSessionStatus, ShellStreamKind, ShellTransportKind, TaskBridgeEvent,
-    TaskBridgeRequest, TaskDetailResponse, TaskEvent, TaskRecord, TaskStatus, TaskTransportKind,
-    TenantRecord, UserRecord, default_app_config, now_epoch_millis,
+    CreateTaskRequest, CreateTaskResponse, DEFAULT_TENANT_ID, DEFAULT_USER_ID,
+    DEVICE_OFFLINE_AFTER_MS, DeviceRecord, HeartbeatRequest,
+    HeartbeatResponse, MembershipRecord, OverlayState, ProviderKind, RegisterDeviceRequest,
+    RegisterDeviceResponse, RelayEventEnvelope, RelayEventType, RespondConversationInputRequest,
+    SendConversationMessageRequest, SendConversationMessageResponse, ServiceHealth,
+    TaskBridgeEvent, TaskBridgeRequest, TaskDetailResponse, TaskEvent, TaskRecord, TaskStatus,
+    TaskTransportKind, TenantRecord, UserRecord, default_app_config, now_epoch_millis,
 };
 
 mod auth;
@@ -52,8 +41,6 @@ mod config;
 mod conversations;
 mod easytier;
 mod git;
-mod port_forwards;
-mod shell;
 mod storage;
 mod store;
 mod tasks;
@@ -74,26 +61,11 @@ use conversations::{
 };
 use easytier::{RelayEasyTierOptions, start_managed_relay_easytier};
 use git::{
-    GitRequestEntry, claim_next_git_request, complete_git_request, create_git_worktree,
-    diff_git_file, inspect_git_workspace, remove_git_worktree,
-};
-#[cfg(test)]
-use port_forwards::{
-    PortForwardListQuery, preferred_port_forward_transport, read_bridge_frame_line,
-};
-use port_forwards::{
-    claim_next_port_forward, close_port_forward, create_port_forward, get_port_forward,
-    list_port_forwards, port_forward_tunnel_websocket, report_port_forward_state,
-};
-#[cfg(test)]
-use shell::{ShellSessionListQuery, preferred_shell_transport};
-use shell::{
-    append_shell_input, append_shell_output, claim_next_shell_session, close_shell_session,
-    create_shell_session, get_shell_pending_input, get_shell_session, list_shell_sessions,
-    shell_session_websocket,
+    GitRequestEntry, claim_next_git_request, complete_git_request, diff_git_file,
+    inspect_git_workspace,
 };
 use storage::{RelayStorage, build_relay_storage};
-use store::{DeviceCredentialRecord, PortForwardEntry, RelayStore, ShellSessionEntry, TaskEntry};
+use store::{DeviceCredentialRecord, RelayStore, TaskEntry};
 #[cfg(test)]
 use store::{load_relay_store, persist_relay_store};
 #[cfg(test)]
@@ -109,7 +81,6 @@ struct AppState {
     store: Arc<RwLock<RelayStore>>,
     storage: Arc<dyn RelayStorage>,
     events_tx: broadcast::Sender<RelayEventEnvelope>,
-    shell_session_updates: Arc<RwLock<HashMap<String, broadcast::Sender<String>>>>,
     workspace_requests: Arc<RwLock<HashMap<String, WorkspaceRequestEntry>>>,
     git_requests: Arc<RwLock<HashMap<String, GitRequestEntry>>>,
     overlay_bridge_health: Arc<StdRwLock<HashMap<OverlayBridgeKey, OverlayBridgeHealth>>>,
@@ -119,24 +90,18 @@ struct AppState {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 enum OverlayBridgeKind {
     Task,
-    Shell,
-    PortForward,
 }
 
 impl OverlayBridgeKind {
     fn label(self) -> &'static str {
         match self {
             Self::Task => "task",
-            Self::Shell => "shell",
-            Self::PortForward => "port-forward",
         }
     }
 
     fn port(self, config: &RelayConfig) -> u16 {
         match self {
             Self::Task => config.task_bridge_port,
-            Self::Shell => config.shell_bridge_port,
-            Self::PortForward => config.port_forward_bridge_port,
         }
     }
 }
@@ -443,12 +408,6 @@ impl ApiError {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-struct AuditListQuery {
-    limit: Option<usize>,
-}
-
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         (
@@ -477,7 +436,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         store: Arc::new(RwLock::new(store)),
         storage,
         events_tx,
-        shell_session_updates: Arc::new(RwLock::new(HashMap::new())),
         workspace_requests: Arc::new(RwLock::new(HashMap::new())),
         git_requests: Arc::new(RwLock::new(HashMap::new())),
         overlay_bridge_health: Arc::new(StdRwLock::new(HashMap::new())),
@@ -548,35 +506,6 @@ fn build_app(state: AppState) -> Router {
             post(respond_task_input_request),
         )
         .route(
-            "/api/shell/sessions",
-            get(list_shell_sessions).post(create_shell_session),
-        )
-        .route("/api/shell/sessions/:session_id", get(get_shell_session))
-        .route(
-            "/api/shell/sessions/:session_id/ws",
-            get(shell_session_websocket),
-        )
-        .route(
-            "/api/shell/sessions/:session_id/input",
-            get(get_shell_pending_input).post(append_shell_input),
-        )
-        .route(
-            "/api/shell/sessions/:session_id/output",
-            post(append_shell_output),
-        )
-        .route(
-            "/api/shell/sessions/:session_id/close",
-            post(close_shell_session),
-        )
-        .route(
-            "/api/devices/:device_id/shell/claim-next",
-            post(claim_next_shell_session),
-        )
-        .route(
-            "/api/devices/:device_id/port-forwards/claim-next",
-            post(claim_next_port_forward),
-        )
-        .route(
             "/api/devices/:device_id/workspace/claim-next",
             post(claim_next_workspace_request),
         )
@@ -584,29 +513,10 @@ fn build_app(state: AppState) -> Router {
             "/api/devices/:device_id/git/claim-next",
             post(claim_next_git_request),
         )
-        .route(
-            "/api/port-forwards",
-            get(list_port_forwards).post(create_port_forward),
-        )
-        .route("/api/port-forwards/:forward_id", get(get_port_forward))
-        .route(
-            "/api/port-forwards/:forward_id/report",
-            post(report_port_forward_state),
-        )
-        .route(
-            "/api/port-forwards/:forward_id/tunnel/ws",
-            get(port_forward_tunnel_websocket),
-        )
-        .route(
-            "/api/port-forwards/:forward_id/close",
-            post(close_port_forward),
-        )
         .route("/api/workspace/browse", post(browse_workspace))
         .route("/api/workspace/preview", post(preview_workspace_file))
         .route("/api/git/inspect", post(inspect_git_workspace))
         .route("/api/git/diff-file", post(diff_git_file))
-        .route("/api/git/worktrees", post(create_git_worktree))
-        .route("/api/git/worktrees/remove", post(remove_git_worktree))
         .route(
             "/api/workspace/requests/:request_id/complete",
             post(complete_workspace_request),
@@ -615,7 +525,6 @@ fn build_app(state: AppState) -> Router {
             "/api/git/requests/:request_id/complete",
             post(complete_git_request),
         )
-        .route("/api/audit/events", get(list_audit_events))
         .route("/api/events/stream", get(events_stream));
 
     Router::new()
@@ -776,37 +685,6 @@ async fn device_heartbeat(
     emit_device(&state, response.clone()).await;
 
     Ok(Json(HeartbeatResponse { device: response }))
-}
-
-async fn list_audit_events(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Query(query): Query<AuditListQuery>,
-) -> Result<Json<Vec<AuditRecord>>, ApiError> {
-    let actor = require_control_actor(&state, &headers, None).await?;
-    ensure_actor_can_read(&actor)?;
-
-    let store = state.store.read().await;
-    let mut records = store
-        .audit_records
-        .iter()
-        .filter(|record| record.tenant_id == actor.tenant_id)
-        .cloned()
-        .collect::<Vec<_>>();
-    records.sort_by(|left, right| {
-        right
-            .timestamp_epoch_ms
-            .cmp(&left.timestamp_epoch_ms)
-            .then_with(|| right.id.cmp(&left.id))
-    });
-    records.truncate(
-        query
-            .limit
-            .unwrap_or(AUDIT_RECORD_LIMIT_MAX)
-            .min(AUDIT_RECORD_LIMIT_MAX),
-    );
-
-    Ok(Json(records))
 }
 
 fn api_error_to_anyhow(error: ApiError) -> anyhow::Error {
@@ -1058,77 +936,25 @@ fn persist_snapshot(state: &AppState, snapshot: &RelayStore) -> Result<(), ApiEr
     })
 }
 
-async fn shell_session_sender(state: &AppState, session_id: &str) -> broadcast::Sender<String> {
-    let mut updates = state.shell_session_updates.write().await;
-    if let Some(sender) = updates.get(session_id) {
-        return sender.clone();
-    }
-
-    let (sender, _) = broadcast::channel(64);
-    updates.insert(session_id.to_string(), sender.clone());
-    sender
-}
-
-async fn publish_shell_session_detail(state: &AppState, detail: &ShellSessionDetailResponse) {
-    let Ok(payload) = serde_json::to_string(detail) else {
-        return;
-    };
-    let sender = shell_session_sender(state, &detail.session.id).await;
-    let _ = sender.send(payload);
-}
-
-fn shell_session_detail(entry: &ShellSessionEntry) -> ShellSessionDetailResponse {
-    ShellSessionDetailResponse {
-        session: entry.record.clone(),
-        inputs: entry.inputs.clone(),
-        outputs: entry.outputs.clone(),
-    }
-}
-
-fn push_shell_output(
-    entry: &mut ShellSessionEntry,
-    stream: vibe_core::ShellStreamKind,
-    data: String,
-    timestamp_epoch_ms: u64,
-) {
-    entry.record.last_output_seq += 1;
-    entry.outputs.push(ShellOutputChunk {
-        seq: entry.record.last_output_seq,
-        session_id: entry.record.id.clone(),
-        stream,
-        data,
-        timestamp_epoch_ms,
-    });
-    if entry.outputs.len() > SHELL_OUTPUT_LIMIT_MAX {
-        let excess = entry.outputs.len() - SHELL_OUTPUT_LIMIT_MAX;
-        entry.outputs.drain(0..excess);
-    }
-}
-
 async fn shutdown_signal() {
     let _ = tokio::signal::ctrl_c().await;
 }
 
 const HEARTBEAT_SWEEP_MS: u64 = 5_000;
 const TASK_LIST_LIMIT_MAX: usize = 500;
-const SHELL_SESSION_LIST_LIMIT_MAX: usize = 100;
-const SHELL_OUTPUT_LIMIT_MAX: usize = 1_024;
-const PORT_FORWARD_LIST_LIMIT_MAX: usize = 100;
 const AUDIT_RECORD_LIMIT_MAX: usize = 500;
-const DEFAULT_SHELL_BRIDGE_PORT: u16 = 19_090;
-const DEFAULT_PORT_FORWARD_BRIDGE_PORT: u16 = 19_091;
 const DEFAULT_TASK_BRIDGE_PORT: u16 = 19_092;
-const SHELL_BRIDGE_POLL_MS: u64 = 100;
 const TASK_BRIDGE_POLL_MS: u64 = 100;
-const MAX_BRIDGE_FRAME_BYTES: usize = 8 * 1024;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::{body::Body, http::Request as HttpRequest};
-    use futures_util::SinkExt;
-    use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
-    use vibe_core::UserRole;
+    use tokio::{
+        io::{AsyncWrite, AsyncWriteExt, BufReader},
+        task::JoinHandle,
+    };
+    use vibe_core::{DeviceCapability, UserRole};
 
     #[test]
     fn query_access_token_extracts_and_decodes_token() {
@@ -1180,12 +1006,6 @@ mod tests {
             state_file: std::env::temp_dir()
                 .join(format!("vibe-relay-test-{}", Uuid::new_v4()))
                 .join("relay-state.json"),
-            forward_host: "127.0.0.1".to_string(),
-            forward_bind_host: "127.0.0.1".to_string(),
-            forward_port_start: 39000,
-            forward_port_end: 39999,
-            shell_bridge_port: DEFAULT_SHELL_BRIDGE_PORT,
-            port_forward_bridge_port: DEFAULT_PORT_FORWARD_BRIDGE_PORT,
             task_bridge_port: DEFAULT_TASK_BRIDGE_PORT,
             overlay_bridge_connect_timeout_ms: 100,
             overlay_bridge_start_timeout_ms: 200,
@@ -1204,7 +1024,6 @@ mod tests {
             store: Arc::new(RwLock::new(store)),
             storage: build_relay_storage(config.storage_kind.clone(), config.state_file.clone()),
             events_tx,
-            shell_session_updates: Arc::new(RwLock::new(HashMap::new())),
             workspace_requests: Arc::new(RwLock::new(HashMap::new())),
             git_requests: Arc::new(RwLock::new(HashMap::new())),
             overlay_bridge_health: Arc::new(StdRwLock::new(HashMap::new())),
@@ -1378,37 +1197,6 @@ mod tests {
         .unwrap()
     }
 
-    async fn wait_for_port_forward_detail<F>(
-        state: &AppState,
-        forward_id: &str,
-        predicate: F,
-    ) -> PortForwardDetailResponse
-    where
-        F: Fn(&PortForwardDetailResponse) -> bool,
-    {
-        tokio::time::timeout(Duration::from_secs(3), async {
-            loop {
-                let detail = {
-                    let store = state.store.read().await;
-                    store
-                        .port_forwards
-                        .get(forward_id)
-                        .map(|entry| PortForwardDetailResponse {
-                            forward: entry.record.clone(),
-                        })
-                };
-                if let Some(detail) = detail
-                    && predicate(&detail)
-                {
-                    return detail;
-                }
-                tokio::time::sleep(Duration::from_millis(10)).await;
-            }
-        })
-        .await
-        .unwrap()
-    }
-
     async fn wait_for_workspace_claim(
         state: &AppState,
         device_id: &str,
@@ -1453,77 +1241,6 @@ mod tests {
         })
         .await
         .unwrap()
-    }
-
-    async fn read_port_forward_bridge_request_for_test(
-        stream: &mut TcpStream,
-    ) -> Option<PortForwardBridgeRequest> {
-        let line = read_bridge_frame_line(stream).await.unwrap()?;
-        Some(serde_json::from_str::<PortForwardBridgeRequest>(&line).unwrap())
-    }
-
-    async fn send_port_forward_bridge_event_for_test(
-        stream: &mut TcpStream,
-        event: &PortForwardBridgeEvent,
-    ) {
-        let mut payload = serde_json::to_string(event).unwrap();
-        payload.push('\n');
-        stream.write_all(payload.as_bytes()).await.unwrap();
-        stream.flush().await.unwrap();
-    }
-
-    type TestWsStream =
-        tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>;
-
-    fn test_websocket_url(base_url: &str, path_and_query: &str) -> String {
-        if let Some(rest) = base_url.strip_prefix("http://") {
-            return format!("ws://{rest}{path_and_query}");
-        }
-        if let Some(rest) = base_url.strip_prefix("https://") {
-            return format!("wss://{rest}{path_and_query}");
-        }
-        panic!("unexpected base url: {base_url}");
-    }
-
-    async fn connect_test_tcp_client(host: &str, port: u16) -> TcpStream {
-        tokio::time::timeout(Duration::from_secs(2), async {
-            loop {
-                match TcpStream::connect((host, port)).await {
-                    Ok(stream) => return stream,
-                    Err(_) => tokio::time::sleep(Duration::from_millis(10)).await,
-                }
-            }
-        })
-        .await
-        .unwrap()
-    }
-
-    async fn read_tunnel_control_for_test(
-        ws_stream: &mut TestWsStream,
-    ) -> PortForwardTunnelControl {
-        let message = tokio::time::timeout(Duration::from_secs(2), ws_stream.next())
-            .await
-            .unwrap()
-            .unwrap()
-            .unwrap();
-        match message {
-            WsMessage::Text(payload) => {
-                serde_json::from_str::<PortForwardTunnelControl>(&payload).unwrap()
-            }
-            other => panic!("unexpected websocket message: {other:?}"),
-        }
-    }
-
-    async fn read_tunnel_binary_for_test(ws_stream: &mut TestWsStream) -> Vec<u8> {
-        let message = tokio::time::timeout(Duration::from_secs(2), ws_stream.next())
-            .await
-            .unwrap()
-            .unwrap()
-            .unwrap();
-        match message {
-            WsMessage::Binary(payload) => payload.to_vec(),
-            other => panic!("unexpected websocket message: {other:?}"),
-        }
     }
 
     async fn spawn_test_server(
@@ -1597,34 +1314,6 @@ mod tests {
                     return None;
                 }
             }
-        }
-    }
-
-    fn test_port_forward(
-        id: &str,
-        device_id: &str,
-        status: PortForwardStatus,
-        relay_port: u16,
-        created_at_epoch_ms: u64,
-    ) -> PortForwardEntry {
-        PortForwardEntry {
-            record: PortForwardRecord {
-                tenant_id: "personal".to_string(),
-                user_id: "local-admin".to_string(),
-                id: id.to_string(),
-                device_id: device_id.to_string(),
-                protocol: vibe_core::PortForwardProtocol::Tcp,
-                relay_host: "127.0.0.1".to_string(),
-                relay_port,
-                target_host: "127.0.0.1".to_string(),
-                target_port: 22,
-                transport: PortForwardTransportKind::RelayTunnel,
-                status,
-                created_at_epoch_ms,
-                started_at_epoch_ms: None,
-                finished_at_epoch_ms: None,
-                error: None,
-            },
         }
     }
 
@@ -2149,139 +1838,6 @@ mod tests {
         assert_eq!(response.repo_path, "src/main.rs");
         assert_eq!(response.status, Some(vibe_core::GitFileStatus::Modified));
         assert!(response.unstaged);
-    }
-
-    #[tokio::test]
-    async fn create_git_worktree_round_trip_claims_and_completes_request() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::GitInspect]),
-            )]),
-            ..RelayStore::default()
-        });
-
-        let create_state = state.clone();
-        let create_task = tokio::spawn(async move {
-            create_git_worktree(
-                State(create_state),
-                test_headers(),
-                Json(vibe_core::GitCreateWorktreeRequest {
-                    device_id: "device-1".to_string(),
-                    session_cwd: Some("repo".to_string()),
-                    branch_name: "feature/worktree".to_string(),
-                    destination_path: "../repo-feature-worktree".to_string(),
-                }),
-            )
-            .await
-        });
-
-        let request = wait_for_git_claim(&state, "device-1").await;
-        let request_id = request.id().to_string();
-        match &request {
-            vibe_core::GitOperationRequest::CreateWorktree {
-                device_id,
-                session_cwd,
-                branch_name,
-                destination_path,
-                ..
-            } => {
-                assert_eq!(device_id, "device-1");
-                assert_eq!(session_cwd.as_deref(), Some("repo"));
-                assert_eq!(branch_name, "feature/worktree");
-                assert_eq!(destination_path, "../repo-feature-worktree");
-            }
-            other => panic!("expected create-worktree request, got {other:?}"),
-        }
-
-        complete_git_request(
-            Path(request_id),
-            State(state.clone()),
-            test_device_headers(&state, "device-1"),
-            Json(vibe_core::CompleteGitOperationRequest {
-                device_id: "device-1".to_string(),
-                result: vibe_core::GitOperationResult::CreateWorktree {
-                    response: vibe_core::GitCreateWorktreeResponse {
-                        device_id: "device-1".to_string(),
-                        workspace_root: "/repo".to_string(),
-                        repo_root: Some("/repo".to_string()),
-                        repo_common_dir: Some("/repo/.git".to_string()),
-                        branch_name: "feature/worktree".to_string(),
-                        destination_path: "/repo-feature-worktree".to_string(),
-                    },
-                },
-            }),
-        )
-        .await
-        .unwrap();
-
-        let Json(response) = create_task.await.unwrap().unwrap();
-        assert_eq!(response.branch_name, "feature/worktree");
-        assert_eq!(response.destination_path, "/repo-feature-worktree");
-    }
-
-    #[tokio::test]
-    async fn remove_git_worktree_round_trip_claims_and_completes_request() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::GitInspect]),
-            )]),
-            ..RelayStore::default()
-        });
-
-        let remove_state = state.clone();
-        let remove_task = tokio::spawn(async move {
-            remove_git_worktree(
-                State(remove_state),
-                test_headers(),
-                Json(vibe_core::GitRemoveWorktreeRequest {
-                    device_id: "device-1".to_string(),
-                    session_cwd: Some("repo".to_string()),
-                    worktree_path: "/repo-feature-worktree".to_string(),
-                }),
-            )
-            .await
-        });
-
-        let request = wait_for_git_claim(&state, "device-1").await;
-        let request_id = request.id().to_string();
-        match &request {
-            vibe_core::GitOperationRequest::RemoveWorktree {
-                device_id,
-                session_cwd,
-                worktree_path,
-                ..
-            } => {
-                assert_eq!(device_id, "device-1");
-                assert_eq!(session_cwd.as_deref(), Some("repo"));
-                assert_eq!(worktree_path, "/repo-feature-worktree");
-            }
-            other => panic!("expected remove-worktree request, got {other:?}"),
-        }
-
-        complete_git_request(
-            Path(request_id),
-            State(state.clone()),
-            test_device_headers(&state, "device-1"),
-            Json(vibe_core::CompleteGitOperationRequest {
-                device_id: "device-1".to_string(),
-                result: vibe_core::GitOperationResult::RemoveWorktree {
-                    response: vibe_core::GitRemoveWorktreeResponse {
-                        device_id: "device-1".to_string(),
-                        workspace_root: "/repo".to_string(),
-                        repo_root: Some("/repo".to_string()),
-                        repo_common_dir: Some("/repo/.git".to_string()),
-                        removed_path: "/repo-feature-worktree".to_string(),
-                    },
-                },
-            }),
-        )
-        .await
-        .unwrap();
-
-        let Json(response) = remove_task.await.unwrap().unwrap();
-        assert_eq!(response.removed_path, "/repo-feature-worktree");
     }
 
     #[tokio::test]
@@ -3094,998 +2650,6 @@ mod tests {
 
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].id, "task-2");
-    }
-
-    #[tokio::test]
-    async fn create_claim_and_close_shell_session_round_trip() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::Shell]),
-            )]),
-            tasks: HashMap::new(),
-            shell_sessions: HashMap::new(),
-            port_forwards: HashMap::new(),
-            ..RelayStore::default()
-        });
-
-        let Json(created) = create_shell_session(
-            State(state.clone()),
-            test_headers(),
-            Json(CreateShellSessionRequest {
-                device_id: "device-1".to_string(),
-                cwd: Some("/tmp".to_string()),
-            }),
-        )
-        .await
-        .unwrap();
-        assert_eq!(created.session.status, ShellSessionStatus::Pending);
-        assert_eq!(created.session.transport, ShellTransportKind::RelayPolling);
-
-        let Json(claimed) = claim_next_shell_session(
-            Path("device-1".to_string()),
-            State(state.clone()),
-            test_device_headers(&state, "device-1"),
-        )
-        .await
-        .unwrap();
-        assert_eq!(
-            claimed.session.as_ref().map(|session| &session.status),
-            Some(&ShellSessionStatus::Active)
-        );
-
-        let Json(detail) = append_shell_input(
-            Path(created.session.id.clone()),
-            State(state.clone()),
-            test_headers(),
-            Json(CreateShellInputRequest {
-                data: "pwd\n".to_string(),
-            }),
-        )
-        .await
-        .unwrap();
-        assert_eq!(detail.inputs.len(), 1);
-        assert_eq!(detail.inputs[0].data, "pwd\n");
-
-        let Json(closed) = close_shell_session(
-            Path(created.session.id.clone()),
-            State(state),
-            test_headers(),
-        )
-        .await
-        .unwrap();
-        assert_eq!(closed.session.status, ShellSessionStatus::CloseRequested);
-        assert!(closed.session.close_requested);
-        assert_eq!(
-            closed.outputs.last().map(|chunk| chunk.data.as_str()),
-            Some("Shell session close requested")
-        );
-    }
-
-    #[tokio::test]
-    async fn list_shell_sessions_applies_filters_and_limit() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::Shell]),
-            )]),
-            tasks: HashMap::new(),
-            shell_sessions: HashMap::from([
-                (
-                    "shell-1".to_string(),
-                    ShellSessionEntry {
-                        record: ShellSessionRecord {
-                            tenant_id: "personal".to_string(),
-                            user_id: "local-admin".to_string(),
-                            id: "shell-1".to_string(),
-                            device_id: "device-1".to_string(),
-                            cwd: None,
-                            transport: ShellTransportKind::RelayPolling,
-                            status: ShellSessionStatus::Pending,
-                            close_requested: false,
-                            created_at_epoch_ms: 10,
-                            started_at_epoch_ms: None,
-                            finished_at_epoch_ms: None,
-                            exit_code: None,
-                            error: None,
-                            last_input_seq: 0,
-                            last_output_seq: 0,
-                        },
-                        inputs: vec![],
-                        outputs: vec![],
-                    },
-                ),
-                (
-                    "shell-2".to_string(),
-                    ShellSessionEntry {
-                        record: ShellSessionRecord {
-                            tenant_id: "personal".to_string(),
-                            user_id: "local-admin".to_string(),
-                            id: "shell-2".to_string(),
-                            device_id: "device-1".to_string(),
-                            cwd: None,
-                            transport: ShellTransportKind::RelayPolling,
-                            status: ShellSessionStatus::Active,
-                            close_requested: false,
-                            created_at_epoch_ms: 20,
-                            started_at_epoch_ms: Some(20),
-                            finished_at_epoch_ms: None,
-                            exit_code: None,
-                            error: None,
-                            last_input_seq: 0,
-                            last_output_seq: 0,
-                        },
-                        inputs: vec![],
-                        outputs: vec![],
-                    },
-                ),
-            ]),
-            port_forwards: HashMap::new(),
-            ..RelayStore::default()
-        });
-
-        let Json(sessions) = list_shell_sessions(
-            State(state),
-            Query(ShellSessionListQuery {
-                device_id: Some("device-1".to_string()),
-                status: Some(ShellSessionStatus::Active),
-                limit: Some(1),
-            }),
-            test_headers(),
-        )
-        .await
-        .unwrap();
-        assert_eq!(sessions.len(), 1);
-        assert_eq!(sessions[0].id, "shell-2");
-    }
-
-    #[test]
-    fn preferred_shell_transport_uses_overlay_when_device_is_connected() {
-        let state = test_state();
-        let mut device = test_device("device-1", vec![DeviceCapability::Shell]);
-        device.overlay.state = OverlayState::Connected;
-        device.overlay.node_ip = Some("10.144.0.2".to_string());
-
-        assert_eq!(
-            preferred_shell_transport(&state, &device),
-            ShellTransportKind::OverlayProxy
-        );
-    }
-
-    #[tokio::test]
-    async fn create_shell_session_uses_relay_polling_when_shell_bridge_is_marked_unavailable() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([("device-1".to_string(), {
-                let mut device = test_device("device-1", vec![DeviceCapability::Shell]);
-                device.overlay.state = OverlayState::Connected;
-                device.overlay.node_ip = Some("10.144.0.2".to_string());
-                device
-            })]),
-            tasks: HashMap::new(),
-            shell_sessions: HashMap::new(),
-            port_forwards: HashMap::new(),
-            ..RelayStore::default()
-        });
-        mark_overlay_bridge_unavailable(
-            &state,
-            "device-1",
-            OverlayBridgeKind::Shell,
-            "simulated shell bridge failure",
-        );
-
-        let Json(created) = create_shell_session(
-            State(state),
-            test_headers(),
-            Json(CreateShellSessionRequest {
-                device_id: "device-1".to_string(),
-                cwd: None,
-            }),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(created.session.transport, ShellTransportKind::RelayPolling);
-    }
-
-    #[tokio::test]
-    async fn claim_next_shell_session_skips_overlay_proxy_pending_sessions() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::Shell]),
-            )]),
-            tasks: HashMap::new(),
-            shell_sessions: HashMap::from([
-                (
-                    "shell-overlay".to_string(),
-                    ShellSessionEntry {
-                        record: ShellSessionRecord {
-                            tenant_id: "personal".to_string(),
-                            user_id: "local-admin".to_string(),
-                            id: "shell-overlay".to_string(),
-                            device_id: "device-1".to_string(),
-                            cwd: None,
-                            transport: ShellTransportKind::OverlayProxy,
-                            status: ShellSessionStatus::Pending,
-                            close_requested: false,
-                            created_at_epoch_ms: 10,
-                            started_at_epoch_ms: None,
-                            finished_at_epoch_ms: None,
-                            exit_code: None,
-                            error: None,
-                            last_input_seq: 0,
-                            last_output_seq: 0,
-                        },
-                        inputs: vec![],
-                        outputs: vec![],
-                    },
-                ),
-                (
-                    "shell-relay".to_string(),
-                    ShellSessionEntry {
-                        record: ShellSessionRecord {
-                            tenant_id: "personal".to_string(),
-                            user_id: "local-admin".to_string(),
-                            id: "shell-relay".to_string(),
-                            device_id: "device-1".to_string(),
-                            cwd: None,
-                            transport: ShellTransportKind::RelayPolling,
-                            status: ShellSessionStatus::Pending,
-                            close_requested: false,
-                            created_at_epoch_ms: 20,
-                            started_at_epoch_ms: None,
-                            finished_at_epoch_ms: None,
-                            exit_code: None,
-                            error: None,
-                            last_input_seq: 0,
-                            last_output_seq: 0,
-                        },
-                        inputs: vec![],
-                        outputs: vec![],
-                    },
-                ),
-            ]),
-            port_forwards: HashMap::new(),
-            ..RelayStore::default()
-        });
-
-        let Json(claimed) = claim_next_shell_session(
-            Path("device-1".to_string()),
-            State(state.clone()),
-            test_device_headers(&state, "device-1"),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(
-            claimed.session.as_ref().map(|session| session.id.as_str()),
-            Some("shell-relay")
-        );
-
-        let store = state.store.read().await;
-        assert_eq!(
-            store.shell_sessions["shell-overlay"].record.status,
-            ShellSessionStatus::Pending
-        );
-        assert_eq!(
-            store.shell_sessions["shell-relay"].record.status,
-            ShellSessionStatus::Active
-        );
-    }
-
-    #[tokio::test]
-    async fn relay_tunnel_port_forward_proxies_tcp_data_via_websocket() {
-        let host = test_local_tcp_host();
-        let forward_listener = TcpListener::bind((host.as_str(), 0)).await.unwrap();
-        let forward_port = forward_listener.local_addr().unwrap().port();
-        drop(forward_listener);
-
-        let state = test_state_with_store_and_config(
-            RelayStore {
-                devices: HashMap::from([(
-                    "device-1".to_string(),
-                    test_device("device-1", vec![DeviceCapability::Shell]),
-                )]),
-                tasks: HashMap::new(),
-                shell_sessions: HashMap::new(),
-                port_forwards: HashMap::new(),
-                ..RelayStore::default()
-            },
-            |config| {
-                config.forward_host = host.clone();
-                config.forward_bind_host = host.clone();
-                config.forward_port_start = forward_port;
-                config.forward_port_end = forward_port;
-            },
-        );
-        let (base_url, shutdown_tx, server) = spawn_test_server(state.clone()).await;
-        let client = reqwest::Client::new();
-
-        let created = client
-            .post(format!("{base_url}/api/port-forwards"))
-            .json(&CreatePortForwardRequest {
-                device_id: "device-1".to_string(),
-                protocol: vibe_core::PortForwardProtocol::Tcp,
-                target_host: "127.0.0.1".to_string(),
-                target_port: 8080,
-            })
-            .send()
-            .await
-            .unwrap()
-            .error_for_status()
-            .unwrap()
-            .json::<CreatePortForwardResponse>()
-            .await
-            .unwrap();
-        assert_eq!(
-            created.forward.transport,
-            PortForwardTransportKind::RelayTunnel
-        );
-        assert_eq!(created.forward.status, PortForwardStatus::Pending);
-
-        let claimed = client
-            .post(format!(
-                "{base_url}/api/devices/{}/port-forwards/claim-next",
-                created.forward.device_id
-            ))
-            .bearer_auth(test_device_token(&created.forward.device_id))
-            .send()
-            .await
-            .unwrap()
-            .error_for_status()
-            .unwrap()
-            .json::<ClaimPortForwardResponse>()
-            .await
-            .unwrap();
-        let claimed_forward = claimed.forward.unwrap();
-        assert_eq!(claimed_forward.status, PortForwardStatus::Active);
-        assert_eq!(
-            claimed_forward.transport,
-            PortForwardTransportKind::RelayTunnel
-        );
-
-        let ws_url = test_websocket_url(
-            &base_url,
-            &format!(
-                "/api/port-forwards/{}/tunnel/ws?deviceId=device-1&access_token={}",
-                claimed_forward.id,
-                test_device_token("device-1")
-            ),
-        );
-        let (mut ws_stream, _) = connect_async(ws_url.as_str()).await.unwrap();
-
-        let mut relay_client =
-            connect_test_tcp_client(&claimed_forward.relay_host, claimed_forward.relay_port).await;
-        let control = read_tunnel_control_for_test(&mut ws_stream).await;
-        assert_eq!(control, PortForwardTunnelControl::ClientConnected);
-
-        let payload = b"relay-tunnel-smoke";
-        let reply = b"relay-tunnel-reply";
-        ws_stream
-            .send(WsMessage::Text(
-                serde_json::to_string(&PortForwardTunnelControl::TargetConnected)
-                    .unwrap()
-                    .into(),
-            ))
-            .await
-            .unwrap();
-        relay_client.write_all(payload).await.unwrap();
-        let tunneled = read_tunnel_binary_for_test(&mut ws_stream).await;
-        assert_eq!(tunneled, payload);
-
-        ws_stream
-            .send(WsMessage::Binary(reply.to_vec().into()))
-            .await
-            .unwrap();
-        let mut actual_reply = vec![0_u8; reply.len()];
-        relay_client.read_exact(&mut actual_reply).await.unwrap();
-        assert_eq!(actual_reply, reply);
-        drop(relay_client);
-
-        let control = read_tunnel_control_for_test(&mut ws_stream).await;
-        assert_eq!(control, PortForwardTunnelControl::ClientClosed);
-
-        let closed = client
-            .post(format!(
-                "{base_url}/api/port-forwards/{}/close",
-                claimed_forward.id
-            ))
-            .send()
-            .await
-            .unwrap()
-            .error_for_status()
-            .unwrap()
-            .json::<PortForwardDetailResponse>()
-            .await
-            .unwrap();
-        assert_eq!(closed.forward.status, PortForwardStatus::CloseRequested);
-        assert_eq!(
-            closed.forward.transport,
-            PortForwardTransportKind::RelayTunnel
-        );
-
-        let close_frame = tokio::time::timeout(Duration::from_secs(2), ws_stream.next())
-            .await
-            .unwrap();
-        match close_frame {
-            Some(Ok(WsMessage::Close(_))) | None => {}
-            Some(Ok(other)) => panic!("unexpected websocket message: {other:?}"),
-            Some(Err(error)) => panic!("unexpected websocket error: {error}"),
-        }
-
-        let detail = wait_for_port_forward_detail(&state, &claimed_forward.id, |detail| {
-            detail.forward.status == PortForwardStatus::CloseRequested
-        })
-        .await;
-        assert_eq!(
-            detail.forward.transport,
-            PortForwardTransportKind::RelayTunnel
-        );
-        assert_eq!(detail.forward.status, PortForwardStatus::CloseRequested);
-
-        let _ = shutdown_tx.send(());
-        server.await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn overlay_port_forward_proxies_tcp_data_and_closes_cleanly() {
-        let overlay_host = test_local_tcp_host();
-        let forward_listener = TcpListener::bind((overlay_host.as_str(), 0)).await.unwrap();
-        let forward_port = forward_listener.local_addr().unwrap().port();
-        drop(forward_listener);
-        let bridge_listener = TcpListener::bind((overlay_host.as_str(), 0)).await.unwrap();
-        let bridge_port = bridge_listener.local_addr().unwrap().port();
-        let target_listener = TcpListener::bind((overlay_host.as_str(), 0)).await.unwrap();
-        let target_addr = target_listener.local_addr().unwrap();
-
-        let mut device = test_overlay_device("device-1", vec![]);
-        device.capabilities = vec![DeviceCapability::Shell];
-        let state = test_state_with_store_and_config(
-            RelayStore {
-                devices: HashMap::from([("device-1".to_string(), device)]),
-                tasks: HashMap::new(),
-                shell_sessions: HashMap::new(),
-                port_forwards: HashMap::new(),
-                ..RelayStore::default()
-            },
-            |config| {
-                config.forward_host = overlay_host.clone();
-                config.forward_bind_host = overlay_host.clone();
-                config.forward_port_start = forward_port;
-                config.forward_port_end = forward_port;
-                config.port_forward_bridge_port = bridge_port;
-            },
-        );
-        let (base_url, shutdown_tx, server) = spawn_test_server(state.clone()).await;
-
-        let target_task = tokio::spawn(async move {
-            let (mut stream, _) = target_listener.accept().await.unwrap();
-            let mut payload = Vec::new();
-            stream.read_to_end(&mut payload).await.unwrap();
-            assert_eq!(payload, b"overlay-port-forward-smoke");
-            stream
-                .write_all(b"target-reply:overlay-port-forward-smoke")
-                .await
-                .unwrap();
-        });
-
-        let client = reqwest::Client::new();
-        let created = client
-            .post(format!("{base_url}/api/port-forwards"))
-            .json(&CreatePortForwardRequest {
-                device_id: "device-1".to_string(),
-                protocol: vibe_core::PortForwardProtocol::Tcp,
-                target_host: target_addr.ip().to_string(),
-                target_port: target_addr.port(),
-            })
-            .send()
-            .await
-            .unwrap()
-            .error_for_status()
-            .unwrap()
-            .json::<CreatePortForwardResponse>()
-            .await
-            .unwrap();
-        assert_eq!(
-            created.forward.transport,
-            PortForwardTransportKind::OverlayProxy
-        );
-
-        let expected_forward_id = created.forward.id.clone();
-        let expected_target_host = target_addr.ip().to_string();
-        let expected_target_port = target_addr.port();
-        let bridge_task = tokio::spawn(async move {
-            let (mut bridge, _) = bridge_listener.accept().await.unwrap();
-            let request = read_port_forward_bridge_request_for_test(&mut bridge)
-                .await
-                .unwrap();
-            match request {
-                PortForwardBridgeRequest::Start {
-                    token,
-                    forward_id,
-                    target_host,
-                    target_port,
-                } => {
-                    assert_eq!(token, Some(test_device_token("device-1")));
-                    assert_eq!(forward_id, expected_forward_id);
-                    assert_eq!(target_host, expected_target_host);
-                    assert_eq!(target_port, expected_target_port);
-                }
-            }
-            send_port_forward_bridge_event_for_test(&mut bridge, &PortForwardBridgeEvent::Ready)
-                .await;
-            let mut target = TcpStream::connect(target_addr).await.unwrap();
-            tokio::io::copy_bidirectional(&mut bridge, &mut target)
-                .await
-                .unwrap();
-        });
-
-        let active_detail = wait_for_port_forward_detail(&state, &created.forward.id, |detail| {
-            detail.forward.status == PortForwardStatus::Active
-        })
-        .await;
-        assert_eq!(
-            active_detail.forward.transport,
-            PortForwardTransportKind::OverlayProxy
-        );
-        assert!(active_detail.forward.started_at_epoch_ms.is_some());
-
-        let mut relay_client = TcpStream::connect((
-            created.forward.relay_host.as_str(),
-            created.forward.relay_port,
-        ))
-        .await
-        .unwrap();
-        relay_client
-            .write_all(b"overlay-port-forward-smoke")
-            .await
-            .unwrap();
-        relay_client.shutdown().await.unwrap();
-        let mut reply = Vec::new();
-        relay_client.read_to_end(&mut reply).await.unwrap();
-        assert_eq!(reply, b"target-reply:overlay-port-forward-smoke");
-
-        let close = client
-            .post(format!(
-                "{base_url}/api/port-forwards/{}/close",
-                created.forward.id
-            ))
-            .send()
-            .await
-            .unwrap()
-            .error_for_status()
-            .unwrap()
-            .json::<PortForwardDetailResponse>()
-            .await
-            .unwrap();
-        assert_eq!(close.forward.status, PortForwardStatus::CloseRequested);
-
-        let closed_detail = wait_for_port_forward_detail(&state, &created.forward.id, |detail| {
-            detail.forward.status == PortForwardStatus::Closed
-        })
-        .await;
-        assert_eq!(
-            closed_detail.forward.transport,
-            PortForwardTransportKind::OverlayProxy
-        );
-        assert!(closed_detail.forward.finished_at_epoch_ms.is_some());
-
-        bridge_task.await.unwrap();
-        target_task.await.unwrap();
-        let _ = shutdown_tx.send(());
-        server.await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn overlay_port_forward_bridge_connect_failure_falls_back_to_relay_tunnel() {
-        let overlay_host = test_local_tcp_host();
-        let forward_listener = TcpListener::bind((overlay_host.as_str(), 0)).await.unwrap();
-        let forward_port = forward_listener.local_addr().unwrap().port();
-        drop(forward_listener);
-        let listener = TcpListener::bind((overlay_host.as_str(), 0)).await.unwrap();
-        let bridge_port = listener.local_addr().unwrap().port();
-        drop(listener);
-
-        let mut device = test_overlay_device("device-1", vec![]);
-        device.capabilities = vec![DeviceCapability::Shell];
-        let state = test_state_with_store_and_config(
-            RelayStore {
-                devices: HashMap::from([("device-1".to_string(), device)]),
-                tasks: HashMap::new(),
-                shell_sessions: HashMap::new(),
-                port_forwards: HashMap::new(),
-                ..RelayStore::default()
-            },
-            |config| {
-                config.forward_host = overlay_host.clone();
-                config.forward_bind_host = overlay_host.clone();
-                config.forward_port_start = forward_port;
-                config.forward_port_end = forward_port;
-                config.port_forward_bridge_port = bridge_port;
-            },
-        );
-
-        let Json(created) = create_port_forward(
-            State(state.clone()),
-            test_headers(),
-            Json(CreatePortForwardRequest {
-                device_id: "device-1".to_string(),
-                protocol: vibe_core::PortForwardProtocol::Tcp,
-                target_host: overlay_host.clone(),
-                target_port: 8080,
-            }),
-        )
-        .await
-        .unwrap();
-        assert_eq!(
-            created.forward.transport,
-            PortForwardTransportKind::OverlayProxy
-        );
-
-        let active_detail = wait_for_port_forward_detail(&state, &created.forward.id, |detail| {
-            detail.forward.status == PortForwardStatus::Active
-        })
-        .await;
-        assert_eq!(
-            active_detail.forward.transport,
-            PortForwardTransportKind::OverlayProxy
-        );
-
-        let mut relay_client = TcpStream::connect((
-            created.forward.relay_host.as_str(),
-            created.forward.relay_port,
-        ))
-        .await
-        .unwrap();
-        relay_client.write_all(b"trigger-fallback").await.unwrap();
-        relay_client.shutdown().await.unwrap();
-        let mut ignored = Vec::new();
-        let _ = relay_client.read_to_end(&mut ignored).await;
-
-        let detail = wait_for_port_forward_detail(&state, &created.forward.id, |detail| {
-            detail.forward.transport == PortForwardTransportKind::RelayTunnel
-                && detail.forward.status == PortForwardStatus::Pending
-        })
-        .await;
-        assert_eq!(
-            detail.forward.transport,
-            PortForwardTransportKind::RelayTunnel
-        );
-        assert_eq!(detail.forward.status, PortForwardStatus::Pending);
-        assert!(
-            detail
-                .forward
-                .error
-                .as_deref()
-                .is_some_and(|message| message.contains("falling back to relay tunnel"))
-        );
-    }
-
-    #[tokio::test]
-    async fn create_claim_and_close_port_forward_round_trip() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::Shell]),
-            )]),
-            tasks: HashMap::new(),
-            shell_sessions: HashMap::new(),
-            port_forwards: HashMap::new(),
-            ..RelayStore::default()
-        });
-
-        let Json(created) = create_port_forward(
-            State(state.clone()),
-            test_headers(),
-            Json(CreatePortForwardRequest {
-                device_id: "device-1".to_string(),
-                protocol: vibe_core::PortForwardProtocol::Tcp,
-                target_host: "127.0.0.1".to_string(),
-                target_port: 8080,
-            }),
-        )
-        .await
-        .unwrap();
-        assert_eq!(created.forward.status, PortForwardStatus::Pending);
-        assert_eq!(created.forward.relay_host, "127.0.0.1");
-        assert_eq!(
-            created.forward.transport,
-            PortForwardTransportKind::RelayTunnel
-        );
-
-        let Json(claimed) = claim_next_port_forward(
-            Path("device-1".to_string()),
-            State(state.clone()),
-            test_device_headers(&state, "device-1"),
-        )
-        .await
-        .unwrap();
-        assert_eq!(
-            claimed.forward.as_ref().map(|forward| &forward.status),
-            Some(&PortForwardStatus::Active)
-        );
-
-        let Json(closed) = close_port_forward(
-            Path(created.forward.id.clone()),
-            State(state),
-            test_headers(),
-        )
-        .await
-        .unwrap();
-        assert_eq!(closed.forward.status, PortForwardStatus::CloseRequested);
-    }
-
-    #[tokio::test]
-    async fn create_port_forward_requires_configured_forward_host() {
-        let state = test_state_with_store_and_config(
-            RelayStore {
-                devices: HashMap::from([(
-                    "device-1".to_string(),
-                    test_device("device-1", vec![DeviceCapability::Shell]),
-                )]),
-                tasks: HashMap::new(),
-                shell_sessions: HashMap::new(),
-                port_forwards: HashMap::new(),
-                ..RelayStore::default()
-            },
-            |config| {
-                config.public_base_url = String::new();
-                config.forward_host = String::new();
-            },
-        );
-
-        let error = create_port_forward(
-            State(state),
-            test_headers(),
-            Json(CreatePortForwardRequest {
-                device_id: "device-1".to_string(),
-                protocol: vibe_core::PortForwardProtocol::Tcp,
-                target_host: "127.0.0.1".to_string(),
-                target_port: 8080,
-            }),
-        )
-        .await
-        .unwrap_err();
-
-        assert_eq!(error.code, "forward_host_unconfigured");
-        assert!(
-            error
-                .message
-                .contains("VIBE_RELAY_FORWARD_HOST or VIBE_PUBLIC_RELAY_BASE_URL")
-        );
-    }
-
-    #[tokio::test]
-    async fn report_port_forward_state_updates_error_and_terminal_status() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::Shell]),
-            )]),
-            tasks: HashMap::new(),
-            shell_sessions: HashMap::new(),
-            port_forwards: HashMap::from([(
-                "forward-1".to_string(),
-                test_port_forward(
-                    "forward-1",
-                    "device-1",
-                    PortForwardStatus::Active,
-                    39001,
-                    10,
-                ),
-            )]),
-            ..RelayStore::default()
-        });
-
-        let Json(detail) = report_port_forward_state(
-            Path("forward-1".to_string()),
-            State(state.clone()),
-            test_device_headers(&state, "device-1"),
-            Json(ReportPortForwardStateRequest {
-                device_id: "device-1".to_string(),
-                status: Some(PortForwardStatus::Closed),
-                error: None,
-                clear_error: true,
-            }),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(detail.forward.status, PortForwardStatus::Closed);
-        assert!(detail.forward.finished_at_epoch_ms.is_some());
-        assert_eq!(detail.forward.error, None);
-    }
-
-    #[tokio::test]
-    async fn list_port_forwards_applies_filters_and_limit() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::Shell]),
-            )]),
-            tasks: HashMap::new(),
-            shell_sessions: HashMap::new(),
-            port_forwards: HashMap::from([
-                (
-                    "forward-1".to_string(),
-                    test_port_forward(
-                        "forward-1",
-                        "device-1",
-                        PortForwardStatus::Pending,
-                        39001,
-                        10,
-                    ),
-                ),
-                (
-                    "forward-2".to_string(),
-                    test_port_forward(
-                        "forward-2",
-                        "device-1",
-                        PortForwardStatus::Active,
-                        39002,
-                        20,
-                    ),
-                ),
-            ]),
-            ..RelayStore::default()
-        });
-
-        let Json(forwards) = list_port_forwards(
-            State(state),
-            Query(PortForwardListQuery {
-                device_id: Some("device-1".to_string()),
-                status: Some(PortForwardStatus::Active),
-                limit: Some(1),
-            }),
-            test_headers(),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(forwards.len(), 1);
-        assert_eq!(forwards[0].id, "forward-2");
-    }
-
-    #[test]
-    fn preferred_port_forward_transport_uses_overlay_when_device_is_connected() {
-        let state = test_state();
-        let mut device = test_device("device-1", vec![DeviceCapability::Shell]);
-        device.overlay.state = OverlayState::Connected;
-        device.overlay.node_ip = Some("10.144.0.2".to_string());
-
-        assert_eq!(
-            preferred_port_forward_transport(&state, &device),
-            PortForwardTransportKind::OverlayProxy
-        );
-    }
-
-    #[tokio::test]
-    async fn create_port_forward_uses_relay_tunnel_when_bridge_is_marked_unavailable() {
-        let host = test_local_tcp_host();
-        let state = test_state_with_store_and_config(
-            RelayStore {
-                devices: HashMap::from([("device-1".to_string(), {
-                    let mut device = test_device("device-1", vec![DeviceCapability::Shell]);
-                    device.overlay.state = OverlayState::Connected;
-                    device.overlay.node_ip = Some(host.clone());
-                    device
-                })]),
-                tasks: HashMap::new(),
-                shell_sessions: HashMap::new(),
-                port_forwards: HashMap::new(),
-                ..RelayStore::default()
-            },
-            |config| {
-                config.forward_host = host.clone();
-                config.forward_bind_host = host.clone();
-            },
-        );
-        mark_overlay_bridge_unavailable(
-            &state,
-            "device-1",
-            OverlayBridgeKind::PortForward,
-            "simulated port-forward bridge failure",
-        );
-
-        let Json(created) = create_port_forward(
-            State(state),
-            test_headers(),
-            Json(CreatePortForwardRequest {
-                device_id: "device-1".to_string(),
-                protocol: vibe_core::PortForwardProtocol::Tcp,
-                target_host: "127.0.0.1".to_string(),
-                target_port: 8080,
-            }),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(
-            created.forward.transport,
-            PortForwardTransportKind::RelayTunnel
-        );
-    }
-
-    #[tokio::test]
-    async fn claim_next_port_forward_skips_overlay_proxy_pending_forwards() {
-        let state = test_state_with_store(RelayStore {
-            devices: HashMap::from([(
-                "device-1".to_string(),
-                test_device("device-1", vec![DeviceCapability::Shell]),
-            )]),
-            tasks: HashMap::new(),
-            shell_sessions: HashMap::new(),
-            port_forwards: HashMap::from([
-                (
-                    "forward-overlay".to_string(),
-                    PortForwardEntry {
-                        record: PortForwardRecord {
-                            tenant_id: "personal".to_string(),
-                            user_id: "local-admin".to_string(),
-                            id: "forward-overlay".to_string(),
-                            device_id: "device-1".to_string(),
-                            protocol: vibe_core::PortForwardProtocol::Tcp,
-                            relay_host: "127.0.0.1".to_string(),
-                            relay_port: 39001,
-                            target_host: "127.0.0.1".to_string(),
-                            target_port: 22,
-                            transport: PortForwardTransportKind::OverlayProxy,
-                            status: PortForwardStatus::Pending,
-                            created_at_epoch_ms: 10,
-                            started_at_epoch_ms: None,
-                            finished_at_epoch_ms: None,
-                            error: None,
-                        },
-                    },
-                ),
-                (
-                    "forward-relay".to_string(),
-                    PortForwardEntry {
-                        record: PortForwardRecord {
-                            tenant_id: "personal".to_string(),
-                            user_id: "local-admin".to_string(),
-                            id: "forward-relay".to_string(),
-                            device_id: "device-1".to_string(),
-                            protocol: vibe_core::PortForwardProtocol::Tcp,
-                            relay_host: "127.0.0.1".to_string(),
-                            relay_port: 39002,
-                            target_host: "127.0.0.1".to_string(),
-                            target_port: 22,
-                            transport: PortForwardTransportKind::RelayTunnel,
-                            status: PortForwardStatus::Pending,
-                            created_at_epoch_ms: 20,
-                            started_at_epoch_ms: None,
-                            finished_at_epoch_ms: None,
-                            error: None,
-                        },
-                    },
-                ),
-            ]),
-            ..RelayStore::default()
-        });
-
-        let Json(claimed) = claim_next_port_forward(
-            Path("device-1".to_string()),
-            State(state.clone()),
-            test_device_headers(&state, "device-1"),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(
-            claimed.forward.as_ref().map(|forward| forward.id.as_str()),
-            Some("forward-relay")
-        );
-
-        let store = state.store.read().await;
-        assert_eq!(
-            store.port_forwards["forward-overlay"].record.status,
-            PortForwardStatus::Pending
-        );
-        assert_eq!(
-            store.port_forwards["forward-relay"].record.status,
-            PortForwardStatus::Active
-        );
     }
 
     #[test]

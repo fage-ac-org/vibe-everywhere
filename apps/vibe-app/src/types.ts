@@ -3,11 +3,6 @@ export type TaskExecutionMode =
   | "read_only"
   | "workspace_write"
   | "workspace_write_and_test";
-export type OverlayState =
-  | "connected"
-  | "degraded"
-  | "disabled"
-  | "unavailable";
 export type ProviderKind = "codex" | "claude_code" | "open_code";
 export type TaskStatus =
   | "pending"
@@ -18,28 +13,11 @@ export type TaskStatus =
   | "succeeded"
   | "failed"
   | "canceled";
-export type ShellSessionStatus =
-  | "pending"
-  | "active"
-  | "close_requested"
-  | "succeeded"
-  | "failed"
-  | "closed";
-export type PortForwardStatus =
-  | "pending"
-  | "active"
-  | "close_requested"
-  | "closed"
-  | "failed";
 export type UserRole = "owner" | "admin" | "member" | "viewer" | "agent";
 export type AuthMode = "disabled" | "access_token";
 export type StorageKind = "file" | "memory" | "external";
 export type DeploymentMode = "self_hosted" | "hosted_compatible";
-export type NotificationChannel = "in_app" | "system";
 export type ControlClientKind = "web" | "tauri_desktop" | "android";
-export type ShellStreamKind = "stdout" | "stderr" | "system";
-export type PortForwardProtocol = "tcp";
-export type PortForwardTransportKind = "relay_tunnel" | "overlay_proxy";
 
 export type TaskEventKind =
   | "system"
@@ -60,16 +38,6 @@ export type ProviderStatus = {
   error: string | null;
 };
 
-export type OverlayNetworkStatus = {
-  mode: "easytier_embedded" | "easytier_sidecar" | "disabled";
-  state: OverlayState;
-  networkName: string | null;
-  nodeIp: string | null;
-  relayUrl: string | null;
-  binaryPath: string | null;
-  lastError: string | null;
-};
-
 export type DeviceRecord = {
   tenantId: string;
   userId: string;
@@ -79,7 +47,6 @@ export type DeviceRecord = {
   capabilities: string[];
   metadata: Record<string, string>;
   providers: ProviderStatus[];
-  overlay: OverlayNetworkStatus;
   online: boolean;
   lastSeenEpochMs: number;
   currentTaskId: string | null;
@@ -174,69 +141,6 @@ export type ConversationDetailResponse = {
   pendingInputRequest: ConversationInputRequest | null;
 };
 
-export type ShellTransportKind = "relay_polling" | "overlay_proxy";
-
-export type ShellSessionRecord = {
-  tenantId: string;
-  userId: string;
-  id: string;
-  deviceId: string;
-  cwd: string | null;
-  transport: ShellTransportKind;
-  status: ShellSessionStatus;
-  closeRequested: boolean;
-  createdAtEpochMs: number;
-  startedAtEpochMs: number | null;
-  finishedAtEpochMs: number | null;
-  exitCode: number | null;
-  error: string | null;
-  lastInputSeq: number;
-  lastOutputSeq: number;
-};
-
-export type ShellInputRecord = {
-  seq: number;
-  sessionId: string;
-  data: string;
-  timestampEpochMs: number;
-};
-
-export type ShellOutputChunk = {
-  seq: number;
-  sessionId: string;
-  stream: ShellStreamKind;
-  data: string;
-  timestampEpochMs: number;
-};
-
-export type ShellSessionDetailResponse = {
-  session: ShellSessionRecord;
-  inputs: ShellInputRecord[];
-  outputs: ShellOutputChunk[];
-};
-
-export type PortForwardRecord = {
-  tenantId: string;
-  userId: string;
-  id: string;
-  deviceId: string;
-  protocol: PortForwardProtocol;
-  relayHost: string;
-  relayPort: number;
-  targetHost: string;
-  targetPort: number;
-  transport: PortForwardTransportKind;
-  status: PortForwardStatus;
-  createdAtEpochMs: number;
-  startedAtEpochMs: number | null;
-  finishedAtEpochMs: number | null;
-  error: string | null;
-};
-
-export type PortForwardDetailResponse = {
-  forward: PortForwardRecord;
-};
-
 export type WorkspaceEntryKind = "directory" | "file";
 
 export type WorkspaceEntry = {
@@ -307,19 +211,6 @@ export type GitDiffFileRequest = {
   repoPath: string;
 };
 
-export type GitCreateWorktreeRequest = {
-  deviceId: string;
-  sessionCwd?: string;
-  branchName: string;
-  destinationPath: string;
-};
-
-export type GitRemoveWorktreeRequest = {
-  deviceId: string;
-  sessionCwd?: string;
-  worktreePath: string;
-};
-
 export type GitChangedFile = {
   path: string;
   repoPath: string;
@@ -348,14 +239,6 @@ export type GitDiffStats = {
   unstagedDeletions: number;
 };
 
-export type GitWorktreeSummary = {
-  path: string;
-  branchName: string | null;
-  headId: string | null;
-  isCurrent: boolean;
-  isDetached: boolean;
-};
-
 export type GitInspectResponse = {
   deviceId: string;
   workspaceRoot: string;
@@ -370,7 +253,6 @@ export type GitInspectResponse = {
   hasCommits: boolean;
   changedFiles: GitChangedFile[];
   recentCommits: GitCommitSummary[];
-  worktrees: GitWorktreeSummary[];
   diffStats: GitDiffStats;
 };
 
@@ -389,23 +271,6 @@ export type GitDiffFileResponse = {
   truncated: boolean;
   stagedPatch: string | null;
   unstagedPatch: string | null;
-};
-
-export type GitCreateWorktreeResponse = {
-  deviceId: string;
-  workspaceRoot: string;
-  repoRoot: string | null;
-  repoCommonDir: string | null;
-  branchName: string;
-  destinationPath: string;
-};
-
-export type GitRemoveWorktreeResponse = {
-  deviceId: string;
-  workspaceRoot: string;
-  repoRoot: string | null;
-  repoCommonDir: string | null;
-  removedPath: string;
 };
 
 export type ServiceHealth = {
@@ -437,30 +302,6 @@ export type DeploymentMetadata = {
   documentationUrl: string | null;
 };
 
-export type AuditAction =
-  | "device_registered"
-  | "task_created"
-  | "task_canceled"
-  | "shell_session_created"
-  | "shell_session_closed"
-  | "preview_created"
-  | "preview_closed";
-
-export type AuditOutcome = "succeeded" | "rejected" | "failed";
-
-export type AuditRecord = {
-  id: string;
-  tenantId: string;
-  userId: string;
-  actorRole: UserRole;
-  action: AuditAction;
-  resourceKind: string;
-  resourceId: string;
-  outcome: AuditOutcome;
-  message: string | null;
-  timestampEpochMs: number;
-};
-
 export type AppConfig = {
   appName: string;
   defaultRelayBaseUrl: string;
@@ -469,7 +310,6 @@ export type AppConfig = {
   storageKind: StorageKind;
   deployment: DeploymentMetadata;
   currentActor: ActorIdentity;
-  notificationChannels: NotificationChannel[];
   platformMatrix: PlatformCapability[];
   supportedTargets: string[];
   controlClients: string[];
@@ -523,16 +363,4 @@ export type SendConversationMessageResponse = {
 export type RespondConversationInputPayload = {
   optionId?: string;
   text?: string;
-};
-
-export type CreateShellSessionPayload = {
-  deviceId: string;
-  cwd?: string;
-};
-
-export type CreatePortForwardPayload = {
-  deviceId: string;
-  protocol?: PortForwardProtocol;
-  targetHost: string;
-  targetPort: number;
 };

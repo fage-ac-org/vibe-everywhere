@@ -1,34 +1,21 @@
 import type {
   AppConfig,
-  AuditRecord,
   ConversationDetailResponse,
   ConversationInputRequest,
   ConversationRecord,
   CreateConversationPayload,
   CreateConversationResponse,
-  CreatePortForwardPayload,
-  CreateShellSessionPayload,
   CreateTaskPayload,
   DeviceRecord,
-  GitCreateWorktreeRequest,
-  GitCreateWorktreeResponse,
   GitDiffFileRequest,
   GitDiffFileResponse,
   GitInspectRequest,
   GitInspectResponse,
-  GitRemoveWorktreeRequest,
-  GitRemoveWorktreeResponse,
-  PortForwardDetailResponse,
-  PortForwardRecord,
-  PortForwardStatus,
   ProviderKind,
   RespondConversationInputPayload,
   SendConversationMessagePayload,
   SendConversationMessageResponse,
   ServiceHealth,
-  ShellSessionDetailResponse,
-  ShellSessionRecord,
-  ShellSessionStatus,
   TaskDetailResponse,
   TaskRecord,
   TaskStatus,
@@ -48,22 +35,6 @@ type TaskQuery = {
   deviceId?: string;
   status?: TaskStatus | "all";
   provider?: ProviderKind;
-  limit?: number;
-};
-
-type ShellSessionQuery = {
-  deviceId?: string;
-  status?: ShellSessionStatus | "all";
-  limit?: number;
-};
-
-type PortForwardQuery = {
-  deviceId?: string;
-  status?: PortForwardStatus | "all";
-  limit?: number;
-};
-
-type AuditQuery = {
   limit?: number;
 };
 
@@ -121,45 +92,6 @@ function buildTaskPath(query?: TaskQuery) {
   return params.size ? `/api/tasks?${params.toString()}` : "/api/tasks";
 }
 
-function buildShellSessionPath(query?: ShellSessionQuery) {
-  const params = new URLSearchParams();
-  if (query?.deviceId) {
-    params.set("deviceId", query.deviceId);
-  }
-  if (query?.status && query.status !== "all") {
-    params.set("status", query.status);
-  }
-  if (typeof query?.limit === "number") {
-    params.set("limit", String(query.limit));
-  }
-
-  return params.size ? `/api/shell/sessions?${params.toString()}` : "/api/shell/sessions";
-}
-
-function buildPortForwardPath(query?: PortForwardQuery) {
-  const params = new URLSearchParams();
-  if (query?.deviceId) {
-    params.set("deviceId", query.deviceId);
-  }
-  if (query?.status && query.status !== "all") {
-    params.set("status", query.status);
-  }
-  if (typeof query?.limit === "number") {
-    params.set("limit", String(query.limit));
-  }
-
-  return params.size ? `/api/port-forwards?${params.toString()}` : "/api/port-forwards";
-}
-
-function buildAuditPath(query?: AuditQuery) {
-  const params = new URLSearchParams();
-  if (typeof query?.limit === "number") {
-    params.set("limit", String(query.limit));
-  }
-
-  return params.size ? `/api/audit/events?${params.toString()}` : "/api/audit/events";
-}
-
 function buildConversationPath(query?: ConversationQuery) {
   const params = new URLSearchParams();
   if (query?.deviceId) {
@@ -180,12 +112,6 @@ export function fetchHealth(baseUrl: string) {
 
 export function fetchAppConfig(baseUrl: string) {
   return requestJson<AppConfig>(baseUrl, "/api/app-config");
-}
-
-export function fetchAuditEvents(baseUrl: string, accessToken: string, query?: AuditQuery) {
-  return requestJson<AuditRecord[]>(baseUrl, buildAuditPath(query), {
-    accessToken
-  });
 }
 
 export function fetchDevices(baseUrl: string, accessToken: string) {
@@ -325,82 +251,6 @@ export async function cancelTask(baseUrl: string, taskId: string, accessToken: s
   });
 }
 
-export function fetchShellSessions(
-  baseUrl: string,
-  accessToken: string,
-  query?: ShellSessionQuery
-) {
-  return requestJson<ShellSessionRecord[]>(baseUrl, buildShellSessionPath(query), {
-    accessToken
-  });
-}
-
-export function fetchShellSessionDetail(
-  baseUrl: string,
-  sessionId: string,
-  accessToken: string
-) {
-  return requestJson<ShellSessionDetailResponse>(baseUrl, `/api/shell/sessions/${sessionId}`, {
-    accessToken
-  });
-}
-
-export async function createShellSession(
-  baseUrl: string,
-  payload: CreateShellSessionPayload,
-  accessToken: string
-) {
-  const response = await requestJson<{ session: ShellSessionRecord }>(
-    baseUrl,
-    "/api/shell/sessions",
-    {
-      accessToken,
-      init: {
-        method: "POST",
-        body: JSON.stringify(payload)
-      }
-    }
-  );
-
-  return response.session;
-}
-
-export async function sendShellInput(
-  baseUrl: string,
-  sessionId: string,
-  data: string,
-  accessToken: string
-) {
-  return requestJson<ShellSessionDetailResponse>(
-    baseUrl,
-    `/api/shell/sessions/${sessionId}/input`,
-    {
-      accessToken,
-      init: {
-        method: "POST",
-        body: JSON.stringify({ data })
-      }
-    }
-  );
-}
-
-export async function closeShellSession(
-  baseUrl: string,
-  sessionId: string,
-  accessToken: string
-) {
-  return requestJson<ShellSessionDetailResponse>(
-    baseUrl,
-    `/api/shell/sessions/${sessionId}/close`,
-    {
-      accessToken,
-      init: {
-        method: "POST"
-      }
-    }
-  );
-}
-
 export function browseWorkspace(
   baseUrl: string,
   payload: WorkspaceBrowseRequest,
@@ -455,82 +305,4 @@ export function fetchGitDiffFile(
       body: JSON.stringify(payload)
     }
   });
-}
-
-export function createGitWorktree(
-  baseUrl: string,
-  payload: GitCreateWorktreeRequest,
-  accessToken: string
-) {
-  return requestJson<GitCreateWorktreeResponse>(baseUrl, "/api/git/worktrees", {
-    accessToken,
-    init: {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }
-  });
-}
-
-export function removeGitWorktree(
-  baseUrl: string,
-  payload: GitRemoveWorktreeRequest,
-  accessToken: string
-) {
-  return requestJson<GitRemoveWorktreeResponse>(baseUrl, "/api/git/worktrees/remove", {
-    accessToken,
-    init: {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }
-  });
-}
-
-export function fetchPortForwards(
-  baseUrl: string,
-  accessToken: string,
-  query?: PortForwardQuery
-) {
-  return requestJson<PortForwardRecord[]>(baseUrl, buildPortForwardPath(query), {
-    accessToken
-  });
-}
-
-export async function createPortForward(
-  baseUrl: string,
-  payload: CreatePortForwardPayload,
-  accessToken: string
-) {
-  const response = await requestJson<{ forward: PortForwardRecord }>(
-    baseUrl,
-    "/api/port-forwards",
-    {
-      accessToken,
-      init: {
-        method: "POST",
-        body: JSON.stringify({
-          protocol: "tcp",
-          ...payload
-        })
-      }
-    }
-  );
-
-  return response.forward;
-}
-
-export async function closePortForward(
-  baseUrl: string,
-  forwardId: string,
-  accessToken: string
-) {
-  return requestJson<PortForwardDetailResponse>(
-    baseUrl,
-    `/api/port-forwards/${forwardId}/close`,
-    {
-      accessToken,
-      init: {
-        method: "POST"
-      }
-    }
-  );
 }

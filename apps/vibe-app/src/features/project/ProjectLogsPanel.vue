@@ -3,25 +3,14 @@ import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import { formatDateTime } from "@/lib/format";
-import type { AuditRecord, ConversationDetailResponse, TaskEvent } from "@/types";
+import type { ConversationDetailResponse, TaskEvent } from "@/types";
 
 const props = defineProps<{
   detail: ConversationDetailResponse | null;
-  auditEvents: AuditRecord[];
 }>();
 
 const { t } = useI18n();
 const filter = ref<"all" | "errors" | "tools" | "provider">("all");
-
-function auditOutcomeTone(record: AuditRecord): "success" | "warning" | "danger" {
-  if (record.outcome === "failed") {
-    return "danger";
-  }
-  if (record.outcome === "rejected") {
-    return "warning";
-  }
-  return "success";
-}
 
 const errorSummaries = computed(() =>
   (props.detail?.tasks ?? [])
@@ -39,14 +28,6 @@ const errorSummaries = computed(() =>
         t("logs.errorFallback"),
       createdAtEpochMs: task.task.createdAtEpochMs
     }))
-);
-
-const auditSummaries = computed(() =>
-  props.auditEvents.map((record) => ({
-    ...record,
-    actionLabel: t(`logs.audit.actions.${record.action}`),
-    outcomeTone: auditOutcomeTone(record)
-  }))
 );
 
 function visibleEvents(events: TaskEvent[]) {
@@ -67,41 +48,6 @@ function visibleEvents(events: TaskEvent[]) {
 
 <template>
   <div class="space-y-5">
-    <section
-      v-if="auditSummaries.length"
-      class="rounded-[1.5rem] border border-sky-500/20 bg-sky-500/8 p-4"
-    >
-      <div class="flex items-center gap-2">
-        <StatusBadge>{{ t("logs.audit.title") }}</StatusBadge>
-        <p class="text-sm text-foreground">{{ t("logs.audit.summary") }}</p>
-      </div>
-      <div class="mt-4 space-y-3">
-        <article
-          v-for="item in auditSummaries"
-          :key="item.id"
-          class="rounded-2xl border border-sky-500/20 bg-background/80 px-4 py-3"
-        >
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-foreground">{{ item.actionLabel }}</p>
-              <p class="mt-1 truncate text-xs text-muted-foreground">
-                {{ item.resourceKind }} · {{ item.resourceId }}
-              </p>
-            </div>
-            <StatusBadge :tone="item.outcomeTone">
-              {{ t(`logs.audit.outcomes.${item.outcome}`) }}
-            </StatusBadge>
-          </div>
-          <p v-if="item.message" class="mt-2 whitespace-pre-wrap text-sm text-foreground">
-            {{ item.message }}
-          </p>
-          <p class="mt-2 text-xs text-muted-foreground">
-            {{ formatDateTime(item.timestampEpochMs) }}
-          </p>
-        </article>
-      </div>
-    </section>
-
     <section
       v-if="errorSummaries.length"
       class="rounded-[1.5rem] border border-rose-500/20 bg-rose-500/8 p-4"

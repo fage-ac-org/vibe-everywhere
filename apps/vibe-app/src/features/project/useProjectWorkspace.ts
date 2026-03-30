@@ -1,18 +1,14 @@
 import { computed, ref, toValue, watch, type MaybeRefOrGetter } from "vue";
 import {
   browseWorkspace,
-  createGitWorktree,
-  fetchAuditEvents,
   fetchGitDiffFile,
   inspectGitWorkspace,
-  removeGitWorktree,
   previewWorkspaceFile
 } from "@/lib/api";
 import { preferredProjectProvider } from "@/lib/policy";
 import { parseProjectRouteParam } from "@/lib/projects";
 import { useAppStore } from "@/stores/app";
 import type {
-  AuditRecord,
   ConversationDetailResponse,
   GitDiffFileResponse,
   GitInspectResponse,
@@ -35,7 +31,6 @@ export function useProjectWorkspace(
   const tasks = computed(() => store.listProjectTasks(deviceId.value, cwd.value));
   const activeConversationId = ref<string | null>(null);
   const conversationDetail = ref<ConversationDetailResponse | null>(null);
-  const auditEvents = ref<AuditRecord[]>([]);
   const gitInspect = ref<GitInspectResponse | null>(null);
   const gitDiff = ref<GitDiffFileResponse | null>(null);
   const activeDiffRepoPath = ref<string | null>(null);
@@ -73,7 +68,6 @@ export function useProjectWorkspace(
         await loadConversationContext(activeConversationId.value);
       } else {
         conversationDetail.value = null;
-        auditEvents.value = [];
       }
 
       gitInspect.value = await inspectGitWorkspace(
@@ -121,15 +115,6 @@ export function useProjectWorkspace(
 
   async function loadConversationContext(conversationId: string) {
     conversationDetail.value = await store.loadConversation(conversationId);
-    const taskIds = new Set(conversationDetail.value.tasks.map((entry) => entry.task.id));
-    auditEvents.value = (
-      await fetchAuditEvents(store.relayBaseUrl, store.relayAccessToken, { limit: 200 })
-    ).filter(
-      (record) =>
-        (record.resourceKind === "task" && taskIds.has(record.resourceId)) ||
-        (record.resourceKind === "conversation" &&
-          record.resourceId === conversationDetail.value?.conversation.id)
-    );
   }
 
   async function openEntry(path: string, kind: "directory" | "file") {
@@ -187,36 +172,6 @@ export function useProjectWorkspace(
     await refreshProject();
   }
 
-  async function createWorktree(branchName: string, destinationPath: string) {
-    await createGitWorktree(
-      store.relayBaseUrl,
-      {
-        deviceId: deviceId.value,
-        sessionCwd: cwd.value ?? undefined,
-        branchName,
-        destinationPath
-      },
-      store.relayAccessToken
-    );
-    await store.refreshAll(true);
-    await refreshProject();
-  }
-
-  async function removeWorktree(worktreePath: string) {
-    await removeGitWorktree(
-      store.relayBaseUrl,
-      {
-        deviceId: deviceId.value,
-        sessionCwd: cwd.value ?? undefined,
-        worktreePath
-      },
-      store.relayAccessToken
-    );
-    store.suppressProject(deviceId.value, worktreePath);
-    await store.refreshAll(true);
-    await refreshProject();
-  }
-
   async function sendFollowUp(
     prompt: string,
     model?: string,
@@ -252,7 +207,6 @@ export function useProjectWorkspace(
 
   watch(activeConversationId, async (value) => {
     if (!value) {
-      auditEvents.value = [];
       return;
     }
 
@@ -266,7 +220,6 @@ export function useProjectWorkspace(
     conversations,
     activeConversationId,
     conversationDetail,
-    auditEvents,
     gitInspect,
     gitDiff,
     activeDiffRepoPath,
@@ -279,8 +232,6 @@ export function useProjectWorkspace(
     selectChangeFile,
     selectConversation,
     openEntry,
-    createWorktree,
-    removeWorktree,
     createTopic,
     sendFollowUp,
     respondToInput,
