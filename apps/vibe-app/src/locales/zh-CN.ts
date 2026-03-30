@@ -11,6 +11,8 @@ const zhCN = {
     refresh: "刷新",
     openProject: "打开项目",
     viewDetails: "查看详情",
+    menu: "菜单",
+    close: "关闭",
     all: "全部",
     online: "在线",
     offline: "离线",
@@ -49,6 +51,11 @@ const zhCN = {
     updated: "更新时间"
   },
   home: {
+    openingChat: "正在打开最近聊天",
+    emptyServerTitle: "先配置服务器再开始聊天",
+    emptyServerSummary: "添加 relay 地址和令牌后，返回这里就会直接进入主机和项目聊天。",
+    emptyProjectsTitle: "还没有可进入的项目",
+    emptyProjectsSummary: "先让主机暴露工作区，随后这里会直接打开最近项目聊天。",
     stats: {
       onlineHosts: "在线主机",
       runningTasks: "运行中任务",
@@ -75,10 +82,13 @@ const zhCN = {
   },
   settings: {
     badge: "我的",
-    title: "服务器、外观与客户端偏好",
-    summary: "主流程留在项目里，relay 设置、语言和主题等次级控制放在这里。",
+    title: "设置",
+    summary: "这里集中管理服务器、主机和项目，主流程留在聊天页。",
     serverTitle: "服务器设置",
     serverSummary: "配置当前客户端连接 relay 所需的地址和控制令牌。",
+    hostsTitle: "主机",
+    projectsTitle: "最近项目",
+    projectsEmpty: "还没有最近项目。",
     relayUrl: "Relay 地址",
     accessToken: "访问令牌",
     accessTokenPlaceholder: "可选 Bearer Token",
@@ -91,6 +101,8 @@ const zhCN = {
   workspace: {
     badge: "项目",
     title: "项目工作台",
+    currentHost: "主机",
+    currentProject: "项目",
     loadingPath: "正在加载项目路径...",
     currentState: "当前状态",
     tabs: {
@@ -114,6 +126,10 @@ const zhCN = {
     }
   },
   conversation: {
+    history: "历史会话",
+    newChat: "新对话",
+    newChatTitle: "开始一个新对话",
+    recentChats: "最近对话",
     topics: "话题",
     emptyTitle: "还没有会话",
     emptySummary: "这个项目已经可以开始工作。发送第一条请求后，就会在 {project} 下创建持续会话。",

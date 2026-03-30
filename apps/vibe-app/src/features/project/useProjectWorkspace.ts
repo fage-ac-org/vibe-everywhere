@@ -38,12 +38,18 @@ export function useProjectWorkspace(
   const filePreview = ref<WorkspaceFilePreviewResponse | null>(null);
   const browserPath = ref<string>("");
   const activeTab = ref<ProjectTab>("conversation");
+  const isDraftConversation = ref(false);
   const isLoading = ref(false);
   const errorMessage = ref("");
 
   watch(
     conversations,
     (value) => {
+      if (isDraftConversation.value) {
+        conversationDetail.value = null;
+        return;
+      }
+
       if (!value.length) {
         activeConversationId.value = null;
         conversationDetail.value = null;
@@ -121,12 +127,20 @@ export function useProjectWorkspace(
   }
 
   async function selectConversation(conversationId: string) {
+    isDraftConversation.value = false;
     activeConversationId.value = conversationId;
     await loadConversationContext(conversationId);
   }
 
   async function loadConversationContext(conversationId: string) {
     conversationDetail.value = await store.loadConversation(conversationId);
+  }
+
+  function startNewConversation() {
+    isDraftConversation.value = true;
+    activeConversationId.value = null;
+    conversationDetail.value = null;
+    activeTab.value = "conversation";
   }
 
   async function openEntry(path: string, kind: "directory" | "file") {
@@ -179,6 +193,7 @@ export function useProjectWorkspace(
       model: model || undefined,
       title: prompt.slice(0, 60)
     });
+    isDraftConversation.value = false;
     activeConversationId.value = response.conversation.id;
     store.markProjectVisited(deviceId.value, cwd.value);
     await refreshProject();
@@ -194,6 +209,7 @@ export function useProjectWorkspace(
       return;
     }
 
+    isDraftConversation.value = false;
     await store.sendProjectMessage(activeConversationId.value, {
       prompt,
       executionMode,
@@ -231,6 +247,7 @@ export function useProjectWorkspace(
     tasks,
     conversations,
     activeConversationId,
+    isDraftConversation,
     conversationDetail,
     gitInspect,
     gitDiff,
@@ -241,6 +258,7 @@ export function useProjectWorkspace(
     isLoading,
     errorMessage,
     refreshProject,
+    startNewConversation,
     selectChangeFile,
     selectConversation,
     openEntry,

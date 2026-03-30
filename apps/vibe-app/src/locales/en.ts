@@ -11,6 +11,8 @@ const en = {
     refresh: "Refresh",
     openProject: "Open project",
     viewDetails: "View details",
+    menu: "Menu",
+    close: "Close",
     all: "All",
     online: "Online",
     offline: "Offline",
@@ -49,6 +51,11 @@ const en = {
     updated: "Updated"
   },
   home: {
+    openingChat: "Opening your latest chat",
+    emptyServerTitle: "Configure a server to start chatting",
+    emptyServerSummary: "Add a relay URL and token, then return here to continue with hosts and projects.",
+    emptyProjectsTitle: "No project is ready yet",
+    emptyProjectsSummary: "Connect a host workspace first, then chats will open directly into the latest project.",
     stats: {
       onlineHosts: "Online hosts",
       runningTasks: "Running tasks",
@@ -75,10 +82,13 @@ const en = {
   },
   settings: {
     badge: "My",
-    title: "Server, appearance, and client preferences",
-    summary: "The primary workflow stays in projects. Relay settings, locale, and theme stay here as secondary controls.",
+    title: "Settings",
+    summary: "Keep server and host management compact. Chats stay in the main workspace.",
     serverTitle: "Server settings",
     serverSummary: "Configure the relay address and control-plane token for this client.",
+    hostsTitle: "Hosts",
+    projectsTitle: "Recent projects",
+    projectsEmpty: "No recent project yet.",
     relayUrl: "Relay URL",
     accessToken: "Access token",
     accessTokenPlaceholder: "Optional bearer token",
@@ -91,6 +101,8 @@ const en = {
   workspace: {
     badge: "Project",
     title: "Project workspace",
+    currentHost: "Host",
+    currentProject: "Project",
     loadingPath: "Loading project path...",
     currentState: "Current state",
     tabs: {
@@ -114,6 +126,10 @@ const en = {
     }
   },
   conversation: {
+    history: "History",
+    newChat: "New chat",
+    newChatTitle: "Start a new chat",
+    recentChats: "Recent chats",
     topics: "Topics",
     emptyTitle: "No conversation yet",
     emptySummary: "This project is ready. Send the first request to start a conversation in {project}.",

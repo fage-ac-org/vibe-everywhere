@@ -3,7 +3,6 @@ import type { RouteRecordRaw } from "vue-router"
 import AppShellView from "./views/AppShellView.vue"
 import HomeView from "./views/HomeView.vue"
 import ProjectWorkspaceView from "./views/ProjectWorkspaceView.vue"
-import ProjectsView from "./views/ProjectsView.vue"
 import SettingsView from "./views/SettingsView.vue"
 
 const routes: RouteRecordRaw[] = [
@@ -16,22 +15,8 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: "",
-        redirect: {
-          name: "home"
-        }
-      },
-      {
-        path: "home",
         name: "home",
         component: HomeView,
-        meta: {
-          titleKey: "app.title"
-        }
-      },
-      {
-        path: "projects",
-        name: "projects",
-        component: ProjectsView,
         meta: {
           titleKey: "app.title"
         }
@@ -42,6 +27,12 @@ const routes: RouteRecordRaw[] = [
         component: ProjectWorkspaceView,
         meta: {
           titleKey: "app.title"
+        }
+      },
+      {
+        path: "projects",
+        redirect: {
+          name: "home"
         }
       },
       {

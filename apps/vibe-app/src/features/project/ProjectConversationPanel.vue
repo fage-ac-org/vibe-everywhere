@@ -15,18 +15,16 @@ import type {
 
 const props = defineProps<{
   detail: ConversationDetailResponse | null;
-  conversations: { id: string; title: string; updatedAtEpochMs: number }[];
-  activeConversationId: string | null;
   projectProviders?: ProviderKind[];
   projectTitle?: string | null;
+  isDraftConversation?: boolean;
 }>();
 
 const emit = defineEmits<{
-  selectConversation: [conversationId: string];
   sendPrompt: [prompt: string, model?: string, executionMode?: TaskExecutionMode];
   respondInput: [optionId?: string, text?: string];
   cancelTask: [taskId: string];
-  openTab: [tab: "changes"];
+  openTab: [tab: "changes" | "files"];
 }>();
 
 const { t } = useI18n();
@@ -85,6 +83,8 @@ const turnCards = computed(() =>
     };
   })
 );
+
+const hasTurns = computed(() => turnCards.value.length > 0);
 
 function submitPrompt() {
   if (!prompt.value.trim()) {
@@ -183,159 +183,124 @@ function buildExplainPrompt(turn: (typeof turnCards.value)[number]) {
 </script>
 
 <template>
-  <div class="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
-    <aside class="space-y-3">
-      <div class="rounded-[1.5rem] border border-white/55 bg-white/80 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/55">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">{{ t("conversation.topics") }}</h3>
-          <StatusBadge>{{ conversations.length }}</StatusBadge>
-        </div>
-        <div class="mt-4 space-y-2">
-          <div
-            v-if="!conversations.length"
-            class="rounded-2xl border border-dashed border-border bg-background/65 px-4 py-5 text-sm text-muted-foreground"
-          >
-            <p class="font-medium text-foreground">{{ t("conversation.emptyTitle") }}</p>
-            <p class="mt-2">
-              {{ t("conversation.emptySummary", { project: projectTitle || t("workspace.title") }) }}
+  <section class="flex min-h-[calc(100vh-9rem)] flex-col">
+    <div class="flex-1 space-y-6 px-1 pb-6 pt-2">
+      <article
+        v-if="!hasTurns"
+        class="mx-auto max-w-2xl rounded-[2rem] border border-dashed border-border bg-background/70 px-6 py-10 text-center"
+      >
+        <p class="text-sm font-medium text-foreground">
+          {{
+            isDraftConversation
+              ? t("conversation.newChatTitle")
+              : t("conversation.firstTurnTitle")
+          }}
+        </p>
+        <p class="mt-3 text-sm text-muted-foreground">
+          {{ t("conversation.firstTurnSummary", { project: projectTitle || t("workspace.title") }) }}
+        </p>
+      </article>
+
+      <article
+        v-for="turn in turnCards"
+        :key="turn.id"
+        class="mx-auto max-w-3xl space-y-4"
+      >
+        <div class="flex justify-end">
+          <div class="max-w-[88%] rounded-[1.6rem] bg-primary px-4 py-3 text-primary-foreground shadow-sm">
+            <p class="whitespace-pre-wrap text-sm leading-6">{{ turn.prompt }}</p>
+            <p class="mt-2 text-[11px] text-primary-foreground/75">
+              {{ formatDateTime(turn.task.createdAtEpochMs) }} ·
+              {{ t(`conversation.executionModeMeta.${turn.task.executionMode}`) }}
             </p>
           </div>
-          <button
-            v-for="conversation in conversations"
-            :key="conversation.id"
-            class="w-full rounded-2xl border px-3 py-3 text-left"
-            :class="
-              conversation.id === activeConversationId
-                ? 'border-primary bg-primary/10'
-                : 'border-border bg-background/65'
-            "
-            @click="emit('selectConversation', conversation.id)"
-          >
-            <p class="truncate text-sm font-medium text-foreground">{{ conversation.title }}</p>
-            <p class="mt-1 text-xs text-muted-foreground">
-              {{ formatDateTime(conversation.updatedAtEpochMs) }}
-            </p>
-          </button>
         </div>
-      </div>
-    </aside>
 
-    <section class="space-y-4">
-      <div
-        class="rounded-[1.5rem] border border-white/55 bg-white/80 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/55"
-      >
-        <div class="space-y-4">
-          <article
-            v-if="!turnCards.length"
-            class="rounded-[1.35rem] border border-dashed border-border bg-background/75 p-5"
-          >
-            <p class="text-sm font-medium text-foreground">{{ t("conversation.firstTurnTitle") }}</p>
-            <p class="mt-2 text-sm text-muted-foreground">
-              {{ t("conversation.firstTurnSummary", { project: projectTitle || t("workspace.title") }) }}
+        <div class="max-w-[92%] rounded-[1.6rem] border border-border/70 bg-white/90 px-4 py-4 shadow-sm dark:bg-slate-950/50">
+          <div class="flex flex-wrap items-center gap-2">
+            <StatusBadge :tone="taskTone(turn.task.status)">
+              {{ t(`conversation.statusLabel.${turn.task.status}`) }}
+            </StatusBadge>
+            <StatusBadge tone="muted">{{ turn.task.provider }}</StatusBadge>
+            <StatusBadge v-if="turn.task.model" tone="muted">{{ turn.task.model }}</StatusBadge>
+            <button
+              v-if="canCancelTask(turn.task.status, turn.task.cancelRequested)"
+              class="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
+              @click="emit('cancelTask', turn.task.id)"
+            >
+              {{ t("conversation.stopTask") }}
+            </button>
+            <button
+              v-if="canRetryTask(turn.task.status)"
+              class="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
+              @click="emit('sendPrompt', buildRetryPrompt(turn), turn.task.model || undefined, turn.task.executionMode)"
+            >
+              {{ t("conversation.retryTask") }}
+            </button>
+            <button
+              v-if="turn.task.status !== 'running' && turn.task.status !== 'pending' && turn.task.status !== 'assigned'"
+              class="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
+              @click="emit('sendPrompt', buildExplainPrompt(turn), turn.task.model || undefined, 'read_only')"
+            >
+              {{ t("conversation.explainResult") }}
+            </button>
+            <button
+              v-if="canOpenChanges(turn.task.status)"
+              class="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
+              @click="emit('openTab', 'changes')"
+            >
+              {{ t("conversation.viewChanges") }}
+            </button>
+          </div>
+
+          <p class="mt-4 whitespace-pre-wrap text-sm leading-7 text-foreground">
+            {{ turn.summary }}
+          </p>
+
+          <div v-if="turn.eventLines.length" class="mt-4 space-y-2">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {{ turn.eventSummary }}
             </p>
-          </article>
-          <article
-            v-for="turn in turnCards"
-            :key="turn.id"
-            class="space-y-3 rounded-[1.35rem] border border-border bg-background/75 p-4"
-          >
-            <div class="ml-auto max-w-[85%] rounded-[1.15rem] bg-primary px-4 py-3 text-primary-foreground">
-              <p class="whitespace-pre-wrap text-sm">{{ turn.prompt }}</p>
-              <p class="mt-3 text-[11px] text-primary-foreground/80">
-                {{ formatDateTime(turn.task.createdAtEpochMs) }} ·
-                {{ t(`conversation.executionModeMeta.${turn.task.executionMode}`) }}
-              </p>
+            <div
+              v-for="event in turn.eventLines"
+              :key="`${turn.id}-${event.seq}`"
+              class="rounded-xl border px-3 py-2 text-xs"
+              :class="
+                event.kind === 'provider_stderr'
+                  ? 'border-rose-500/20 bg-rose-500/8 text-rose-700 dark:text-rose-300'
+                  : event.kind === 'tool_call' || event.kind === 'tool_output'
+                    ? 'border-sky-500/20 bg-sky-500/8'
+                    : 'border-border bg-background'
+              "
+            >
+              <p class="font-medium">{{ event.kind }}</p>
+              <p class="mt-1 whitespace-pre-wrap leading-5">{{ event.message }}</p>
             </div>
+          </div>
 
-            <div class="rounded-[1.15rem] border border-border bg-white/80 p-4 dark:bg-slate-950/40">
-              <div class="flex flex-wrap items-center gap-2">
-                <StatusBadge :tone="taskTone(turn.task.status)">
-                  {{ t(`conversation.statusLabel.${turn.task.status}`) }}
-                </StatusBadge>
-                <StatusBadge tone="muted">{{ turn.task.provider }}</StatusBadge>
-                <StatusBadge v-if="turn.task.model" tone="muted">{{ turn.task.model }}</StatusBadge>
-                <button
-                  v-if="canCancelTask(turn.task.status, turn.task.cancelRequested)"
-                  class="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
-                  @click="emit('cancelTask', turn.task.id)"
-                >
-                  {{ t("conversation.stopTask") }}
-                </button>
-                <button
-                  v-if="canRetryTask(turn.task.status)"
-                  class="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
-                  @click="emit('sendPrompt', buildRetryPrompt(turn), turn.task.model || undefined, turn.task.executionMode)"
-                >
-                  {{ t("conversation.retryTask") }}
-                </button>
-                <button
-                  v-if="turn.task.status !== 'running' && turn.task.status !== 'pending' && turn.task.status !== 'assigned'"
-                  class="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
-                  @click="emit('sendPrompt', buildExplainPrompt(turn), turn.task.model || undefined, 'read_only')"
-                >
-                  {{ t("conversation.explainResult") }}
-                </button>
-                <button
-                  v-if="canOpenChanges(turn.task.status)"
-                  class="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
-                  @click="emit('openTab', 'changes')"
-                >
-                  {{ t("conversation.viewChanges") }}
-                </button>
+          <details class="mt-4 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
+            <summary class="cursor-pointer text-xs font-medium text-muted-foreground">
+              {{ t("conversation.rawEventsTitle") }}
+            </summary>
+            <div class="mt-3 space-y-2">
+              <div
+                v-for="event in turn.rawLines"
+                :key="`${turn.id}-raw-${event.seq}`"
+                class="rounded-lg border border-border bg-background px-3 py-2 text-xs"
+              >
+                <p class="font-medium">{{ event.kind }}</p>
+                <p class="mt-1 whitespace-pre-wrap leading-5">{{ event.message }}</p>
               </div>
-
-              <p class="mt-3 whitespace-pre-wrap text-sm text-foreground">
-                {{ turn.summary }}
-              </p>
-
-              <p class="mt-3 text-xs text-muted-foreground">
-                {{ turn.eventSummary }}
-              </p>
-
-              <div v-if="turn.eventLines.length" class="mt-4 space-y-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {{ t("conversation.eventStreamTitle") }}
-                </p>
-                <div
-                  v-for="event in turn.eventLines"
-                  :key="`${turn.id}-${event.seq}`"
-                  class="rounded-xl border px-3 py-2 text-xs"
-                  :class="
-                    event.kind === 'provider_stderr'
-                      ? 'border-rose-500/20 bg-rose-500/8 text-rose-700 dark:text-rose-300'
-                      : event.kind === 'tool_call' || event.kind === 'tool_output'
-                        ? 'border-sky-500/20 bg-sky-500/8'
-                        : 'border-border bg-background'
-                  "
-                >
-                  <p class="font-medium">{{ event.kind }}</p>
-                  <p class="mt-1 whitespace-pre-wrap">{{ event.message }}</p>
-                </div>
-              </div>
-
-              <details class="mt-4 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
-                <summary class="cursor-pointer text-xs font-medium text-muted-foreground">
-                  {{ t("conversation.rawEventsTitle") }}
-                </summary>
-                <div class="mt-3 space-y-2">
-                  <div
-                    v-for="event in turn.rawLines"
-                    :key="`${turn.id}-raw-${event.seq}`"
-                    class="rounded-lg border border-border bg-background px-3 py-2 text-xs"
-                  >
-                    <p class="font-medium">{{ event.kind }}</p>
-                    <p class="mt-1 whitespace-pre-wrap">{{ event.message }}</p>
-                  </div>
-                </div>
-              </details>
             </div>
-          </article>
+          </details>
         </div>
-      </div>
+      </article>
+    </div>
 
+    <div class="sticky bottom-0 mt-auto border-t border-border/60 bg-[linear-gradient(180deg,rgba(244,244,240,0),rgba(244,244,240,0.96)_20%,rgba(244,244,240,0.98)_100%)] px-1 pb-2 pt-4 dark:bg-[linear-gradient(180deg,rgba(9,9,11,0),rgba(9,9,11,0.94)_20%,rgba(9,9,11,0.98)_100%)]">
       <div
         v-if="detail?.pendingInputRequest"
-        class="rounded-[1.5rem] border border-amber-500/30 bg-amber-500/8 p-4"
+        class="mx-auto mb-4 max-w-3xl rounded-[1.4rem] border border-amber-500/30 bg-amber-500/8 p-4"
       >
         <div class="flex items-center gap-2">
           <StatusBadge tone="warning">{{ t("conversation.waitingInput") }}</StatusBadge>
@@ -364,17 +329,15 @@ function buildExplainPrompt(turn: (typeof turnCards.value)[number]) {
         </div>
       </div>
 
-      <div
-        class="rounded-[1.5rem] border border-white/55 bg-white/80 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/55"
-      >
-        <div class="grid gap-3 xl:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
-          <div class="space-y-2 rounded-2xl bg-background/75 px-4 py-3">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+      <div class="mx-auto max-w-3xl rounded-[1.8rem] border border-white/60 bg-white/90 p-3 shadow-[0_24px_60px_-35px_rgba(15,23,42,0.55)] backdrop-blur dark:border-white/10 dark:bg-slate-950/75">
+        <div class="grid gap-3 md:grid-cols-[160px_180px_minmax(0,1fr)_auto]">
+          <div class="space-y-2 rounded-2xl bg-background/75 px-3 py-3">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {{ t("conversation.executionMode.title") }}
             </p>
             <select
               v-model="executionMode"
-              class="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+              class="w-full rounded-2xl border border-border bg-background px-3 py-2.5 text-sm"
             >
               <option
                 v-for="option in executionModeOptions"
@@ -384,7 +347,7 @@ function buildExplainPrompt(turn: (typeof turnCards.value)[number]) {
                 {{ t(option.labelKey) }}
               </option>
             </select>
-            <p class="text-xs text-muted-foreground">{{ t(selectedExecutionMode.summaryKey) }}</p>
+            <p class="text-[11px] text-muted-foreground">{{ t(selectedExecutionMode.summaryKey) }}</p>
           </div>
           <input
             v-model="model"
@@ -398,11 +361,11 @@ function buildExplainPrompt(turn: (typeof turnCards.value)[number]) {
             class="min-h-28 rounded-2xl border border-border bg-background px-4 py-3 text-sm"
             :placeholder="t('conversation.promptPlaceholder')"
           />
-          <button class="rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground" @click="submitPrompt">
+          <button class="rounded-[1.4rem] bg-primary px-5 py-3 text-sm font-medium text-primary-foreground" @click="submitPrompt">
             {{ t("conversation.send") }}
           </button>
         </div>
       </div>
-    </section>
-  </div>
+    </div>
+  </section>
 </template>
