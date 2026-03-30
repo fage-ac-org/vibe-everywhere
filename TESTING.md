@@ -12,7 +12,7 @@ This repository has four independently changing surfaces:
 The current product baseline is:
 
 - top-level navigation: `首页 / 项目 / 我的`
-- project workspace: `会话 / 变更 / 文件 / 日志`
+- project workspace: `会话 / 变更 / 文件`
 - stable object model: `服务器 -> 主机 -> 项目 -> 会话/任务执行`
 
 The test plan must catch:
@@ -57,7 +57,7 @@ workspace layout changes.
 
 - open a project and confirm the header keeps host, project, branch, and AI state visible
 - confirm the default tab is `会话`
-- confirm the project also exposes `变更 / 文件 / 日志`
+- confirm the project also exposes `变更 / 文件`
 - open an inventory-only project with no prior history and confirm the empty conversation state
   still allows sending the first prompt
 - create a new conversation and continue an existing conversation in the same project
@@ -69,8 +69,7 @@ workspace layout changes.
   event output instead of only flat chat bubbles
 - verify pending or running task cards can request stop directly from the conversation surface
 - verify completed or failed task cards expose quick follow-up actions for retry and explanation
-- verify completed tasks can jump directly to `变更`, and failed or completed tasks can jump
-  directly to `日志`
+- verify completed tasks can jump directly to `变更`
 
 ### Review And Inspection
 
@@ -78,7 +77,6 @@ workspace layout changes.
 - verify `变更` shows review summary cards before the raw file diff panel
 - verify selecting a changed file loads its staged and/or unstaged diff output
 - verify `文件` can browse the project tree and preview a text file
-- verify `日志` surfaces error summaries first and supports `全部 / 错误 / 工具 / Provider` filtering
 - when an ACP-backed task runs in `只读`, verify write attempts or terminal command attempts are
   rejected; when it runs in `可改文件`, verify test-style terminal commands are rejected until
   `可改并测试` is selected

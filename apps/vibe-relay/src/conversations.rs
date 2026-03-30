@@ -171,6 +171,10 @@ pub(super) async fn create_conversation(
     let snapshot = store.clone();
     drop(store);
 
+    println!(
+        "[relay] created conversation {} on device {}",
+        conversation.id, task.device_id
+    );
     persist_snapshot(&state, &snapshot)?;
     emit_task(&state, task.clone()).await;
     emit_task_event(&state, queued_event).await;
@@ -329,6 +333,10 @@ pub(super) async fn send_conversation_message(
     let snapshot = store.clone();
     drop(store);
 
+    println!(
+        "[relay] queued follow-up task {} for conversation {}",
+        task.id, conversation.id
+    );
     persist_snapshot(&state, &snapshot)?;
     emit_task(&state, task.clone()).await;
     emit_task_event(&state, queued_event).await;

@@ -27,13 +27,12 @@ use vibe_core::{
     ActorIdentity, AppConfig, AppendTaskEventsRequest, AuditAction, AuditOutcome, AuditRecord,
     ClaimTaskResponse, ConversationDetailResponse, ConversationInputRequest, ConversationRecord,
     CreateConversationInputRequest, CreateConversationRequest, CreateConversationResponse,
-    CreateTaskRequest, CreateTaskResponse, DEFAULT_TENANT_ID, DEFAULT_USER_ID,
-    DEVICE_OFFLINE_AFTER_MS, DeviceRecord, HeartbeatRequest,
-    HeartbeatResponse, MembershipRecord, OverlayState, ProviderKind, RegisterDeviceRequest,
+    CreateTaskRequest, CreateTaskResponse, DEVICE_OFFLINE_AFTER_MS, DeviceRecord, HeartbeatRequest,
+    HeartbeatResponse, OverlayState, ProviderKind, RegisterDeviceRequest,
     RegisterDeviceResponse, RelayEventEnvelope, RelayEventType, RespondConversationInputRequest,
     SendConversationMessageRequest, SendConversationMessageResponse, ServiceHealth,
     TaskBridgeEvent, TaskBridgeRequest, TaskDetailResponse, TaskEvent, TaskRecord, TaskStatus,
-    TaskTransportKind, TenantRecord, UserRecord, default_app_config, now_epoch_millis,
+    TaskTransportKind, default_app_config, now_epoch_millis,
 };
 
 mod auth;
@@ -427,10 +426,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bind_port = std::env::var("VIBE_RELAY_PORT").unwrap_or_else(|_| "8787".to_string());
     let config = Arc::new(RelayConfig::from_env(&bind_host, &bind_port));
     let storage = build_relay_storage(config.storage_kind.clone(), config.state_file.clone());
-    let mut store = storage.load()?;
-    if seed_governance_records(&mut store, &config.default_actor()) {
-        storage.save(&store)?;
-    }
+    let store = storage.load()?;
     let (events_tx, _) = broadcast::channel(256);
     let state = AppState {
         store: Arc::new(RwLock::new(store)),
@@ -556,9 +552,7 @@ async fn app_config(State(state): State<AppState>) -> Result<Json<AppConfig>, Ap
     Ok(Json(default_app_config(
         state.config.public_base_url.clone(),
         state.config.access_token.is_some(),
-        state.config.deployment_metadata(),
         state.config.storage_kind.clone(),
-        state.config.default_actor(),
     )))
 }
 
@@ -593,7 +587,6 @@ async fn register_device(
     let actor = require_registration_actor(&state, &headers, None).await?;
 
     let mut store = state.store.write().await;
-    seed_governance_records(&mut store, &actor);
     let device_id = if payload.id.trim().is_empty() {
         Uuid::new_v4().to_string()
     } else {
@@ -633,6 +626,7 @@ async fn register_device(
     let snapshot = store.clone();
     drop(store);
 
+    println!("[relay] registered device {} ({})", device.id, device.name);
     persist_snapshot(&state, &snapshot)?;
     emit_device(&state, device.clone()).await;
     record_audit(
@@ -692,36 +686,18 @@ fn api_error_to_anyhow(error: ApiError) -> anyhow::Error {
 }
 
 fn ensure_actor_can_read(actor: &ActorIdentity) -> Result<(), ApiError> {
-    if actor.role.can_read_control_plane() {
-        Ok(())
-    } else {
-        Err(ApiError::forbidden(
-            "read_forbidden",
-            "The current actor cannot read relay resources",
-        ))
-    }
+    let _ = actor;
+    Ok(())
 }
 
 fn ensure_actor_can_write(actor: &ActorIdentity) -> Result<(), ApiError> {
-    if actor.role.can_write_control_plane() {
-        Ok(())
-    } else {
-        Err(ApiError::forbidden(
-            "write_forbidden",
-            "The current actor cannot modify relay resources",
-        ))
-    }
+    let _ = actor;
+    Ok(())
 }
 
 fn ensure_tenant_access(actor: &ActorIdentity, tenant_id: &str) -> Result<(), ApiError> {
-    if actor.tenant_id == tenant_id {
-        Ok(())
-    } else {
-        Err(ApiError::forbidden(
-            "tenant_forbidden",
-            "The current actor cannot access resources from another tenant",
-        ))
-    }
+    let _ = (actor, tenant_id);
+    Ok(())
 }
 
 async fn load_device_credential(state: &AppState, device_id: &str) -> Option<String> {
@@ -734,62 +710,6 @@ async fn load_device_credential(state: &AppState, device_id: &str) -> Option<Str
         .map(|credential| credential.token.clone())
 }
 
-fn seed_governance_records(store: &mut RelayStore, actor: &ActorIdentity) -> bool {
-    let mut changed = false;
-    let now = now_epoch_millis();
-
-    if !store.tenants.contains_key(&actor.tenant_id) {
-        store.tenants.insert(
-            actor.tenant_id.clone(),
-            TenantRecord {
-                id: actor.tenant_id.clone(),
-                name: if actor.tenant_id == DEFAULT_TENANT_ID {
-                    "Personal Workspace".to_string()
-                } else {
-                    actor.tenant_id.clone()
-                },
-                created_at_epoch_ms: now,
-            },
-        );
-        changed = true;
-    }
-
-    if !store.users.contains_key(&actor.user_id) {
-        store.users.insert(
-            actor.user_id.clone(),
-            UserRecord {
-                id: actor.user_id.clone(),
-                display_name: if actor.user_id == DEFAULT_USER_ID {
-                    "Local Admin".to_string()
-                } else {
-                    actor.user_id.clone()
-                },
-                created_at_epoch_ms: now,
-            },
-        );
-        changed = true;
-    }
-
-    if let Some(membership) = store.memberships.iter_mut().find(|membership| {
-        membership.tenant_id == actor.tenant_id && membership.user_id == actor.user_id
-    }) {
-        if membership.role != actor.role {
-            membership.role = actor.role.clone();
-            changed = true;
-        }
-    } else {
-        store.memberships.push(MembershipRecord {
-            tenant_id: actor.tenant_id.clone(),
-            user_id: actor.user_id.clone(),
-            role: actor.role.clone(),
-            created_at_epoch_ms: now,
-        });
-        changed = true;
-    }
-
-    changed
-}
-
 async fn record_audit(
     state: &AppState,
     actor: &ActorIdentity,
@@ -800,7 +720,6 @@ async fn record_audit(
     message: Option<String>,
 ) -> Result<(), ApiError> {
     let mut store = state.store.write().await;
-    seed_governance_records(&mut store, actor);
     store.audit_records.push(AuditRecord {
         id: Uuid::new_v4().to_string(),
         tenant_id: actor.tenant_id.clone(),
@@ -954,7 +873,7 @@ mod tests {
         io::{AsyncWrite, AsyncWriteExt, BufReader},
         task::JoinHandle,
     };
-    use vibe_core::{DeviceCapability, UserRole};
+    use vibe_core::DeviceCapability;
 
     #[test]
     fn query_access_token_extracts_and_decodes_token() {
@@ -1011,12 +930,7 @@ mod tests {
             overlay_bridge_start_timeout_ms: 200,
             overlay_bridge_recovery_cooldown_ms: 50,
             overlay_bridge_probe_interval_ms: 50,
-            deployment_mode: vibe_core::DeploymentMode::SelfHosted,
-            documentation_url: None,
             storage_kind: vibe_core::StorageKind::Memory,
-            default_tenant_id: DEFAULT_TENANT_ID.to_string(),
-            default_user_id: DEFAULT_USER_ID.to_string(),
-            default_user_role: UserRole::Owner,
         };
         configure(&mut config);
 

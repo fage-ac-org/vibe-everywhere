@@ -96,8 +96,7 @@ const en = {
     tabs: {
       conversation: "Conversation",
       changes: "Changes",
-      files: "Files",
-      logs: "Logs"
+      files: "Files"
     },
     metrics: {
       topics: "Topics {count}",
@@ -168,7 +167,6 @@ const en = {
     retryTask: "Retry",
     explainResult: "Explain result",
     viewChanges: "View changes",
-    viewLogs: "View logs",
     replyPlaceholder: "Type a reply",
     sendCustomReply: "Send custom reply",
     optionalModel: "Optional model",
@@ -226,19 +224,6 @@ const en = {
     truncated: "truncated preview",
     empty: "Pick a file to preview it here."
   },
-  logs: {
-    empty: "No runtime logs are available yet.",
-    errorSummaryTitle: "Error summary",
-    errorSummaryBody: "Recent failed or stderr-heavy runs are grouped here first.",
-    errorFallback: "This task failed without a structured error message.",
-    noFilteredEvents: "No log events match the current filter for this task.",
-    filters: {
-      all: "All",
-      errors: "Errors",
-      tools: "Tools",
-      provider: "Provider"
-    }
-  }
 };
 
 export default en;

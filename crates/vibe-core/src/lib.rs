@@ -117,7 +117,6 @@ pub enum DeviceCapability {
     FileSync,
     WorkspaceBrowse,
     GitInspect,
-    Notifications,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -1338,13 +1337,6 @@ pub struct CompleteGitOperationRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum DeploymentMode {
-    SelfHosted,
-    HostedCompatible,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
 pub enum AuthMode {
     Disabled,
     AccessToken,
@@ -1357,40 +1349,6 @@ pub enum StorageKind {
     File,
     Memory,
     External,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum NotificationChannel {
-    InApp,
-    System,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ControlClientKind {
-    Web,
-    TauriDesktop,
-    Android,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct PlatformCapability {
-    pub client: ControlClientKind,
-    pub mobile_optimized: bool,
-    pub supports_system_notifications: bool,
-    pub supports_persisted_runtime_config: bool,
-    pub prefers_explicit_remote_relay_url: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct DeploymentMetadata {
-    pub mode: DeploymentMode,
-    pub display_name: String,
-    pub relay_public_origin: String,
-    pub documentation_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -1446,10 +1404,6 @@ pub struct AppConfig {
     pub requires_auth: bool,
     pub auth_mode: AuthMode,
     pub storage_kind: StorageKind,
-    pub deployment: DeploymentMetadata,
-    pub current_actor: ActorIdentity,
-    pub notification_channels: Vec<NotificationChannel>,
-    pub platform_matrix: Vec<PlatformCapability>,
     pub supported_targets: Vec<String>,
     pub control_clients: Vec<String>,
     pub feature_flags: Vec<String>,
@@ -1486,9 +1440,7 @@ pub struct RelayEventEnvelope {
 pub fn default_app_config(
     default_relay_base_url: impl Into<String>,
     requires_auth: bool,
-    deployment: DeploymentMetadata,
     storage_kind: StorageKind,
-    current_actor: ActorIdentity,
 ) -> AppConfig {
     AppConfig {
         app_name: "Vibe Everywhere".to_string(),
@@ -1500,32 +1452,6 @@ pub fn default_app_config(
             AuthMode::Disabled
         },
         storage_kind,
-        deployment,
-        current_actor,
-        notification_channels: vec![NotificationChannel::InApp, NotificationChannel::System],
-        platform_matrix: vec![
-            PlatformCapability {
-                client: ControlClientKind::Web,
-                mobile_optimized: false,
-                supports_system_notifications: true,
-                supports_persisted_runtime_config: true,
-                prefers_explicit_remote_relay_url: false,
-            },
-            PlatformCapability {
-                client: ControlClientKind::TauriDesktop,
-                mobile_optimized: false,
-                supports_system_notifications: true,
-                supports_persisted_runtime_config: true,
-                prefers_explicit_remote_relay_url: false,
-            },
-            PlatformCapability {
-                client: ControlClientKind::Android,
-                mobile_optimized: true,
-                supports_system_notifications: true,
-                supports_persisted_runtime_config: true,
-                prefers_explicit_remote_relay_url: true,
-            },
-        ],
         supported_targets: vec![
             "Windows".to_string(),
             "macOS".to_string(),

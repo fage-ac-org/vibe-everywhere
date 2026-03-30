@@ -17,7 +17,7 @@ import type {
   WorkspaceFilePreviewResponse
 } from "@/types";
 
-export type ProjectTab = "conversation" | "changes" | "files" | "logs";
+export type ProjectTab = "conversation" | "changes" | "files";
 
 export function useProjectWorkspace(
   deviceIdSource: MaybeRefOrGetter<string>,
@@ -60,6 +60,10 @@ export function useProjectWorkspace(
   async function refreshProject() {
     isLoading.value = true;
     errorMessage.value = "";
+    console.info("[vibe-app] project refresh start", {
+      deviceId: deviceId.value,
+      cwd: cwd.value
+    });
 
     try {
       await store.refreshAll();
@@ -101,8 +105,16 @@ export function useProjectWorkspace(
         },
         store.relayAccessToken
       );
+      console.info("[vibe-app] project refresh success", {
+        deviceId: deviceId.value,
+        cwd: cwd.value,
+        conversations: conversations.value.length,
+        changedFiles: gitInspect.value?.changedFiles.length ?? 0,
+        entries: workspace.value?.entries.length ?? 0
+      });
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : String(error);
+      console.error("[vibe-app] project refresh failed", error);
     } finally {
       isLoading.value = false;
     }

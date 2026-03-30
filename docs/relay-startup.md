@@ -149,15 +149,10 @@ Start-ScheduledTask -TaskName VibeRelay
 | `VIBE_RELAY_FORWARD_PORT_START` | `39000` | No | Start of the relay-managed forwarding port range |
 | `VIBE_RELAY_FORWARD_PORT_END` | `39999` | No | End of the relay-managed forwarding port range |
 
-## Identity And Default Actor Variables
+## Identity Baseline
 
-These values are usually left at defaults in single-tenant self-hosted deployments:
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `VIBE_DEFAULT_TENANT_ID` | repository default tenant ID | Default tenant identifier used by relay-owned records |
-| `VIBE_DEFAULT_USER_ID` | repository default user ID | Default user identifier used by relay-owned records |
-| `VIBE_DEFAULT_USER_ROLE` | `owner` | Default role exposed for the relay default actor |
+The current release no longer exposes multi-tenant, default-user, or default-role relay settings.
+The relay now runs with a fixed single-user self-hosted baseline.
 
 ## Overlay And EasyTier Variables
 

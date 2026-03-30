@@ -13,11 +13,8 @@ export type TaskStatus =
   | "succeeded"
   | "failed"
   | "canceled";
-export type UserRole = "owner" | "admin" | "member" | "viewer" | "agent";
 export type AuthMode = "disabled" | "access_token";
 export type StorageKind = "file" | "memory" | "external";
-export type DeploymentMode = "self_hosted" | "hosted_compatible";
-export type ControlClientKind = "web" | "tauri_desktop" | "android";
 
 export type TaskEventKind =
   | "system"
@@ -39,8 +36,6 @@ export type ProviderStatus = {
 };
 
 export type DeviceRecord = {
-  tenantId: string;
-  userId: string;
   id: string;
   name: string;
   platform: string;
@@ -53,8 +48,6 @@ export type DeviceRecord = {
 };
 
 export type TaskRecord = {
-  tenantId: string;
-  userId: string;
   id: string;
   deviceId: string;
   conversationId: string | null;
@@ -93,8 +86,6 @@ export type TaskDetailResponse = {
 };
 
 export type ConversationRecord = {
-  tenantId: string;
-  userId: string;
   id: string;
   deviceId: string;
   title: string;
@@ -281,36 +272,12 @@ export type ServiceHealth = {
   taskCount: number;
 };
 
-export type ActorIdentity = {
-  tenantId: string;
-  userId: string;
-  role: UserRole;
-};
-
-export type PlatformCapability = {
-  client: ControlClientKind;
-  mobileOptimized: boolean;
-  supportsSystemNotifications: boolean;
-  supportsPersistedRuntimeConfig: boolean;
-  prefersExplicitRemoteRelayUrl: boolean;
-};
-
-export type DeploymentMetadata = {
-  mode: DeploymentMode;
-  displayName: string;
-  relayPublicOrigin: string;
-  documentationUrl: string | null;
-};
-
 export type AppConfig = {
   appName: string;
   defaultRelayBaseUrl: string;
   requiresAuth: boolean;
   authMode: AuthMode;
   storageKind: StorageKind;
-  deployment: DeploymentMetadata;
-  currentActor: ActorIdentity;
-  platformMatrix: PlatformCapability[];
   supportedTargets: string[];
   controlClients: string[];
   featureFlags: string[];

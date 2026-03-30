@@ -147,15 +147,9 @@ Start-ScheduledTask -TaskName VibeRelay
 | `VIBE_RELAY_FORWARD_PORT_START` | `39000` | 否 | relay 预览和转发端口范围起始值 |
 | `VIBE_RELAY_FORWARD_PORT_END` | `39999` | 否 | relay 预览和转发端口范围结束值 |
 
-## 默认身份相关变量
+## 默认身份基线
 
-下列变量通常仅在高级或多租户场景下使用：
-
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `VIBE_DEFAULT_TENANT_ID` | 仓库默认 tenant ID | relay 默认租户标识 |
-| `VIBE_DEFAULT_USER_ID` | 仓库默认 user ID | relay 默认用户标识 |
-| `VIBE_DEFAULT_USER_ROLE` | `owner` | relay 默认角色 |
+当前版本不再公开多租户、默认用户或默认角色配置。relay 以单用户、自建控制面的固定默认身份运行。
 
 ## Overlay 与 EasyTier 变量
 

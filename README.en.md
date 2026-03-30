@@ -9,7 +9,7 @@
 Vibe Everywhere is a self-hosted remote AI development workspace. The system consists of
 `vibe-relay`, `vibe-agent`, and control clients, and is centered on one stable product model:
 `Server -> Host -> Project -> Conversation / Task execution`. The main project workspace is limited
-to `Conversation / Changes / Files / Logs`.
+to `Conversation / Changes / Files`.
 
 This document is written for end users and operators. It provides a system overview, binary
 installation entry points, relay startup references, key configuration semantics, and the standard
@@ -24,7 +24,7 @@ The standard workflow is:
 3. Connect a desktop, Android, or self-hosted Web client to the relay.
 4. Select an online host and open one of its projects.
 5. Continue an existing conversation or start a new AI task inside that project.
-6. Review conversation output, changes, files, and logs from the same project workspace.
+6. Review conversation output, changes, and files from the same project workspace.
 
 ## Components
 
@@ -39,7 +39,7 @@ The standard workflow is:
 The current release supports:
 
 - the mobile-first navigation: `Home / Projects / My`
-- a project workspace with `Conversation / Changes / Files / Logs`
+- a project workspace with `Conversation / Changes / Files`
 - host project discovery from the agent working root and first-level Git repositories
 - creation, continuation, and basic event viewing for long-lived AI conversations
 - device registration, presence reporting, and provider availability display
@@ -50,7 +50,7 @@ The current release supports:
 - per-task conversation summaries with recent execution events and expandable raw output
 - direct stop action for pending or running tasks inside the conversation surface
 - quick follow-up actions on task cards for retry, result explanation, and direct jumps into
-  changes or logs
+  changes
 - per-task execution mode selection: read-only / workspace write / write + test
 - inline provider choice prompts with preset options plus custom text input
 - English and Simplified Chinese UI

@@ -7,7 +7,6 @@ import { formatRelativeTime } from "@/lib/format";
 import ProjectChangesPanel from "@/features/project/ProjectChangesPanel.vue";
 import ProjectConversationPanel from "@/features/project/ProjectConversationPanel.vue";
 import ProjectFilesPanel from "@/features/project/ProjectFilesPanel.vue";
-import ProjectLogsPanel from "@/features/project/ProjectLogsPanel.vue";
 import { useProjectWorkspace, type ProjectTab } from "@/features/project/useProjectWorkspace";
 import { useAppStore } from "@/stores/app";
 
@@ -34,8 +33,7 @@ const {
 const tabs: { id: ProjectTab; key: string }[] = [
   { id: "conversation", key: "workspace.tabs.conversation" },
   { id: "changes", key: "workspace.tabs.changes" },
-  { id: "files", key: "workspace.tabs.files" },
-  { id: "logs", key: "workspace.tabs.logs" }
+  { id: "files", key: "workspace.tabs.files" }
 ];
 
 const projectAvailabilityTone = computed(() => {
@@ -206,12 +204,10 @@ watch(
     />
 
     <ProjectFilesPanel
-      v-else-if="activeTab === 'files'"
+      v-else
       :workspace="workspaceBrowse"
       :file-preview="filePreview"
       @open-entry="workspace.openEntry"
     />
-
-    <ProjectLogsPanel v-else :detail="conversationDetail" />
   </section>
 </template>

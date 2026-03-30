@@ -26,7 +26,7 @@ const emit = defineEmits<{
   sendPrompt: [prompt: string, model?: string, executionMode?: TaskExecutionMode];
   respondInput: [optionId?: string, text?: string];
   cancelTask: [taskId: string];
-  openTab: [tab: "changes" | "logs"];
+  openTab: [tab: "changes"];
 }>();
 
 const { t } = useI18n();
@@ -165,10 +165,6 @@ function canOpenChanges(status: TaskStatus) {
   return status === "succeeded";
 }
 
-function canOpenLogs(status: TaskStatus) {
-  return status === "failed" || status === "succeeded" || status === "canceled";
-}
-
 function buildRetryPrompt(turn: (typeof turnCards.value)[number]) {
   return [
     "Retry the previous request in this project.",
@@ -285,13 +281,6 @@ function buildExplainPrompt(turn: (typeof turnCards.value)[number]) {
                   @click="emit('openTab', 'changes')"
                 >
                   {{ t("conversation.viewChanges") }}
-                </button>
-                <button
-                  v-if="canOpenLogs(turn.task.status)"
-                  class="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
-                  @click="emit('openTab', 'logs')"
-                >
-                  {{ t("conversation.viewLogs") }}
                 </button>
               </div>
 

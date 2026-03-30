@@ -132,7 +132,7 @@ export const useAppStore = defineStore("app", {
       return Boolean(state.relayBaseUrl.trim());
     },
     activeServerLabel(state) {
-      return state.appConfig?.deployment.displayName ?? "Current server";
+      return state.appConfig?.appName ?? "Current server";
     },
     onlineHostCount(state) {
       return state.devices.filter((device) => device.online).length;
@@ -211,6 +211,7 @@ export const useAppStore = defineStore("app", {
   },
   actions: {
     async bootstrap() {
+      console.info("[vibe-app] bootstrap start");
       this.isBootstrapping = true;
       this.recentProjectKeys = loadRecentProjectKeys();
       this.defaultExecutionMode = loadDefaultExecutionMode();
@@ -222,10 +223,15 @@ export const useAppStore = defineStore("app", {
       await this.refreshAll(true);
       this.startAutoRefresh();
       this.isBootstrapping = false;
+      console.info("[vibe-app] bootstrap complete");
     },
     async saveRelaySettings() {
       this.relayBaseUrl = normalizeRelayBaseUrl(this.relayBaseUrlInput);
       this.relayAccessToken = this.relayAccessTokenInput.trim();
+      console.info("[vibe-app] save relay settings", {
+        relayBaseUrl: this.relayBaseUrl,
+        hasAccessToken: Boolean(this.relayAccessToken)
+      });
       persistRelayBaseUrl(this.relayBaseUrl);
       persistRelayAccessToken(this.relayAccessToken);
       await this.refreshAll(true);
@@ -243,6 +249,10 @@ export const useAppStore = defineStore("app", {
 
       this.isRefreshing = true;
       this.errorMessage = "";
+      console.info("[vibe-app] refresh start", {
+        relayBaseUrl: this.relayBaseUrl,
+        forceProjectDiscovery
+      });
 
       try {
         const [health, appConfig, devices, conversations, tasks] = await Promise.all([
@@ -260,8 +270,15 @@ export const useAppStore = defineStore("app", {
         this.tasks = tasks;
         await this.refreshProjectInventory(forceProjectDiscovery);
         this.lastRefreshEpochMs = Date.now();
+        console.info("[vibe-app] refresh success", {
+          devices: this.devices.length,
+          conversations: this.conversations.length,
+          tasks: this.tasks.length,
+          projects: this.discoveredProjects.length
+        });
       } catch (error) {
         this.errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[vibe-app] refresh failed", error);
       } finally {
         this.isRefreshing = false;
       }

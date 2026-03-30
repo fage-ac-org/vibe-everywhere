@@ -96,8 +96,7 @@ const zhCN = {
     tabs: {
       conversation: "会话",
       changes: "变更",
-      files: "文件",
-      logs: "日志"
+      files: "文件"
     },
     metrics: {
       topics: "话题 {count}",
@@ -168,7 +167,6 @@ const zhCN = {
     retryTask: "重试",
     explainResult: "解释结果",
     viewChanges: "查看变更",
-    viewLogs: "查看日志",
     replyPlaceholder: "输入回复内容",
     sendCustomReply: "发送自定义回复",
     optionalModel: "可选模型",
@@ -226,19 +224,6 @@ const zhCN = {
     truncated: "预览已截断",
     empty: "选择一个文件后会在这里预览。"
   },
-  logs: {
-    empty: "当前还没有运行日志。",
-    errorSummaryTitle: "错误摘要",
-    errorSummaryBody: "最近失败或 stderr 较多的运行会优先汇总在这里。",
-    errorFallback: "这个任务失败了，但没有结构化错误消息。",
-    noFilteredEvents: "当前筛选条件下，这个任务没有匹配的日志事件。",
-    filters: {
-      all: "全部",
-      errors: "错误",
-      tools: "工具",
-      provider: "Provider"
-    }
-  }
 };
 
 export default zhCN;

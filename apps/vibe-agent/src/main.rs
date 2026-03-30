@@ -84,12 +84,6 @@ struct Cli {
     #[arg(long, env = "VIBE_DEVICE_ID")]
     device_id: Option<String>,
 
-    #[arg(long, env = "VIBE_TENANT_ID", default_value = DEFAULT_TENANT_ID)]
-    tenant_id: String,
-
-    #[arg(long, env = "VIBE_USER_ID", default_value = DEFAULT_USER_ID)]
-    user_id: String,
-
     #[arg(long, env = "VIBE_WORKING_ROOT", default_value = ".")]
     working_root: PathBuf,
 
@@ -125,8 +119,6 @@ struct SharedState {
 
 #[derive(Clone)]
 struct AgentProfile {
-    tenant_id: String,
-    user_id: String,
     device_id: String,
     device_name: String,
     platform: DevicePlatform,
@@ -259,6 +251,11 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let relay_url = resolve_relay_url(cli.relay_url.as_deref(), cfg!(debug_assertions))?;
     let working_root = resolve_working_root(&cli.working_root)?;
+    println!(
+        "[agent] starting with relay {} and working root {}",
+        relay_url,
+        working_root.display()
+    );
     let identity_path = default_agent_identity_path(&working_root);
     let identity_state = load_agent_identity_state(&identity_path)?;
     let initial_device_id = cli
@@ -275,8 +272,6 @@ async fn main() -> Result<()> {
         .or_else(|| trim_optional_token(cli.relay_access_token_compat.as_deref()));
     let auth = AgentAuthState::new(enrollment_token, identity_path, initial_device_credential);
     let mut profile = AgentProfile {
-        tenant_id: cli.tenant_id.clone(),
-        user_id: cli.user_id.clone(),
         device_id: initial_device_id,
         device_name: cli.device_name.clone().unwrap_or_else(default_device_name),
         platform: DevicePlatform::current(),
@@ -494,6 +489,11 @@ async fn register_device(
         .await
         .context("failed to decode register response")?;
 
+    println!(
+        "[agent] registered device {} ({})",
+        response.device.id, response.device.name
+    );
+
     Ok(response)
 }
 
@@ -502,8 +502,8 @@ async fn build_register_device_request(
     shared: &SharedState,
 ) -> RegisterDeviceRequest {
     RegisterDeviceRequest {
-        tenant_id: profile.tenant_id.clone(),
-        user_id: profile.user_id.clone(),
+        tenant_id: DEFAULT_TENANT_ID.to_string(),
+        user_id: DEFAULT_USER_ID.to_string(),
         id: profile.device_id.clone(),
         name: profile.device_name.clone(),
         platform: profile.platform.clone(),
@@ -747,8 +747,6 @@ mod tests {
             overlay: Arc::new(RwLock::new(OverlayNetworkStatus::default())),
         };
         let profile = AgentProfile {
-            tenant_id: "team-a".to_string(),
-            user_id: "agent-1".to_string(),
             device_id: "device-1".to_string(),
             device_name: "Workstation".to_string(),
             platform: DevicePlatform::Linux,
@@ -757,8 +755,8 @@ mod tests {
 
         let request = build_register_device_request(&profile, &shared).await;
 
-        assert_eq!(request.tenant_id, "team-a");
-        assert_eq!(request.user_id, "agent-1");
+        assert_eq!(request.tenant_id, DEFAULT_TENANT_ID);
+        assert_eq!(request.user_id, DEFAULT_USER_ID);
         assert_eq!(request.id, "device-1");
         assert_eq!(request.name, "Workstation");
         assert_eq!(request.platform, DevicePlatform::Linux);
