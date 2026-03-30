@@ -12,7 +12,7 @@ pub(crate) fn build_provider_command(
     task: &TaskRecord,
     cwd: &Path,
 ) -> Result<Command> {
-    let mut command = Command::new(&provider.command);
+    let mut command = provider_command(&provider.command);
     let prompt = render_task_prompt(task);
 
     match task.provider {
@@ -79,6 +79,35 @@ pub(crate) fn build_provider_command(
     }
 
     Ok(command)
+}
+
+fn provider_command(command: &str) -> Command {
+    if windows_batch_script_requires_cmd(Path::new(command), cfg!(windows)) {
+        let mut wrapped = Command::new("cmd.exe");
+        wrapped.arg("/C").arg(command);
+        wrapped
+    } else {
+        Command::new(command)
+    }
+}
+
+fn std_provider_command(command: &Path) -> std::process::Command {
+    if windows_batch_script_requires_cmd(command, cfg!(windows)) {
+        let mut wrapped = std::process::Command::new("cmd.exe");
+        wrapped.arg("/C").arg(command);
+        wrapped
+    } else {
+        std::process::Command::new(command)
+    }
+}
+
+fn windows_batch_script_requires_cmd(path: &Path, is_windows: bool) -> bool {
+    is_windows
+        && path
+            .extension()
+            .and_then(|value| value.to_str())
+            .map(|value| matches!(value.to_ascii_lowercase().as_str(), "cmd" | "bat"))
+            .unwrap_or(false)
 }
 
 fn codex_sandbox_mode(execution_mode: TaskExecutionMode) -> &'static str {
@@ -419,7 +448,7 @@ fn detect_provider(
 
     match which::which(&command) {
         Ok(path) => {
-            let version = std::process::Command::new(&path)
+            let version = std_provider_command(&path)
                 .arg("--version")
                 .output()
                 .ok()
@@ -1318,5 +1347,48 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert!(!args.windows(2).any(|pair| pair[0] == "--disallowedTools"));
+    }
+
+    #[test]
+    fn windows_batch_scripts_require_cmd_wrapper() {
+        assert!(windows_batch_script_requires_cmd(
+            Path::new(r"C:\tmp\fake-codex.cmd"),
+            true,
+        ));
+        assert!(windows_batch_script_requires_cmd(
+            Path::new(r"C:\tmp\fake-codex.BAT"),
+            true,
+        ));
+    }
+
+    #[test]
+    fn non_batch_scripts_do_not_require_cmd_wrapper() {
+        assert!(!windows_batch_script_requires_cmd(
+            Path::new(r"C:\tmp\codex.exe"),
+            true,
+        ));
+        assert!(!windows_batch_script_requires_cmd(
+            Path::new(r"C:\tmp\fake-codex.cmd"),
+            false,
+        ));
+    }
+
+    #[test]
+    fn windows_batch_provider_command_invokes_cmd_exe() {
+        let command = provider_command(r"C:\tmp\fake-codex.cmd");
+        let program = command.as_std().get_program().to_string_lossy().to_string();
+        let args = command
+            .as_std()
+            .get_args()
+            .map(|value| value.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        if cfg!(windows) {
+            assert_eq!(program, "cmd.exe");
+            assert_eq!(args[..2], ["/C", r"C:\tmp\fake-codex.cmd"]);
+        } else {
+            assert_eq!(program, r"C:\tmp\fake-codex.cmd");
+            assert!(args.is_empty());
+        }
     }
 }
