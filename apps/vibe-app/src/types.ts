@@ -132,6 +132,12 @@ export type ConversationDetailResponse = {
   pendingInputRequest: ConversationInputRequest | null;
 };
 
+export type ConversationPanelDetail = {
+  conversation: ConversationRecord | null;
+  tasks: TaskDetailResponse[];
+  pendingInputRequest: ConversationInputRequest | null;
+};
+
 export type WorkspaceEntryKind = "directory" | "file";
 
 export type WorkspaceEntry = {

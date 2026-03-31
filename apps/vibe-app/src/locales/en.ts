@@ -214,6 +214,7 @@ const en = {
     },
     eventStreamTitle: "Recent execution events",
     rawEventsTitle: "Detailed event output",
+    assistantPlaceholder: "AI is thinking and working",
     waitingInput: "Waiting input",
     stopTask: "Stop task",
     retryTask: "Retry",

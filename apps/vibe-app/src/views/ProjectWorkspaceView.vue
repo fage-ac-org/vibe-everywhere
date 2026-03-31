@@ -338,7 +338,7 @@ watch([activeConversationId, activeTab], () => {
             >
               {{ t(tab.key) }}
             </button>
-            <button class="rounded-full border border-border px-4 py-2 text-sm" @click="workspace.refreshProject">
+            <button class="rounded-full border border-border px-4 py-2 text-sm" @click="() => workspace.refreshProject()">
               {{ t("common.refresh") }}
             </button>
           </div>
@@ -367,6 +367,7 @@ watch([activeConversationId, activeTab], () => {
         :project-providers="project?.providers"
         :project-title="project?.title"
         :is-draft-conversation="isDraftConversation"
+        :is-restoring-conversation="workspace.isRestoringConversation.value"
         @send-prompt="workspace.sendFollowUp"
         @respond-input="workspace.respondToInput"
         @cancel-task="workspace.cancelTask"

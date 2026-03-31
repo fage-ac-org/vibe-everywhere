@@ -5,6 +5,15 @@ import {
   inspectGitWorkspace,
   previewWorkspaceFile
 } from "@/lib/api";
+import {
+  buildOptimisticTaskDetail,
+  createOptimisticTaskRecord,
+  createPanelDetailFromConversation,
+  markOptimisticTaskFailed,
+  mergeConversationPanelDetail,
+  pruneResolvedOptimisticTasks,
+  replaceOptimisticTask
+} from "@/lib/conversationPanelState";
 import { shouldRefreshConversationDetail } from "@/lib/conversationRealtime";
 import { preferredProjectProvider } from "@/lib/policy";
 import { parseProjectRouteParam } from "@/lib/projects";
@@ -12,10 +21,13 @@ import { buildEventStreamUrl } from "@/lib/runtime";
 import { useAppStore } from "@/stores/app";
 import type {
   ConversationDetailResponse,
+  ConversationPanelDetail,
+  ConversationRecord,
   GitDiffFileResponse,
   GitInspectResponse,
   ProviderKind,
   RelayEventEnvelope,
+  TaskDetailResponse,
   TaskExecutionMode,
   WorkspaceBrowseResponse,
   WorkspaceFilePreviewResponse
@@ -42,7 +54,7 @@ export function useProjectWorkspace(
     enabled.value ? store.listProjectTasks(deviceId.value, cwd.value, provider.value) : []
   );
   const activeConversationId = ref<string | null>(null);
-  const conversationDetail = ref<ConversationDetailResponse | null>(null);
+  const serverConversationDetail = ref<ConversationDetailResponse | null>(null);
   const gitInspect = ref<GitInspectResponse | null>(null);
   const gitDiff = ref<GitDiffFileResponse | null>(null);
   const activeDiffRepoPath = ref<string | null>(null);
@@ -52,21 +64,36 @@ export function useProjectWorkspace(
   const activeTab = ref<ProjectTab>("conversation");
   const isDraftConversation = ref(false);
   const isLoading = ref(false);
+  const isRestoringConversation = ref(false);
   const errorMessage = ref("");
+  const draftConversation = ref<ConversationRecord | null>(null);
+  const optimisticTasksByConversation = ref<Record<string, TaskDetailResponse[]>>({});
   let activeEventSource: EventSource | null = null;
   let realtimeRefreshTimer: number | null = null;
+  let conversationLoadVersion = 0;
+
+  const currentConversationKey = computed(() => activeConversationId.value ?? "__draft__");
+  const conversationDetail = computed<ConversationPanelDetail | null>(() => {
+    const optimisticTasks = optimisticTasksByConversation.value[currentConversationKey.value] ?? [];
+    const baseDetail = activeConversationId.value
+      ? serverConversationDetail.value
+      : isDraftConversation.value
+        ? createPanelDetailFromConversation(draftConversation.value, [])
+        : null;
+    return mergeConversationPanelDetail(baseDetail, optimisticTasks);
+  });
 
   watch(
     conversations,
     (value) => {
       if (isDraftConversation.value) {
-        conversationDetail.value = null;
+        serverConversationDetail.value = null;
         return;
       }
 
       if (!value.length) {
         activeConversationId.value = null;
-        conversationDetail.value = null;
+        serverConversationDetail.value = null;
         return;
       }
 
@@ -77,9 +104,106 @@ export function useProjectWorkspace(
     { immediate: true }
   );
 
-  async function refreshProject() {
+  function updateOptimisticTasks(
+    conversationKey: string,
+    updater: (tasks: TaskDetailResponse[]) => TaskDetailResponse[]
+  ) {
+    const currentTasks = optimisticTasksByConversation.value[conversationKey] ?? [];
+    optimisticTasksByConversation.value = {
+      ...optimisticTasksByConversation.value,
+      [conversationKey]: updater(currentTasks)
+    };
+  }
+
+  function moveOptimisticTasks(fromKey: string, toKey: string) {
+    const existing = optimisticTasksByConversation.value[fromKey] ?? [];
+    const nextState = { ...optimisticTasksByConversation.value };
+    delete nextState[fromKey];
+    nextState[toKey] = [...(nextState[toKey] ?? []), ...existing];
+    optimisticTasksByConversation.value = nextState;
+  }
+
+  function addOptimisticTask(
+    conversationKey: string,
+    prompt: string,
+    model: string | undefined,
+    executionMode: TaskExecutionMode | undefined
+  ) {
+    const preferredProvider = provider.value ?? preferredProjectProvider(project.value?.providers);
+    const executionProtocol =
+      store.devices
+        .find((entry) => entry.id === deviceId.value)
+        ?.providers.find((entry) => entry.kind === preferredProvider)
+        ?.executionProtocol ?? "acp";
+    const optimisticTask = buildOptimisticTaskDetail(
+      createOptimisticTaskRecord(
+        prompt,
+        deviceId.value,
+        preferredProvider,
+        executionProtocol,
+        executionMode ?? store.defaultExecutionMode,
+        cwd.value,
+        model ?? null,
+        activeConversationId.value
+      )
+    );
+    updateOptimisticTasks(conversationKey, (tasks) => [...tasks, optimisticTask]);
+    return optimisticTask.task.id;
+  }
+
+  function clearConversationState() {
+    serverConversationDetail.value = null;
+    draftConversation.value = null;
+  }
+
+  function clearDraftOptimisticTasks() {
+    if (!optimisticTasksByConversation.value.__draft__) {
+      return;
+    }
+    const nextState = { ...optimisticTasksByConversation.value };
+    delete nextState.__draft__;
+    optimisticTasksByConversation.value = nextState;
+  }
+
+  async function loadPanels() {
+    gitInspect.value = await inspectGitWorkspace(
+      store.relayBaseUrl,
+      {
+        deviceId: deviceId.value,
+        sessionCwd: cwd.value ?? undefined
+      },
+      store.relayAccessToken
+    );
+    if (gitInspect.value?.changedFiles.length) {
+      const selectedRepoPath = gitInspect.value.changedFiles.some(
+        (file) => file.repoPath === activeDiffRepoPath.value
+      )
+        ? activeDiffRepoPath.value
+        : gitInspect.value.changedFiles[0]?.repoPath;
+      if (selectedRepoPath) {
+        await selectChangeFile(selectedRepoPath);
+      }
+    } else {
+      activeDiffRepoPath.value = null;
+      gitDiff.value = null;
+    }
+
+    workspace.value = await browseWorkspace(
+      store.relayBaseUrl,
+      {
+        deviceId: deviceId.value,
+        sessionCwd: cwd.value ?? undefined,
+        path: browserPath.value || undefined
+      },
+      store.relayAccessToken
+    );
+  }
+
+  async function refreshProject(options?: { includePanels?: boolean; refreshStore?: boolean }) {
+    const includePanels = options?.includePanels ?? true;
+    const refreshStore = options?.refreshStore ?? true;
     if (!enabled.value || !deviceId.value || !cwd.value) {
-      conversationDetail.value = null;
+      clearConversationState();
       gitInspect.value = null;
       gitDiff.value = null;
       activeDiffRepoPath.value = null;
@@ -97,45 +221,19 @@ export function useProjectWorkspace(
     });
 
     try {
-      await store.refreshAll();
+      if (refreshStore) {
+        await store.refreshAll();
+      }
 
       if (activeConversationId.value) {
         await loadConversationContext(activeConversationId.value);
       } else {
-        conversationDetail.value = null;
+        clearConversationState();
       }
 
-      gitInspect.value = await inspectGitWorkspace(
-        store.relayBaseUrl,
-        {
-          deviceId: deviceId.value,
-          sessionCwd: cwd.value ?? undefined
-        },
-        store.relayAccessToken
-      );
-      if (gitInspect.value?.changedFiles.length) {
-        const selectedRepoPath = gitInspect.value.changedFiles.some(
-          (file) => file.repoPath === activeDiffRepoPath.value
-        )
-          ? activeDiffRepoPath.value
-          : gitInspect.value.changedFiles[0]?.repoPath;
-        if (selectedRepoPath) {
-          await selectChangeFile(selectedRepoPath);
-        }
-      } else {
-        activeDiffRepoPath.value = null;
-        gitDiff.value = null;
+      if (includePanels) {
+        await loadPanels();
       }
-
-      workspace.value = await browseWorkspace(
-        store.relayBaseUrl,
-        {
-          deviceId: deviceId.value,
-          sessionCwd: cwd.value ?? undefined,
-          path: browserPath.value || undefined
-        },
-        store.relayAccessToken
-      );
       console.info("[vibe-app] project refresh success", {
         deviceId: deviceId.value,
         cwd: cwd.value,
@@ -153,12 +251,33 @@ export function useProjectWorkspace(
 
   async function selectConversation(conversationId: string) {
     isDraftConversation.value = false;
+    serverConversationDetail.value = null;
     activeConversationId.value = conversationId;
-    await loadConversationContext(conversationId);
   }
 
   async function loadConversationContext(conversationId: string) {
-    conversationDetail.value = await store.loadConversation(conversationId);
+    const loadVersion = ++conversationLoadVersion;
+    isRestoringConversation.value = true;
+
+    try {
+      const detail = await store.loadConversation(conversationId);
+      if (loadVersion !== conversationLoadVersion || activeConversationId.value !== conversationId) {
+        return;
+      }
+
+      serverConversationDetail.value = detail;
+      errorMessage.value = "";
+      updateOptimisticTasks(conversationId, (tasks) => pruneResolvedOptimisticTasks(tasks, detail));
+    } catch (error) {
+      if (loadVersion !== conversationLoadVersion || activeConversationId.value !== conversationId) {
+        return;
+      }
+      errorMessage.value = error instanceof Error ? error.message : String(error);
+    } finally {
+      if (loadVersion === conversationLoadVersion && activeConversationId.value === conversationId) {
+        isRestoringConversation.value = false;
+      }
+    }
   }
 
   function disposeRealtimeUpdates() {
@@ -191,7 +310,7 @@ export function useProjectWorkspace(
     }
 
     store.applyRelayEvent(event);
-    if (!shouldRefreshConversationDetail(event, conversationId, conversationDetail.value)) {
+    if (!shouldRefreshConversationDetail(event, conversationId, serverConversationDetail.value)) {
       return;
     }
 
@@ -224,7 +343,8 @@ export function useProjectWorkspace(
   function startNewConversation() {
     isDraftConversation.value = true;
     activeConversationId.value = null;
-    conversationDetail.value = null;
+    clearConversationState();
+    clearDraftOptimisticTasks();
     activeTab.value = "conversation";
   }
 
@@ -268,20 +388,34 @@ export function useProjectWorkspace(
   }
 
   async function createTopic(prompt: string, model?: string, executionMode?: TaskExecutionMode) {
+    const optimisticTaskId = addOptimisticTask("__draft__", prompt, model, executionMode);
     const preferredProvider = preferredProjectProvider(project.value?.providers);
-    const response = await store.createProjectConversation({
-      deviceId: deviceId.value,
-      provider: provider.value ?? preferredProvider,
-      executionMode,
-      prompt,
-      cwd: cwd.value ?? undefined,
-      model: model || undefined,
-      title: prompt.slice(0, 60)
-    });
-    isDraftConversation.value = false;
-    activeConversationId.value = response.conversation.id;
-    store.markProjectVisited(deviceId.value, cwd.value);
-    await refreshProject();
+    draftConversation.value = null;
+
+    try {
+      const response = await store.createProjectConversation({
+        deviceId: deviceId.value,
+        provider: provider.value ?? preferredProvider,
+        executionMode,
+        prompt,
+        cwd: cwd.value ?? undefined,
+        model: model || undefined,
+        title: prompt.slice(0, 60)
+      });
+      isDraftConversation.value = false;
+      draftConversation.value = response.conversation;
+      moveOptimisticTasks("__draft__", response.conversation.id);
+      updateOptimisticTasks(response.conversation.id, (tasks) =>
+        replaceOptimisticTask(tasks, optimisticTaskId, response.task)
+      );
+      activeConversationId.value = response.conversation.id;
+      store.markProjectVisited(deviceId.value, cwd.value);
+      void loadConversationContext(response.conversation.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      updateOptimisticTasks("__draft__", (tasks) => markOptimisticTaskFailed(tasks, optimisticTaskId, message));
+      throw error;
+    }
   }
 
   async function sendFollowUp(
@@ -295,12 +429,24 @@ export function useProjectWorkspace(
     }
 
     isDraftConversation.value = false;
-    await store.sendProjectMessage(activeConversationId.value, {
-      prompt,
-      executionMode,
-      model: model || undefined
-    });
-    await refreshProject();
+    const conversationId = activeConversationId.value;
+    const optimisticTaskId = addOptimisticTask(conversationId, prompt, model, executionMode);
+
+    try {
+      const response = await store.sendProjectMessage(conversationId, {
+        prompt,
+        executionMode,
+        model: model || undefined
+      });
+      updateOptimisticTasks(conversationId, (tasks) =>
+        replaceOptimisticTask(tasks, optimisticTaskId, response.task)
+      );
+      void loadConversationContext(conversationId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      updateOptimisticTasks(conversationId, (tasks) => markOptimisticTaskFailed(tasks, optimisticTaskId, message));
+      throw error;
+    }
   }
 
   async function respondToInput(optionId?: string, text?: string) {
@@ -310,20 +456,26 @@ export function useProjectWorkspace(
     }
 
     await store.respondToInput(request.taskId, request.id, optionId, text);
-    await refreshProject();
+    if (activeConversationId.value) {
+      await loadConversationContext(activeConversationId.value);
+    }
   }
 
   async function cancelTask(taskId: string) {
     await store.cancelProjectTask(taskId);
-    await refreshProject();
+    if (activeConversationId.value) {
+      await loadConversationContext(activeConversationId.value);
+    }
   }
 
   watch(activeConversationId, async (value) => {
     disposeRealtimeUpdates();
     if (!value) {
+      isRestoringConversation.value = false;
       return;
     }
 
+    serverConversationDetail.value = null;
     await loadConversationContext(value);
     connectRealtimeUpdates(value);
   }, { immediate: true });
@@ -341,13 +493,14 @@ export function useProjectWorkspace(
 
   watch(enabled, async (value) => {
     if (!value) {
-      conversationDetail.value = null;
+      clearConversationState();
       gitInspect.value = null;
       gitDiff.value = null;
       activeDiffRepoPath.value = null;
       workspace.value = null;
       filePreview.value = null;
       activeConversationId.value = null;
+      isRestoringConversation.value = false;
       disposeRealtimeUpdates();
       return;
     }
@@ -377,6 +530,7 @@ export function useProjectWorkspace(
     conversations,
     activeConversationId,
     isDraftConversation,
+    isRestoringConversation,
     conversationDetail,
     gitInspect,
     gitDiff,

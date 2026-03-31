@@ -7,19 +7,19 @@ import { buildTaskFailureSummary } from "@/lib/conversationRealtime";
 import { formatDateTime } from "@/lib/format";
 import { useAppStore } from "@/stores/app";
 import type {
-  ConversationDetailResponse,
+  ConversationPanelDetail,
   ProviderKind,
   TaskDetailResponse,
-  TaskEvent,
   TaskExecutionMode,
   TaskStatus
 } from "@/types";
 
 const props = defineProps<{
-  detail: ConversationDetailResponse | null;
+  detail: ConversationPanelDetail | null;
   projectProviders?: ProviderKind[];
   projectTitle?: string | null;
   isDraftConversation?: boolean;
+  isRestoringConversation?: boolean;
   selectedModel?: string;
   modelOptions?: { label: string; value: string }[];
   canCompose?: boolean;
@@ -98,7 +98,6 @@ const turnCards = computed(() =>
       .map((event) => event.message)
       .join("")
       .trim();
-    const nonAssistantEvents = taskDetail.events.filter((event) => event.kind !== "assistant_delta");
 
     return {
       id: taskDetail.task.id,
@@ -106,8 +105,6 @@ const turnCards = computed(() =>
       prompt: taskDetail.task.prompt,
       assistantText,
       summary: buildTurnSummary(taskDetail, assistantText),
-      eventSummary: buildEventSummary(nonAssistantEvents),
-      eventLines: nonAssistantEvents.slice(-6),
       stderrLines: taskDetail.events.filter((event) => event.kind === "provider_stderr"),
       rawLines: taskDetail.events
     };
@@ -158,19 +155,11 @@ function buildTurnSummary(taskDetail: TaskDetailResponse, assistantText: string)
   return t(`conversation.statusSummary.${taskDetail.task.status}`);
 }
 
-function buildEventSummary(events: TaskEvent[]) {
-  const toolCalls = events.filter((event) => event.kind === "tool_call").length;
-  const toolOutputs = events.filter((event) => event.kind === "tool_output").length;
-  const stderr = events.filter((event) => event.kind === "provider_stderr").length;
-  const status = events.filter((event) => event.kind === "status").length;
-  const parts = [
-    status ? t("conversation.eventSummary.status", { count: status }) : null,
-    toolCalls ? t("conversation.eventSummary.toolCalls", { count: toolCalls }) : null,
-    toolOutputs ? t("conversation.eventSummary.toolOutputs", { count: toolOutputs }) : null,
-    stderr ? t("conversation.eventSummary.errors", { count: stderr }) : null
-  ].filter((value): value is string => Boolean(value));
-
-  return parts.length ? parts.join(" · ") : t("conversation.eventSummary.idle");
+function showAssistantPlaceholder(turn: (typeof turnCards.value)[number]) {
+  return (
+    !turn.assistantText &&
+    (turn.task.status === "running" || turn.task.status === "assigned" || turn.task.status === "pending")
+  );
 }
 
 function taskTone(status: TaskStatus) {
@@ -265,7 +254,19 @@ async function copyTurn(turn: (typeof turnCards.value)[number]) {
     <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-6 pt-2">
       <div class="space-y-6">
         <article
-          v-if="!hasTurns"
+          v-if="isRestoringConversation && !hasTurns"
+          class="mx-auto max-w-3xl rounded-[2rem] border border-border/70 bg-background/80 px-6 py-8"
+        >
+          <div class="space-y-4">
+            <div class="h-4 w-40 animate-pulse rounded-full bg-muted" />
+            <div class="h-24 animate-pulse rounded-[1.5rem] bg-muted/70" />
+            <div class="ml-auto h-16 w-2/3 animate-pulse rounded-[1.5rem] bg-primary/12" />
+            <div class="h-28 animate-pulse rounded-[1.5rem] bg-muted/70" />
+          </div>
+        </article>
+
+        <article
+          v-else-if="!hasTurns"
           class="mx-auto max-w-2xl rounded-[2rem] border border-dashed border-border bg-background/70 px-6 py-10 text-center"
         >
           <p class="text-sm font-medium text-foreground">
@@ -337,31 +338,31 @@ async function copyTurn(turn: (typeof turnCards.value)[number]) {
               </button>
             </div>
 
-            <p class="mt-4 whitespace-pre-wrap text-sm leading-7 text-foreground">
-              {{ turn.summary }}
-            </p>
-
-            <div v-if="turn.eventLines.length" class="mt-4 space-y-2">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {{ turn.eventSummary }}
+            <div
+              v-if="showAssistantPlaceholder(turn)"
+              class="mt-4 rounded-[1.3rem] border border-dashed border-border/70 bg-background/70 px-4 py-4"
+            >
+              <div class="flex items-center gap-2 text-sm font-medium text-foreground">
+                <span class="inline-flex gap-1">
+                  <span class="size-2 animate-bounce rounded-full bg-primary [animation-delay:-0.2s]" />
+                  <span class="size-2 animate-bounce rounded-full bg-primary [animation-delay:-0.1s]" />
+                  <span class="size-2 animate-bounce rounded-full bg-primary" />
+                </span>
+                {{ t("conversation.assistantPlaceholder") }}
+              </div>
+              <p class="mt-2 text-sm text-muted-foreground">
+                {{ turn.summary }}
               </p>
-              <div
-                v-for="event in turn.eventLines"
-                :key="`${turn.id}-${event.seq}`"
-                class="rounded-xl border px-3 py-2 text-xs"
-                :class="
-                  event.kind === 'provider_stderr'
-                    ? 'border-rose-500/20 bg-rose-500/8 text-rose-700 dark:text-rose-300'
-                    : event.kind === 'tool_call' || event.kind === 'tool_output'
-                      ? 'border-sky-500/20 bg-sky-500/8'
-                      : 'border-border bg-background'
-                "
-              >
-                <p class="font-medium">{{ event.kind }}</p>
-                <p class="mt-1 whitespace-pre-wrap leading-5">{{ event.message }}</p>
+              <div class="mt-4 space-y-2">
+                <div class="h-2.5 w-full animate-pulse rounded-full bg-muted/70" />
+                <div class="h-2.5 w-5/6 animate-pulse rounded-full bg-muted/60 [animation-delay:120ms]" />
+                <div class="h-2.5 w-2/3 animate-pulse rounded-full bg-muted/50 [animation-delay:240ms]" />
               </div>
             </div>
 
+            <p v-else class="mt-4 whitespace-pre-wrap text-sm leading-7 text-foreground">
+              {{ turn.summary }}
+            </p>
             <details class="mt-4 rounded-xl border border-dashed border-border bg-background/60 px-3 py-2">
               <summary class="cursor-pointer text-xs font-medium text-muted-foreground">
                 {{ t("conversation.rawEventsTitle") }}

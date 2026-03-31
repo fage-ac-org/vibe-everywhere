@@ -214,6 +214,7 @@ const zhCN = {
     },
     eventStreamTitle: "最近执行事件",
     rawEventsTitle: "详细事件输出",
+    assistantPlaceholder: "AI 正在思考并执行",
     waitingInput: "等待输入",
     stopTask: "停止任务",
     retryTask: "重试",

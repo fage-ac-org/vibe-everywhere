@@ -722,6 +722,24 @@ export const useAppStore = defineStore("app", {
     async loadConversation(conversationId: string) {
       return fetchConversationDetail(this.relayBaseUrl, conversationId, this.relayAccessToken);
     },
+    upsertConversation(conversation: ConversationRecord) {
+      const existingIndex = this.conversations.findIndex((entry) => entry.id === conversation.id);
+      if (existingIndex >= 0) {
+        this.conversations.splice(existingIndex, 1, conversation);
+      } else {
+        this.conversations = [conversation, ...this.conversations];
+      }
+      this.conversations.sort((left, right) => right.updatedAtEpochMs - left.updatedAtEpochMs);
+    },
+    upsertTask(task: TaskRecord) {
+      const existingIndex = this.tasks.findIndex((entry) => entry.id === task.id);
+      if (existingIndex >= 0) {
+        this.tasks.splice(existingIndex, 1, task);
+      } else {
+        this.tasks = [task, ...this.tasks];
+      }
+      this.tasks.sort((left, right) => right.createdAtEpochMs - left.createdAtEpochMs);
+    },
     applyRelayEvent(event: RelayEventEnvelope) {
       if (event.eventType !== "task_updated" || !event.task) {
         return;
@@ -758,7 +776,8 @@ export const useAppStore = defineStore("app", {
     },
     async createProjectConversation(payload: CreateConversationPayload) {
       const response = await createConversation(this.relayBaseUrl, payload, this.relayAccessToken);
-      await this.refreshAll();
+      this.upsertConversation(response.conversation);
+      this.upsertTask(response.task);
       if (this.selectedProjectId && response.conversation.provider === this.selectedProvider) {
         this.rememberConversationForCurrentScope(response.conversation.id);
       }
@@ -771,13 +790,14 @@ export const useAppStore = defineStore("app", {
         payload,
         this.relayAccessToken
       );
-      await this.refreshAll();
+      this.upsertConversation(response.conversation);
+      this.upsertTask(response.task);
       this.rememberConversationForCurrentScope(conversationId);
       return response;
     },
     async cancelProjectTask(taskId: string) {
       const response = await cancelTask(this.relayBaseUrl, taskId, this.relayAccessToken);
-      await this.refreshAll();
+      this.upsertTask(response.task);
       return response;
     },
     async replyToInput(detail: ConversationDetailResponse) {
@@ -807,7 +827,6 @@ export const useAppStore = defineStore("app", {
         { optionId, text },
         this.relayAccessToken
       );
-      await this.refreshAll();
       return response;
     },
     async archiveProjectConversation(conversationId: string) {
@@ -816,7 +835,7 @@ export const useAppStore = defineStore("app", {
         conversationId,
         this.relayAccessToken
       );
-      await this.refreshAll();
+      this.upsertConversation(response);
       return response;
     },
     getSelectedModelId() {

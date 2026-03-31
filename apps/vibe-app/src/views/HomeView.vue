@@ -33,9 +33,6 @@ const modelOptions = computed(() =>
   }))
 );
 const scopeReady = computed(() => Boolean(selectedProject.value && selectedProvider.value));
-const providerLabel = computed(() =>
-  selectedProvider.value ? store.getProviderLabel(selectedProvider.value) : t("chat.noAcpSelected")
-);
 
 const workspace = useProjectWorkspace(
   computed(() => selectedProject.value?.deviceId ?? ""),
@@ -44,9 +41,15 @@ const workspace = useProjectWorkspace(
   scopeReady
 );
 
-const projectSummary = computed(() => selectedProject.value?.projectSummary ?? null);
 const recentConversationList = computed(() => workspace.conversations.value.slice(0, 8));
 const workspaceErrorMessage = computed(() => workspace.errorMessage.value || store.errorMessage);
+const isRestoringConversation = computed(
+  () =>
+    store.isBootstrapping ||
+    (scopeReady.value &&
+      workspace.isRestoringConversation.value &&
+      !workspace.isDraftConversation.value)
+);
 const emptySummary = computed(() => {
   if (!store.hasRelayConfig) {
     return t("home.emptyServerSummary");
@@ -64,6 +67,9 @@ const emptySummary = computed(() => {
 
 async function syncWorkspaceConversation() {
   if (!scopeReady.value || !selectedProject.value || !selectedProvider.value) {
+    if (store.isBootstrapping) {
+      return;
+    }
     activeTab.value = "conversation";
     workspace.startNewConversation();
     return;
@@ -143,14 +149,23 @@ watch(
         </button>
       </div>
 
-      <div class="mt-3 space-y-3 rounded-[1.25rem] border border-white/60 bg-white/85 p-3 dark:border-white/10 dark:bg-slate-900/75">
-        <div class="grid gap-2">
+      <div class="mt-3 rounded-[1.15rem] border border-white/60 bg-white/85 p-2.5 dark:border-white/10 dark:bg-slate-900/75">
+        <div class="mb-2 flex items-center justify-between px-1">
+          <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {{ t("chat.context") }}
+          </p>
+          <span class="text-[10px] text-muted-foreground">
+            {{ selectedProject?.deviceName ?? store.activeServerLabel }}
+          </span>
+        </div>
+        <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-1">
+        <div class="grid gap-1.5 md:col-span-2 xl:col-span-1">
           <label class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             {{ t("chat.project") }}
           </label>
           <select
             :value="store.selectedProjectId"
-            class="w-full rounded-2xl border border-border bg-background px-3 py-2.5 text-sm"
+            class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
             @change="onProjectChange"
           >
             <option value="">{{ t("chat.noProjectSelected") }}</option>
@@ -164,13 +179,13 @@ watch(
           </select>
         </div>
 
-        <div class="grid gap-2">
+        <div class="grid gap-1.5">
           <label class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             {{ t("chat.acp") }}
           </label>
           <select
             :value="store.selectedProvider"
-            class="w-full rounded-2xl border border-border bg-background px-3 py-2.5 text-sm"
+            class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
             :disabled="!selectedProject"
             @change="onProviderChange"
           >
@@ -185,13 +200,13 @@ watch(
           </select>
         </div>
 
-        <div class="grid gap-2">
+        <div class="grid gap-1.5">
           <label class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             {{ t("chat.model") }}
           </label>
           <select
             v-model="selectedModelValue"
-            class="w-full rounded-2xl border border-border bg-background px-3 py-2.5 text-sm"
+            class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
             :disabled="!selectedProvider"
           >
             <option value="">{{ t("chat.noModelSelected") }}</option>
@@ -203,6 +218,7 @@ watch(
               {{ profile.name }}
             </option>
           </select>
+        </div>
         </div>
       </div>
 
@@ -216,14 +232,17 @@ watch(
       </button>
 
       <div class="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <p class="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {{ t("conversation.recentChats") }}
-        </p>
-        <div class="mt-2 space-y-2">
+        <div class="flex items-center justify-between px-1">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {{ t("conversation.recentChats") }}
+          </p>
+          <span class="text-[10px] text-muted-foreground">{{ recentConversationList.length }}</span>
+        </div>
+        <div class="mt-2 space-y-1.5">
           <button
             v-for="conversation in recentConversationList"
             :key="conversation.id"
-            class="w-full rounded-[1.15rem] border px-3 py-3 text-left"
+            class="w-full rounded-[1rem] border px-3 py-2.5 text-left transition-colors"
             :class="
               conversation.id === workspace.activeConversationId.value && !workspace.isDraftConversation.value
                 ? 'border-primary bg-primary/10'
@@ -231,10 +250,16 @@ watch(
             "
             @click="workspace.selectConversation(conversation.id)"
           >
-            <p class="truncate text-sm font-medium">{{ conversation.title }}</p>
-            <p class="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span>{{ formatRelativeTime(conversation.updatedAtEpochMs) }}</span>
-              <span>{{ store.getProviderLabel(conversation.provider) }}</span>
+            <div class="flex items-start justify-between gap-3">
+              <p class="line-clamp-2 min-w-0 flex-1 text-[13px] font-medium leading-5">
+                {{ conversation.title }}
+              </p>
+              <span class="shrink-0 rounded-full bg-background/80 px-2 py-0.5 text-[10px] text-muted-foreground">
+                {{ store.getProviderLabel(conversation.provider) }}
+              </span>
+            </div>
+            <p class="mt-1 text-[10px] text-muted-foreground">
+              {{ formatRelativeTime(conversation.updatedAtEpochMs) }}
             </p>
           </button>
           <div
@@ -303,64 +328,12 @@ watch(
         {{ workspaceErrorMessage }}
       </div>
 
-      <div
-        class="mt-3 shrink-0 rounded-[1.15rem] border border-white/60 bg-white/80 px-4 py-3 shadow-[0_16px_45px_-40px_rgba(15,23,42,0.55)] backdrop-blur dark:border-white/10 dark:bg-slate-950/65"
-      >
-        <div class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
-          <div class="min-w-0">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {{ t("chat.project") }}
-            </p>
-            <p class="mt-1 truncate font-medium">
-              {{ selectedProject?.name ?? t("chat.noProjectSelected") }}
-            </p>
-            <p v-if="selectedProject?.pathLabel" class="truncate text-xs text-muted-foreground">
-              {{ selectedProject.pathLabel }}
-            </p>
-          </div>
-          <div class="min-w-0">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {{ t("settings.hostsTitle") }}
-            </p>
-            <p class="mt-1 truncate font-medium">
-              {{ selectedProject?.deviceName ?? t("chat.noProjectSelected") }}
-            </p>
-            <p class="truncate text-xs text-muted-foreground">
-              {{ selectedProject?.online ? t("common.online") : t("common.offline") }}
-            </p>
-          </div>
-          <div class="min-w-0">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {{ t("chat.acp") }}
-            </p>
-            <p class="mt-1 truncate font-medium">{{ providerLabel }}</p>
-            <p class="truncate text-xs text-muted-foreground">
-              {{ t("workspace.metrics.topics", { count: projectSummary?.conversationCount ?? recentConversationList.length }) }}
-            </p>
-          </div>
-          <div class="min-w-0">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {{ t("chat.model") }}
-            </p>
-            <p class="mt-1 truncate font-medium">
-              {{ store.selectedModelProfile?.name ?? t("chat.noModelSelected") }}
-            </p>
-            <p class="truncate text-xs text-muted-foreground">
-              {{
-                projectSummary
-                  ? t("workspace.metrics.running", { count: projectSummary.runningTaskCount ?? 0 })
-                  : t("dashboard.hostsOnline", { count: store.onlineHostCount })
-              }}
-            </p>
-          </div>
-        </div>
-      </div>
-
       <ProjectConversationPanel
         class="mt-3 min-h-0 flex-1"
         :detail="workspace.conversationDetail.value"
         :project-title="selectedProject?.name"
         :is-draft-conversation="workspace.isDraftConversation.value"
+        :is-restoring-conversation="isRestoringConversation"
         v-model:selected-model="selectedModelValue"
         :model-options="modelOptions"
         :can-compose="scopeReady"
