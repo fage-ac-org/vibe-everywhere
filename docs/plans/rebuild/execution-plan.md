@@ -76,15 +76,15 @@ Create the canonical Rust contract crate before any downstream project defines p
 
 ### Order
 
-1. `modules/vibe-wire/message-meta.md`
+1. `[done]` `modules/vibe-wire/message-meta.md`
    - unblocks legacy/session messages and provider/runtime metadata
-2. `modules/vibe-wire/legacy-protocol.md`
+2. `[done]` `modules/vibe-wire/legacy-protocol.md`
    - unblocks compatibility with imported app legacy rendering
-3. `modules/vibe-wire/session-protocol.md`
+3. `[done]` `modules/vibe-wire/session-protocol.md`
    - unblocks CLI/provider event mapping
-4. `modules/vibe-wire/messages.md`
+4. `[done]` `modules/vibe-wire/messages.md`
    - unblocks server updates, session storage, and app update parsing
-5. `modules/vibe-wire/voice.md`
+5. `[done]` `modules/vibe-wire/voice.md`
    - unblocks late server support APIs
 
 ### Output

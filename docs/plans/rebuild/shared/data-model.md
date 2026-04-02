@@ -322,7 +322,7 @@ Canonical serialized union:
 Canonical serialized fields:
 
 - `sentFrom?: string`
-- `permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'read-only' | 'safe-yolo' | 'yolo'`
+- `permissionMode?: string`
 - `model?: string | null`
 - `fallbackModel?: string | null`
 - `customSystemPrompt?: string | null`
@@ -332,6 +332,7 @@ Canonical serialized fields:
 - `displayText?: string`
 - invariants:
   - field names serialize to Happy-compatible shapes
+  - `permissionMode` preserves arbitrary Happy-compatible mode keys rather than constraining them to a fixed enum
   - shared by both legacy decrypted payloads and `SessionProtocolMessage`
   - consumers must preserve unknown-compatible nullability behavior where Happy allows it
 

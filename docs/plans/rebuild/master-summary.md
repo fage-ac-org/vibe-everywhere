@@ -31,9 +31,9 @@ scripts/
 
 ## Current Phase
 
-- phase: `M0 - Planning Baseline` complete; `Wave 1: vibe-wire` is ready to start
-- implementation status: shared contracts frozen; subsystem implementation not started
-- immediate goal: implement `vibe-wire` in execution-plan order, starting with `modules/vibe-wire/message-meta.md`
+- phase: `M1 - Shared Wire` complete; `Wave 2: vibe-server` minimum spine is ready to start
+- implementation status: `vibe-wire` implemented, validated, and published with JSON compatibility vectors under `crates/vibe-wire/fixtures/`, plus Happy-schema fixture validation; downstream subsystems not started
+- immediate goal: implement `vibe-server` minimum spine in execution-plan order, starting with `modules/vibe-server/versions-and-config.md`
 - authoritative execution sequence: `docs/plans/rebuild/execution-plan.md`
 - AI dispatch batches: `docs/plans/rebuild/execution-batches.md`
 
@@ -70,8 +70,8 @@ scripts/
 
 ## Current Recommended Next Modules
 
-- `modules/vibe-wire/message-meta.md`
-- `modules/vibe-wire/legacy-protocol.md`
-- `modules/vibe-wire/session-protocol.md`
-- `modules/vibe-wire/messages.md`
-- `modules/vibe-wire/voice.md`
+- `modules/vibe-server/versions-and-config.md`
+- `modules/vibe-server/storage-db.md`
+- `modules/vibe-server/storage-redis.md`
+- `modules/vibe-server/auth.md`
+- `modules/vibe-server/event-router.md` pass A

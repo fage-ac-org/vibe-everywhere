@@ -54,6 +54,7 @@ Implement the legacy user and agent message wrappers that remain necessary for c
 - legacy agent messages must allow unknown content keys
 - user messages must reject non-text content in the canonical schema
 - optional `localKey` and `meta` fields must serialize compatibly
+- optional `localKey` and `meta` fields must reject explicit JSON `null`
 
 ## Tests
 
@@ -61,6 +62,7 @@ Implement the legacy user and agent message wrappers that remain necessary for c
 - agent message pass-through round-trip
 - discriminated union parse tests
 - invalid user-content tests
+- invalid explicit `null` tests for optional-only fields
 
 ## Acceptance Criteria
 

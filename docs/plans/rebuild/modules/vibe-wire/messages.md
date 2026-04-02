@@ -73,6 +73,7 @@ and CLI.
 - nullable `localId` and encrypted value wrappers must remain distinguishable from missing fields
 - `MessageContent` must reject invalid discriminators
 - update body parsing must fail cleanly on unknown `t` values
+- optional-only fields such as `meta`, `active`, and `activeAt` must reject explicit JSON `null`
 
 ## Tests
 
@@ -80,6 +81,8 @@ and CLI.
 - one fixture for each update body variant
 - one fixture for legacy and session-protocol `MessageContent`
 - invalid discriminator tests
+- invalid explicit `null` tests for optional-only fields while preserving `nullish` fields where
+  Happy allows them
 
 ## Acceptance Criteria
 

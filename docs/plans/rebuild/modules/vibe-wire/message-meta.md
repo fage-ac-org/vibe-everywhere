@@ -7,6 +7,7 @@ Implement the shared metadata object attached to legacy and session-protocol mes
 ## Happy Source Of Truth
 
 - `packages/happy-wire/src/messageMeta.ts`
+- `packages/happy-app/sources/sync/typesMessageMeta.ts`
 
 ## Target Rust/Vibe Location
 
@@ -16,7 +17,7 @@ Implement the shared metadata object attached to legacy and session-protocol mes
 ## Responsibilities
 
 - define shared message metadata fields
-- encode permission-mode enum values compatibly
+- preserve permission-mode string keys compatibly
 - preserve optional/nullable behavior required by Happy clients
 
 ## Non-Goals
@@ -27,7 +28,6 @@ Implement the shared metadata object attached to legacy and session-protocol mes
 ## Public Types And Interfaces
 
 - `MessageMeta`
-- `PermissionMode`
 
 ## Data Flow
 
@@ -42,26 +42,31 @@ Implement the shared metadata object attached to legacy and session-protocol mes
 ## Implementation Steps
 
 1. Port every metadata field using Happy wire names.
-2. Implement `PermissionMode` with the current Happy value set.
+2. Represent `permissionMode` as a string key so current Happy clients can send arbitrary values.
 3. Use `Option` for nullable or optional fields exactly where Happy does.
-4. Add exhaustive serialization tests for the enum values and optional fields.
+4. Add serialization tests for known and custom permission-mode values plus optional fields.
 
 ## Edge Cases And Failure Modes
 
 - some fields are nullable and optional; the implementation must distinguish both when needed
 - permission-mode values containing hyphens must serialize exactly
+- unknown permission-mode keys from current Happy clients must round-trip unchanged
+- optional-only fields such as `sentFrom`, `permissionMode`, and `displayText` must reject explicit
+  JSON `null`
 
 ## Tests
 
 - full object round-trip
 - sparse object round-trip
-- enum value serialization tests
-- invalid permission-mode parsing tests
+- known permission-mode round-trip tests
+- custom permission-mode round-trip tests
+- invalid non-string permission-mode parsing tests
+- invalid explicit `null` tests for optional-only fields
 
 ## Acceptance Criteria
 
 - all metadata fields are present and wire-compatible
-- permission-mode enum values match Happy strings
+- permission-mode values round-trip exactly, including custom client-defined keys
 
 ## Open Questions
 

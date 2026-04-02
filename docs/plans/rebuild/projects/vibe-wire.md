@@ -53,14 +53,17 @@ crosses subsystem boundaries must live here first.
 
 - preserve Happy field names on the wire
 - preserve optionality and pass-through behavior where Happy relies on it
+- reject explicit JSON `null` for fields that are optional in Happy but not nullable
 - do not add Vibe-only fields to shared wire types during parity phase
 
 ## Testing Strategy
 
 - unit tests per module
 - JSON round-trip tests
+- invalid-input tests for optional-vs-nullable field behavior
 - fixture coverage for every session event type
 - cross-language compatibility vectors where applicable
+- cross-language validation against Happy schemas for published fixtures
 
 ## Acceptance Criteria
 

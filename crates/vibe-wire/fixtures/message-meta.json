@@ -1,0 +1,32 @@
+[
+  {
+    "name": "message-meta-full",
+    "value": {
+      "allowedTools": [
+        "shell",
+        "git"
+      ],
+      "appendSystemPrompt": null,
+      "customSystemPrompt": "system",
+      "disallowedTools": null,
+      "displayText": "Visible",
+      "fallbackModel": null,
+      "model": "gpt-5",
+      "permissionMode": "bypassPermissions",
+      "sentFrom": "mobile"
+    }
+  },
+  {
+    "name": "message-meta-sparse",
+    "value": {
+      "sentFrom": "cli"
+    }
+  },
+  {
+    "name": "message-meta-custom-permission-mode",
+    "value": {
+      "displayText": "Visible",
+      "permissionMode": "team-custom-mode"
+    }
+  }
+]

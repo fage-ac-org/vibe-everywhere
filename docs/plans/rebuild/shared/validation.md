@@ -16,6 +16,7 @@ For `vibe-wire`:
 
 - unit tests per schema and serialization variant
 - compatibility vectors for session protocol, legacy protocol, metadata, and voice
+- cross-language schema validation of published compatibility vectors against Happy source-of-truth schemas
 - crypto vector tests for any reusable crypto helpers
 
 ## Server Phase

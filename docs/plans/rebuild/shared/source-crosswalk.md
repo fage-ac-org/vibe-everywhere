@@ -4,7 +4,7 @@
 
 | Happy source | Happy responsibility | Vibe target | Target module root | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `packages/happy-wire` | shared message schemas and protocol helpers | `crates/vibe-wire` | `src/` | planned | canonical Rust source for all shared contracts |
+| `packages/happy-wire` | shared message schemas and protocol helpers | `crates/vibe-wire` | `src/` | done | canonical Rust source for all shared contracts |
 | `packages/happy-server` | backend APIs, socket updates, storage, auth | `crates/vibe-server` | `src/` | planned | server rewrite depends on `vibe-wire` contracts |
 | `packages/happy-agent` | remote-control CLI client | `crates/vibe-agent` | `src/` | planned | session and machine control client |
 | `packages/happy-cli` | local runtime, daemon, provider integrations | `crates/vibe-cli` | `src/` | planned | largest subsystem, start only after wire and server spine |
@@ -26,12 +26,12 @@
 
 | Happy source path | Happy responsibility | Vibe target crate/package | Vibe target module | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `packages/happy-wire/src/index.ts` | package export surface and type barrel | `crates/vibe-wire` | `lib.rs` | planned | re-export only; public contracts stay canonical in `vibe-wire` |
-| `packages/happy-wire/src/messages.ts` | wire message containers | `crates/vibe-wire` | `messages.rs` | planned | define encrypted message and update containers |
-| `packages/happy-wire/src/sessionProtocol.ts` | session envelope and event union | `crates/vibe-wire` | `session_protocol.rs` | planned | primary protocol source of truth |
-| `packages/happy-wire/src/legacyProtocol.ts` | legacy user/agent content wrapper | `crates/vibe-wire` | `legacy_protocol.rs` | planned | required for app compatibility |
-| `packages/happy-wire/src/messageMeta.ts` | message metadata | `crates/vibe-wire` | `message_meta.rs` | planned | shared by CLI, agent, app, server |
-| `packages/happy-wire/src/voice.ts` | voice token schema | `crates/vibe-wire` | `voice.rs` | planned | add serde + validation |
+| `packages/happy-wire/src/index.ts` | package export surface and type barrel | `crates/vibe-wire` | `lib.rs` | done | re-export only; public contracts stay canonical in `vibe-wire` |
+| `packages/happy-wire/src/messages.ts` | wire message containers | `crates/vibe-wire` | `messages.rs` | done | define encrypted message and update containers |
+| `packages/happy-wire/src/sessionProtocol.ts` | session envelope and event union | `crates/vibe-wire` | `session_protocol.rs` | done | primary protocol source of truth |
+| `packages/happy-wire/src/legacyProtocol.ts` | legacy user/agent content wrapper | `crates/vibe-wire` | `legacy_protocol.rs` | done | required for app compatibility |
+| `packages/happy-wire/src/messageMeta.ts` | message metadata | `crates/vibe-wire` | `message_meta.rs` | done | shared by CLI, agent, app, server |
+| `packages/happy-wire/src/voice.ts` | voice token schema | `crates/vibe-wire` | `voice.rs` | done | add serde + validation |
 | `packages/happy-server/sources/main.ts` | primary server binary bootstrap | `crates/vibe-server` | `main.rs` | planned | owned by `versions-and-config`; no separate bootstrap layer outside typed config/context |
 | `packages/happy-server/sources/standalone.ts` | alternate standalone startup path | `crates/vibe-server` | `main.rs` | planned | folds into the same startup/bootstrap module as `main.ts` |
 | `packages/happy-server/sources/versions.ts` | version/build metadata helpers | `crates/vibe-server` | `version.rs` | planned | owned by `versions-and-config` |

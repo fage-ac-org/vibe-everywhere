@@ -1,0 +1,12 @@
+{
+  "name": "vibe-remote-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate:vibe-wire-fixtures": "node ./validate-vibe-wire-fixtures.mjs"
+  },
+  "dependencies": {
+    "@paralleldrive/cuid2": "2.3.1",
+    "zod": "3.25.76"
+  }
+}

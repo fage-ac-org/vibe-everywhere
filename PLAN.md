@@ -11,8 +11,8 @@
 
 ## Current Phase
 
-- phase: Wave 0 planning freeze complete; no subsystem implementation has started
-- next milestone: implement Wave 1 `vibe-wire`, starting with `modules/vibe-wire/message-meta.md`
+- phase: Wave 1 `vibe-wire` complete with exported compatibility vectors under `crates/vibe-wire/fixtures/` and Happy-schema validation coverage; Wave 2 `vibe-server` minimum spine is ready to start
+- next milestone: implement Wave 2 `vibe-server`, starting with `modules/vibe-server/versions-and-config.md`
 
 ## Rule
 

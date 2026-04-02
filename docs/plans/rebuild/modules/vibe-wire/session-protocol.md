@@ -69,6 +69,8 @@ Implement the canonical session envelope and event union used by the long-term m
 
 - envelope validation must reject mismatched roles for constrained events
 - `file.image` metadata must remain optional and partial only in the Happy-supported shape
+- optional-only fields such as `thinking`, `mimeType`, `image`, `title`, `turn`, and `subagent`
+  must reject explicit JSON `null`
 - future session-protocol variants must be added only by plan update
 
 ## Tests
@@ -77,6 +79,7 @@ Implement the canonical session envelope and event union used by the long-term m
 - valid envelope fixtures
 - invalid role/event combination fixtures
 - optional `turn` and `subagent` coverage
+- invalid explicit `null` tests for optional-only fields
 
 ## Acceptance Criteria
 
